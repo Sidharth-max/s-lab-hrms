@@ -8,11 +8,16 @@ function bool(v: string | undefined, d = false) {
 export const env = {
   appUrl: process.env.APP_URL ?? "http://localhost:3000",
   authSecret: process.env.AUTH_SECRET ?? "",
-  smsProvider: (process.env.SMS_PROVIDER ?? "console") as "console" | "msg91",
+  smsProvider: (process.env.SMS_PROVIDER ?? "console") as "console" | "fast2sms",
   // TESTING ONLY: shows the OTP on screen so you can log in without an SMS provider.
   otpShowInUi: bool(process.env.OTP_SHOW_IN_UI),
-  msg91AuthKey: process.env.MSG91_AUTH_KEY ?? "",
-  msg91TemplateId: process.env.MSG91_TEMPLATE_ID ?? "",
+  fast2sms: {
+    apiKey: process.env.FAST2SMS_API_KEY ?? "",
+    mode: (process.env.FAST2SMS_MODE === "dlt" ? "dlt" : "otp") as "otp" | "dlt",
+    otpId: process.env.FAST2SMS_OTP_ID ?? "",
+    senderId: process.env.FAST2SMS_SENDER_ID ?? "",
+    dltMessageId: process.env.FAST2SMS_DLT_MESSAGE_ID ?? "",
+  },
   faceProvider: (process.env.FACE_PROVIDER ?? "mock") as "mock" | "aws",
   faceMatchThreshold: Number(process.env.FACE_MATCH_THRESHOLD ?? 95),
   faceLiveness: bool(process.env.FACE_LIVENESS),
