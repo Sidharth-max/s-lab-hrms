@@ -1,0 +1,13 @@
+{
+	"appId": "dev.slab.hrms",
+	"appName": "S-Lab HRMS",
+	"webDir": "android-web",
+	"server": {
+		"url": "https://hrms.s-lab.dev",
+		"cleartext": false,
+		"errorPath": "offline.html"
+	},
+	"android": {
+		"allowMixedContent": false
+	}
+}

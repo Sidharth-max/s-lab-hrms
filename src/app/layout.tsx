@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
-import { UpdateChecker } from "@/components/UpdateChecker";
 import { Toaster } from "@/components/Toaster";
 
 export const metadata: Metadata = {
@@ -21,7 +20,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={GeistSans.variable}>
       <body className="min-h-dvh antialiased">
         {children}
-        <UpdateChecker />
         <Toaster />
       </body>
     </html>

@@ -12,18 +12,13 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate",
-    "cap:sync": "cap sync android"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.7",
     "@aws-amplify/ui-react-liveness": "^3.7.0",
     "@aws-sdk/client-rekognition": "^3.1167.0",
     "@aws-sdk/client-sts": "^3.1167.0",
-    "@capacitor-community/text-to-speech": "^8.0.2",
-    "@capacitor/android": "^8.6.0",
-    "@capacitor/app": "^8.1.2",
-    "@capacitor/core": "^8.6.0",
     "@prisma/client": "^6.19.3",
     "aws-amplify": "^6.22.2",
     "geist": "^1.9.2",
@@ -36,7 +31,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.6.0",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19",
