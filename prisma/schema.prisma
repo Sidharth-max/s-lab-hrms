@@ -68,6 +68,7 @@ model User {
   role        Role
   permissions String[] @default([]) // only used for MANAGER
   siteIds     String[] @default([]) // MANAGER site scope, empty = all sites
+  language    String   @default("en") // "en" | "hi"
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
@@ -149,6 +150,7 @@ model Device {
   businessId   String
   siteId       String
   name         String
+  language     String    @default("hi") // scanner screen and voice: "hi" | "en"
   tokenHash    String    @unique
   registeredBy String
   createdAt    DateTime  @default(now())

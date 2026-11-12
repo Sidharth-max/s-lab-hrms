@@ -1,0 +1,42 @@
+"use client";
+
+import { useState } from "react";
+
+/**
+ * Narrow space (phone, or one half of a foldable): tab bar, one section at a time.
+ * Wide space: every section shown together in a two-column grid. Based on the container width.
+ */
+export function Tabs({
+  tabs,
+  initial,
+}: {
+  tabs: { id: string; label: string; content: React.ReactNode; wide?: boolean }[];
+  initial?: string;
+}) {
+  const [active, setActive] = useState(initial && tabs.some((t) => t.id === initial) ? initial : tabs[0]?.id);
+  return (
+    <div className="@container">
+      <div className="no-print -mx-1 mb-3 flex gap-1 overflow-x-auto px-1 py-1 @4xl:hidden" role="tablist">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={active === t.id}
+            onClick={() => setActive(t.id)}
+            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${active === t.id ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white"}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-4 @4xl:grid-cols-2">
+        {tabs.map((t) => (
+          <div key={t.id} role="tabpanel" className={`${active === t.id ? "block" : "hidden"} min-w-0 @4xl:block ${t.wide ? "@4xl:col-span-2" : ""}`}>
+            {t.content}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

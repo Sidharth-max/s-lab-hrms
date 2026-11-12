@@ -66,3 +66,67 @@ body {
     background: #fff;
   }
 }
+
+/* Two panes on an open foldable (two screen segments) or a tablet-sized screen.
+   Phones in landscape (short height) keep one pane. */
+@custom-variant fold {
+  @media (min-width: 600px) and (min-height: 500px), (horizontal-viewport-segments: 2) {
+    @slot;
+  }
+}
+
+/* Tables turn into cards when their container is phone-width. */
+.cq {
+  container-type: inline-size;
+}
+@container (max-width: 639px) {
+  .table-cards thead {
+    display: none;
+  }
+  .table-cards,
+  .table-cards tbody {
+    display: block;
+  }
+  .table-cards tr {
+    display: block;
+    border-bottom: 1px solid var(--line);
+    padding: 0.5rem 0.75rem;
+  }
+  .table-cards td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 0;
+    padding: 0.2rem 0;
+    text-align: right;
+  }
+  .table-cards td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .table-cards td.card-title {
+    font-size: 1rem;
+    text-align: left;
+    padding-bottom: 0.35rem;
+  }
+  .table-cards td:empty {
+    display: none;
+  }
+}
+
+/* Open foldable: put each pane exactly on one screen segment, gap over the hinge. */
+@media (horizontal-viewport-segments: 2) {
+  .split {
+    grid-template-columns: env(viewport-segment-width 0 0) env(viewport-segment-width 1 0) !important;
+    column-gap: calc(env(viewport-segment-left 1 0) - env(viewport-segment-right 0 0)) !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .split > * {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

@@ -26,11 +26,13 @@ const hindi = {
 export default function Liveness({
   sessionId,
   region,
+  lang,
   onDone,
   onError,
 }: {
   sessionId: string;
   region: string;
+  lang: "hi" | "en";
   onDone: () => void;
   onError: (msg: string) => void;
 }) {
@@ -39,7 +41,7 @@ export default function Liveness({
       sessionId={sessionId}
       region={region}
       disableStartScreen
-      displayText={hindi}
+      displayText={lang === "hi" ? hindi : undefined}
       onAnalysisComplete={async () => onDone()}
       onError={(e) => onError(e.state ?? "error")}
       config={{

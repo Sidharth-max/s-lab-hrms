@@ -2,22 +2,23 @@
 
 import { Capacitor } from "@capacitor/core";
 
-/** Speaks Hindi text. Uses the phone's text-to-speech in the Android app, the browser voice on the web. */
-export async function speakHindi(text: string) {
+/** Speaks text in Hindi or English. Uses the phone's text-to-speech in the Android app, the browser voice on the web. */
+export async function speak(text: string, lang: "hi" | "en" = "hi") {
+  const locale = lang === "en" ? "en-IN" : "hi-IN";
   try {
     if (Capacitor.isNativePlatform()) {
       const { TextToSpeech } = await import("@capacitor-community/text-to-speech");
       await TextToSpeech.stop().catch(() => {});
-      await TextToSpeech.speak({ text, lang: "hi-IN", rate: 0.95 });
+      await TextToSpeech.speak({ text, lang: locale, rate: 0.95 });
       return;
     }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "hi-IN";
+      u.lang = locale;
       u.rate = 0.95;
-      const hindi = window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("hi"));
-      if (hindi) u.voice = hindi;
+      const voice = window.speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(locale.slice(0, 2)));
+      if (voice) u.voice = voice;
       window.speechSynthesis.speak(u);
     }
   } catch {

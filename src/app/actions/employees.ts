@@ -60,6 +60,7 @@ export const createEmployee = safe(async (_p: ActionResult, form: FormData): Pro
     data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), ...payData },
   });
   await audit(actor.businessId, actor.id, "employee.create", "Employee", emp.id, { name, code });
+  revalidatePath("/employees", "layout");
   redirect(`/employees/${emp.id}?created=1`);
 });
 
@@ -97,7 +98,7 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   await audit(actor.businessId, actor.id, "employee.update", "Employee", emp.id, {
     before: { name: emp.name, wageType: emp.wageType, monthlyWage: emp.monthlyWage, dailyWage: emp.dailyWage, pf: emp.pfEnabled, esi: emp.esiEnabled },
   });
-  revalidatePath(`/employees/${emp.id}`);
+  revalidatePath("/employees", "layout");
   return { ok: true, message: "Saved" };
 });
 
@@ -108,7 +109,7 @@ export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Pr
   if (!leftOn) {
     await db.employee.update({ where: { id: emp.id }, data: { leftOn: null, active: true } });
     await audit(actor.businessId, actor.id, "employee.rejoin", "Employee", emp.id);
-    revalidatePath(`/employees/${emp.id}`);
+    revalidatePath("/employees", "layout");
     return { ok: true, message: "Employee is active again" };
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(leftOn)) return { error: "Enter the leaving date" };
@@ -119,7 +120,7 @@ export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Pr
   // Remove the face so the person can no longer mark attendance. Attendance and salary history stay.
   if (emp.faceId) await faceProvider().remove(actor.businessId, emp.faceId).catch((e) => console.error("Face delete failed", e));
   await audit(actor.businessId, actor.id, "employee.left", "Employee", emp.id, { leftOn });
-  revalidatePath(`/employees/${emp.id}`);
+  revalidatePath("/employees", "layout");
   return { ok: true, message: "Marked as left. Face removed." };
 });
 
@@ -134,7 +135,7 @@ export const enrollFace = safe(async (_p: ActionResult, form: FormData): Promise
   if (!r.ok) return { error: r.error };
   await db.employee.update({ where: { id: emp.id }, data: { faceId: r.faceId, faceEnrolledAt: new Date() } });
   await audit(actor.businessId, actor.id, "face.enroll", "Employee", emp.id);
-  revalidatePath(`/employees/${emp.id}`);
+  revalidatePath("/employees", "layout");
   return { ok: true, message: "Face enrolled" };
 });
 
@@ -144,7 +145,7 @@ export const removeFace = safe(async (_p: ActionResult, form: FormData): Promise
   if (emp.faceId) await faceProvider().remove(actor.businessId, emp.faceId);
   await db.employee.update({ where: { id: emp.id }, data: { faceId: null, faceEnrolledAt: null } });
   await audit(actor.businessId, actor.id, "face.remove", "Employee", emp.id);
-  revalidatePath(`/employees/${emp.id}`);
+  revalidatePath("/employees", "layout");
   return { ok: true, message: "Face removed" };
 });
 
@@ -156,7 +157,7 @@ export const setEmployeeLogin = safe(async (_p: ActionResult, form: FormData): P
   if (!enable) {
     if (emp.userId) await db.user.update({ where: { id: emp.userId }, data: { active: false } });
     await audit(actor.businessId, actor.id, "employee.login.off", "Employee", emp.id);
-    revalidatePath(`/employees/${emp.id}`);
+    revalidatePath("/employees", "layout");
     return { ok: true, message: "Web login turned off" };
   }
   if (!emp.phone) return { error: "Add the employee's mobile number first" };
@@ -171,6 +172,6 @@ export const setEmployeeLogin = safe(async (_p: ActionResult, form: FormData): P
     });
   }
   await audit(actor.businessId, actor.id, "employee.login.on", "Employee", emp.id);
-  revalidatePath(`/employees/${emp.id}`);
+  revalidatePath("/employees", "layout");
   return { ok: true, message: "Web login turned on. The employee logs in with this mobile number and OTP." };
 });

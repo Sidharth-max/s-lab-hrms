@@ -3,14 +3,16 @@ import { notFound } from "next/navigation";
 import { addManualPunch, clearDayStatus, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL } from "@/lib/attendance";
+import { statusLabel } from "@/lib/attendance";
 import { db } from "@/lib/db";
+import { getT } from "@/lib/i18n-server";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
 import { dateKeyToDb, formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
 
 export default async function DayDetail({ params }: PageProps<"/attendance/[employeeId]/[date]">) {
   const actor = await requireStaff();
+  const { t, lang } = await getT();
   const { employeeId, date } = await params;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) notFound();
   const emp = await db.employee.findFirst({ where: { id: employeeId, businessId: actor.businessId } });
@@ -27,78 +29,89 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
   const day = days.get(emp.id)!.find((d) => d.date === date)!;
   const locked = run?.status === "LOCKED";
   const editable = can(actor, "attendance.edit") && !locked && date <= istDateKey(new Date());
+  const statuses = [
+    ["PRESENT", t("Present", "हाज़िर")],
+    ["HALF_DAY", t("Half day", "आधा दिन")],
+    ["ABSENT", t("Absent", "ग़ैरहाज़िर")],
+    ["PAID_LEAVE", t("Paid leave", "सवेतन छुट्टी")],
+    ["UNPAID_LEAVE", t("Unpaid leave", "बिना वेतन छुट्टी")],
+  ];
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div>
-        <Link href={`/attendance?date=${date}`} className="muted underline">← Attendance</Link>
+        <Link href={`/attendance?date=${date}`} className="muted underline">← {t("Attendance", "हाज़िरी")}</Link>
         <h1 className="h1">{emp.name} · {formatDateKey(date)}</h1>
         <p className="text-lg">
-          {STATUS_LABEL[day.status] || "—"} {day.overridden && <span className="badge bg-blue-50 text-[var(--brand)]">manual</span>}
+          {statusLabel(day.status, lang) || "—"} {day.overridden && <span className="badge bg-blue-50 text-[var(--brand)]">{t("manual", "हाथ से")}</span>}
         </p>
       </div>
-      {locked && <div className="card border-amber-200 bg-amber-50 text-sm">Salary for this month is locked, so this day cannot be edited. Use an adjustment in next month&apos;s salary.</div>}
-      {!can(actor, "attendance.edit") && <div className="card text-sm muted">You can view but not edit attendance.</div>}
+      {locked && (
+        <div className="card border-amber-200 bg-amber-50 text-sm">
+          {t("Salary for this month is locked, so this day cannot be edited. Use an adjustment in next month's salary.", "इस महीने की सैलरी लॉक है, इसलिए यह दिन नहीं बदल सकते। अगले महीने की सैलरी में एडजस्टमेंट जोड़ें।")}
+        </div>
+      )}
+      {!can(actor, "attendance.edit") && <div className="card muted text-sm">{t("You can view but not edit attendance.", "आप हाज़िरी देख सकते हैं, बदल नहीं सकते।")}</div>}
 
       <section className="card">
-        <h2 className="mb-2 font-semibold">Punches</h2>
-        <table className="table">
-          <thead><tr><th>Type</th><th>Time</th><th>How</th><th /></tr></thead>
+        <h2 className="mb-2 font-semibold">{t("Punches", "पंच")}</h2>
+        <table className="table table-cards">
+          <thead><tr><th>{t("Type", "प्रकार")}</th><th>{t("Time", "समय")}</th><th>{t("How", "कैसे")}</th><th /></tr></thead>
           <tbody>
             {punches.map((p) => (
               <tr key={p.id} className={p.voidedAt ? "text-[var(--muted)] line-through" : ""}>
-                <td>{p.type}</td>
-                <td>{formatIstTime(p.at)}{istDateKey(p.at) !== date ? ` (${formatDateKey(istDateKey(p.at))})` : ""}</td>
-                <td className="no-underline">
-                  {p.source === "FACE" ? `Face scan${p.score ? ` (${p.score.toFixed(1)}%)` : ""}` : `Manual by ${users.get(p.createdBy ?? "") ?? "?"}: ${p.reason}`}
-                  {p.voidedAt && <div className="text-xs">Removed by {users.get(p.voidedBy ?? "") ?? "?"}: {p.voidReason}</div>}
+                <td className="card-title font-semibold">{p.type === "IN" ? t("IN", "आए") : t("OUT", "गए")}</td>
+                <td data-label={t("Time", "समय")}>{formatIstTime(p.at)}{istDateKey(p.at) !== date ? ` (${formatDateKey(istDateKey(p.at))})` : ""}</td>
+                <td data-label={t("How", "कैसे")}>
+                  <span>
+                    {p.source === "FACE"
+                      ? `${t("Face scan", "फ़ेस स्कैन")}${p.score ? ` (${p.score.toFixed(1)}%)` : ""}`
+                      : `${t("Manual by", "हाथ से:")} ${users.get(p.createdBy ?? "") ?? "?"}: ${p.reason}`}
+                    {p.voidedAt && <span className="block text-xs">{t("Removed by", "हटाया:")} {users.get(p.voidedBy ?? "") ?? "?"}: {p.voidReason}</span>}
+                  </span>
                 </td>
                 <td>
                   {editable && !p.voidedAt && (
-                    <ActionForm action={voidPunch} submitLabel="Remove" submitClass="btn-secondary !py-1" confirm="Remove this punch? It stays in history.">
+                    <ActionForm action={voidPunch} submitLabel={t("Remove", "हटाएं")} submitClass="btn-secondary !py-1" confirm={t("Remove this punch? It stays in history.", "यह पंच हटाएं? इतिहास में रहेगा।")}>
                       <input type="hidden" name="punchId" value={p.id} />
                     </ActionForm>
                   )}
                 </td>
               </tr>
             ))}
-            {punches.length === 0 && <tr><td colSpan={4} className="muted">No punches.</td></tr>}
+            {punches.length === 0 && <tr><td colSpan={4} className="muted">{t("No punches.", "कोई पंच नहीं।")}</td></tr>}
           </tbody>
         </table>
       </section>
 
       {editable && (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 @2xl:grid-cols-2">
           <section className="card">
-            <h2 className="mb-3 font-semibold">Add missed punch</h2>
-            <ActionForm action={addManualPunch} className="flex flex-col gap-3" submitLabel="Add punch" resetOnSuccess>
+            <h2 className="mb-3 font-semibold">{t("Add missed punch", "छूटा पंच जोड़ें")}</h2>
+            <ActionForm action={addManualPunch} className="flex flex-col gap-3" submitLabel={t("Add punch", "पंच जोड़ें")} resetOnSuccess>
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
               <div className="flex gap-2">
-                <select name="type" className="input"><option value="IN">IN</option><option value="OUT">OUT</option></select>
+                <select name="type" className="input"><option value="IN">{t("IN", "आए")}</option><option value="OUT">{t("OUT", "गए")}</option></select>
                 <input type="time" name="time" className="input" required />
               </div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="nextDay" /> Time is after midnight (night shift)</label>
-              <input name="reason" className="input" placeholder="Reason (e.g. tablet not working)" required />
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="nextDay" /> {t("Time is after midnight (night shift)", "समय आधी रात के बाद का है (नाइट शिफ़्ट)")}</label>
+              <input name="reason" className="input" placeholder={t("Reason (e.g. tablet not working)", "कारण (जैसे टैबलेट ख़राब)")} required />
             </ActionForm>
           </section>
           <section className="card">
-            <h2 className="mb-3 font-semibold">Set day status</h2>
-            <ActionForm action={setDayStatus} className="flex flex-col gap-3" submitLabel="Set status" resetOnSuccess>
+            <h2 className="mb-3 font-semibold">{t("Set day status", "दिन की स्थिति तय करें")}</h2>
+            <ActionForm action={setDayStatus} className="flex flex-col gap-3" submitLabel={t("Set status", "स्थिति सेव करें")} resetOnSuccess>
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
               <select name="status" className="input" defaultValue="PRESENT">
-                <option value="PRESENT">Present</option>
-                <option value="HALF_DAY">Half day</option>
-                <option value="ABSENT">Absent</option>
-                <option value="PAID_LEAVE">Paid leave</option>
-                <option value="UNPAID_LEAVE">Unpaid leave</option>
+                {statuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              <input name="reason" className="input" placeholder="Reason" required />
+              <input name="reason" className="input" placeholder={t("Reason", "कारण")} required />
             </ActionForm>
             {day.overridden && (
               <div className="mt-3">
-                <ActionForm action={clearDayStatus} submitLabel="Back to automatic (from scans)" submitClass="btn-secondary">
+                <ActionForm action={clearDayStatus} submitLabel={t("Back to automatic (from scans)", "वापस अपने-आप (स्कैन से)")} submitClass="btn-secondary">
                   <input type="hidden" name="employeeId" value={emp.id} />
                   <input type="hidden" name="date" value={date} />
                 </ActionForm>
@@ -110,12 +123,12 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
 
       {overrides.length > 0 && (
         <section className="card">
-          <h2 className="mb-2 font-semibold">Edit history</h2>
+          <h2 className="mb-2 font-semibold">{t("Edit history", "बदलाव का इतिहास")}</h2>
           <ul className="flex flex-col gap-1 text-sm">
             {overrides.map((o) => (
               <li key={o.id}>
-                {o.createdAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}: {users.get(o.createdBy) ?? "?"} set{" "}
-                <b>{o.status === "AUTO" ? "automatic" : STATUS_LABEL[o.status]}</b> — {o.reason}
+                {o.createdAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}: {users.get(o.createdBy) ?? "?"} →{" "}
+                <b>{o.status === "AUTO" ? t("automatic", "अपने-आप") : statusLabel(o.status, lang)}</b> — {o.reason}
               </li>
             ))}
           </ul>

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, type CameraHandle } from "@/components/Camera";
-import { beep, speakHindi } from "@/lib/speak";
+import { beep, speak } from "@/lib/speak";
 
 const Liveness = dynamic(() => import("./Liveness"), { ssr: false });
 
@@ -12,13 +12,14 @@ interface Config {
   device: { name: string; site: string; business: string };
   mode: "mock" | "aws";
   liveness: boolean;
+  language: "hi" | "en";
   region: string;
   testEmployees: { id: string; name: string; code: string }[];
 }
 
 type Result = { ok: boolean; title: string; detail?: string };
 
-function Clock() {
+function Clock({ lang }: { lang: "hi" | "en" }) {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     const tick = () => setNow(new Date());
@@ -34,7 +35,7 @@ function Clock() {
     <span>
       {now.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })}
       {" · "}
-      {now.toLocaleDateString("hi-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" })}
+      {now.toLocaleDateString(lang === "en" ? "en-IN" : "hi-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" })}
     </span>
   );
 }
@@ -47,21 +48,23 @@ export function Scanner() {
   const [picking, setPicking] = useState<string | null>(null); // captured image while choosing in test mode
   const [livenessSession, setLivenessSession] = useState<string | null>(null);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lang = config?.language ?? "hi";
+  const m = useCallback((hi: string, en: string) => (lang === "en" ? en : hi), [lang]);
 
   useEffect(() => {
     fetch("/api/scan", { cache: "no-store" })
       .then((r) => (r.status === 401 ? (window.location.reload(), null) : r.json()))
       .then((c) => c && setConfig(c))
-      .catch(() => setResult({ ok: false, title: "इंटरनेट नहीं है", detail: "No internet. Attendance will be entered by the manager." }));
+      .catch(() => setResult({ ok: false, title: "इंटरनेट नहीं है / No internet", detail: "मैनेजर बाद में हाज़िरी लगाएंगे / The manager will enter attendance later" }));
   }, []);
 
   const show = useCallback((r: Result, speech?: string) => {
     setResult(r);
     beep(r.ok);
-    void speakHindi(speech ?? r.title);
+    void speak((speech ?? r.title).replace("✓", ""), lang);
     if (resetTimer.current) clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => setResult(null), 4500);
-  }, []);
+  }, [lang]);
 
   const send = useCallback(
     async (payload: Record<string, unknown>) => {
@@ -72,20 +75,19 @@ export function Scanner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const data = await res.json().catch(() => ({ ok: false, message: "फिर से कोशिश करें" }));
+        const data = await res.json().catch(() => ({ ok: false, message: m("फिर से कोशिश करें", "Please try again") }));
         if (data.ok) {
-          const title = data.duplicate ? "पहले ही दर्ज है" : data.type === "IN" ? "हाज़िरी लग गई ✓" : "छुट्टी दर्ज ✓";
-          show({ ok: true, title, detail: `${data.name} (${data.code}) · ${data.time}` }, data.speech);
+          show({ ok: true, title: data.title, detail: `${data.name} (${data.code}) · ${data.time}` }, data.speech);
         } else {
-          show({ ok: false, title: data.message ?? "फिर से कोशिश करें" });
+          show({ ok: false, title: data.message ?? m("फिर से कोशिश करें", "Please try again") });
         }
       } catch {
-        show({ ok: false, title: "इंटरनेट नहीं है", detail: "मैनेजर से हाज़िरी लगवाएं" });
+        show({ ok: false, title: m("इंटरनेट नहीं है", "No internet"), detail: m("मैनेजर से हाज़िरी लगवाएं", "Ask the manager to mark your attendance") });
       } finally {
         setBusy(false);
       }
     },
-    [show],
+    [show, m],
   );
 
   const start = useCallback(async () => {
@@ -94,15 +96,15 @@ export function Scanner() {
       setBusy(true);
       const r = await fetch("/api/liveness/session", { method: "POST" }).then((x) => x.json()).catch(() => null);
       setBusy(false);
-      if (!r?.sessionId) return show({ ok: false, title: "सर्विस में दिक्कत, फिर से कोशिश करें" });
+      if (!r?.sessionId) return show({ ok: false, title: m("सर्विस में दिक्कत, फिर से कोशिश करें", "Service problem, please try again") });
       setLivenessSession(r.sessionId);
       return;
     }
     const image = cam.current?.capture();
-    if (!image) return show({ ok: false, title: "कैमरा तैयार नहीं है" });
+    if (!image) return show({ ok: false, title: m("कैमरा तैयार नहीं है", "Camera not ready") });
     if (config.mode === "mock") return setPicking(image);
     await send({ image });
-  }, [busy, config, result, picking, livenessSession, send, show]);
+  }, [busy, config, result, picking, livenessSession, send, show, m]);
 
   return (
     <main className="fixed inset-0 flex flex-col bg-black text-white select-none">
@@ -111,7 +113,7 @@ export function Scanner() {
           <div className="font-semibold">{config?.device.business ?? "…"}</div>
           <div className="text-white/70">{config ? `${config.device.site} · ${config.device.name}` : ""}</div>
         </div>
-        <div className="text-right text-white/80"><Clock /></div>
+        <div className="text-right text-white/80"><Clock lang={lang} /></div>
       </header>
 
       {livenessSession && config ? (
@@ -119,6 +121,7 @@ export function Scanner() {
           <Liveness
             sessionId={livenessSession}
             region={config.region}
+            lang={lang}
             onDone={() => {
               const sid = livenessSession;
               setLivenessSession(null);
@@ -126,7 +129,7 @@ export function Scanner() {
             }}
             onError={() => {
               setLivenessSession(null);
-              show({ ok: false, title: "जाँच पूरी नहीं हुई, फिर से कोशिश करें" });
+              show({ ok: false, title: m("जाँच पूरी नहीं हुई, फिर से कोशिश करें", "Check not completed, please try again") });
             }}
           />
         </div>
@@ -137,8 +140,7 @@ export function Scanner() {
             <div className="h-[55%] aspect-[3/4] rounded-[50%] border-4 border-white/70" />
           </div>
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-6 text-center">
-            <div className="text-3xl font-bold">{busy ? "जाँच हो रही है…" : "स्क्रीन छुएं और कैमरे की तरफ़ देखें"}</div>
-            <div className="mt-1 text-white/70">Tap the screen and look at the camera</div>
+            <div className="text-3xl font-bold">{busy ? m("जाँच हो रही है…", "Checking…") : m("स्क्रीन छुएं और कैमरे की तरफ़ देखें", "Tap the screen and look at the camera")}</div>
             {config?.mode === "mock" && <div className="mt-2 inline-block rounded bg-amber-400 px-2 py-0.5 text-sm font-bold text-black">TEST MODE</div>}
           </div>
         </button>
@@ -180,7 +182,7 @@ export function Scanner() {
       )}
 
       <footer className="flex justify-end bg-black/80 px-4 py-2">
-        <Link href="/login?from=scan" className="text-xs text-white/50 underline">Manager login</Link>
+        <Link href="/login?from=scan" className="text-xs text-white/50 underline">{m("मैनेजर लॉग इन", "Manager login")}</Link>
       </footer>
     </main>
   );

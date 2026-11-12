@@ -16,6 +16,11 @@ const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 const step = (s) => console.log("•", s);
+process.on("unhandledRejection", async (e) => {
+  console.error(e);
+  if (shots) await page.screenshot({ path: `${shots}/FAIL.png`, fullPage: true }).catch(() => {});
+  process.exit(1);
+});
 const shot = async (n) => shots && (await page.screenshot({ path: `${shots}/${n}.png`, fullPage: true }));
 
 async function login(phone) {
@@ -27,6 +32,7 @@ async function login(phone) {
   await page.click("button:has-text('Log in')");
 }
 
+try {
 step("owner logs in");
 await login(OWNER);
 await page.waitForURL("**/dashboard");
@@ -53,6 +59,7 @@ await page.click("button:has-text('Save face')");
 await page.waitForSelector("text=Face enrolled");
 
 step("give advance within balance needs no approval");
+await page.click("button[role=tab]:has-text('Advance')");
 await page.click("summary:has-text('Give advance')");
 await page.fill("input[name=amount]", "50000");
 await page.click("button:has-text('Save advance')");
@@ -60,6 +67,7 @@ await page.waitForSelector("text=Advance saved");
 await shot("02-employee");
 
 step("turn on employee web login");
+await page.click("button[role=tab]:has-text('Login / Left')");
 await page.click("button:has-text('Turn on web login')");
 await page.waitForSelector("text=Web login turned on");
 
@@ -91,8 +99,7 @@ step("manager gives big advance -> needs approval");
 await page.waitForTimeout(5000);
 await login("9000000001");
 await page.waitForURL("**/dashboard");
-await page.goto(empUrl);
-await page.click("summary:has-text('Give advance')");
+await page.goto(empUrl + "?advance=1");
 await page.fill("input[name=amount]", "900000");
 await page.click("button:has-text('Save advance')");
 await page.waitForSelector("text=Sent for owner approval");
@@ -120,13 +127,40 @@ await page.click("button:has-text('Approve and lock')");
 await page.waitForSelector("[role=status]:has-text('Salary locked')");
 await shot("05-payroll");
 
+step("Hindi: switch language on phone");
+await page.click("button:has-text('☰')");
+await page.click("button:has-text('हिंदी'):visible");
+await page.waitForSelector("text=सैलरी >> visible=true");
+await shot("06-hindi");
+await page.click("button:has-text('☰')");
+await page.click("button:has-text('English'):visible");
+await page.waitForSelector("text=Salary >> visible=true");
+
+step("open foldable: list and details side by side");
+const fold = await browser.newContext({ viewport: { width: 884, height: 1104 } });
+await fold.addCookies(await ctx.cookies());
+const fp = await fold.newPage();
+fp.on("pageerror", (e) => errors.push(e.message));
+await fp.goto(empUrl);
+await fp.waitForSelector("aside >> text=Ramesh Kumar");
+await fp.waitForSelector("h1:has-text('Ramesh Kumar')");
+if (!(await fp.locator("aside").isVisible())) throw new Error("list pane hidden on foldable");
+if (await fp.locator("button[role=tab]").first().isVisible()) console.log("  (tabs shown in narrow detail pane)");
+if (shots) await fp.screenshot({ path: `${shots}/07-foldable.png` });
+await fold.close();
+
 step("employee portal");
 await page.click("button:has-text('Log out')");
 await login("9123456789");
 await page.waitForURL("**/me");
 await page.waitForSelector("text=Ramesh Kumar");
-await shot("06-me");
+await shot("08-me");
 
+} catch (e) {
+  if (shots) await page.screenshot({ path: `${shots}/FAIL.png`, fullPage: true }).catch(() => {});
+  await browser.close();
+  throw e;
+}
 await browser.close();
 if (errors.length) {
   console.error("Page errors:", errors);

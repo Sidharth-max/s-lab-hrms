@@ -192,3 +192,19 @@ export function nextPunch(
   }
   return { action: "punch", type: "IN", workDate: todayKey };
 }
+
+export const STATUS_LABEL_HI: Record<DerivedStatus, string> = {
+  PRESENT: "हाज़िर",
+  HALF_DAY: "आधा दिन",
+  ABSENT: "ग़ैरहाज़िर",
+  PAID_LEAVE: "सवेतन छुट्टी",
+  UNPAID_LEAVE: "बिना वेतन छुट्टी",
+  WEEKLY_OFF: "साप्ताहिक छुट्टी",
+  HOLIDAY: "त्योहार छुट्टी",
+  FUTURE: "",
+  NOT_EMPLOYED: "",
+};
+
+export function statusLabel(status: DerivedStatus, lang: "en" | "hi"): string {
+  return (lang === "hi" ? STATUS_LABEL_HI : STATUS_LABEL)[status];
+}

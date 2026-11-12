@@ -61,7 +61,7 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
     return a;
   });
   await audit(actor.businessId, actor.id, "advance.create", "Advance", advance.id, { employeeId: emp.id, amount, recoveryMonths, startMonth, goesNegative });
-  revalidatePath(`/employees/${emp.id}`);
+  revalidatePath("/employees", "layout");
   revalidatePath("/advances");
   if (needsApproval) {
     return { ok: true, message: "Balance will go negative. Sent for owner approval (see Approvals).", data: { pending: advance.id } };

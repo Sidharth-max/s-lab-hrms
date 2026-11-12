@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useT } from "./LangProvider";
 
 export interface CameraHandle {
   /** Returns a JPEG data URL of the current frame, or null if the camera is not ready. */
@@ -14,30 +15,36 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     let stream: MediaStream | null = null;
     let cancelled = false;
     (async () => {
       try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera not available. Open the site over https.");
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error(t("Camera not available. Open the site over https.", "कैमरा नहीं मिला। साइट https पर खोलें।"));
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
-        if (cancelled) return stream.getTracks().forEach((t) => t.stop());
+        if (cancelled) return stream.getTracks().forEach((track) => track.stop());
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
         }
       } catch (e) {
-        setError(e instanceof Error && e.name === "NotAllowedError" ? "Camera permission denied. Allow camera access and reload." : (e as Error).message);
+        setError(
+          e instanceof Error && e.name === "NotAllowedError"
+            ? t("Camera permission denied. Allow camera access and reload.", "कैमरे की अनुमति नहीं मिली। अनुमति दें और फिर खोलें।")
+            : (e as Error).message,
+        );
       }
     })();
     return () => {
       cancelled = true;
-      stream?.getTracks().forEach((t) => t.stop());
+      stream?.getTracks().forEach((track) => track.stop());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useImperativeHandle(ref, () => ({

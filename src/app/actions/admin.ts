@@ -153,9 +153,10 @@ export const registerDevice = safe(async (_p: ActionResult, form: FormData): Pro
   const site = await db.site.findFirst({ where: { id: str(form, "siteId"), businessId: actor.businessId, active: true } });
   if (!site) return { error: "Choose a site" };
   const name = str(form, "name") || `${site.name} scanner`;
+  const language = str(form, "language") === "en" ? "en" : "hi";
   const token = randomBytes(32).toString("base64url");
   const device = await db.device.create({
-    data: { businessId: actor.businessId, siteId: site.id, name, tokenHash: hashToken(token), registeredBy: actor.id },
+    data: { businessId: actor.businessId, siteId: site.id, name, language, tokenHash: hashToken(token), registeredBy: actor.id },
   });
   const jar = await cookies();
   jar.set(DEVICE_COOKIE, token, {
@@ -165,7 +166,7 @@ export const registerDevice = safe(async (_p: ActionResult, form: FormData): Pro
     path: "/",
     maxAge: 60 * 60 * 24 * 365 * 10,
   });
-  await audit(actor.businessId, actor.id, "device.register", "Device", device.id, { name, siteId: site.id });
+  await audit(actor.businessId, actor.id, "device.register", "Device", device.id, { name, siteId: site.id, language });
   if (form.get("logout") === "on") {
     await destroySession();
     redirect("/scan");
@@ -182,6 +183,17 @@ export const revokeDevice = safe(async (_p: ActionResult, form: FormData): Promi
   await audit(actor.businessId, actor.id, "device.revoke", "Device", d.id);
   revalidatePath("/devices");
   return { ok: true, message: "Device removed. It can no longer scan." };
+});
+
+export const setDeviceLanguage = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+  const actor = await assertStaff("devices.register");
+  const d = await db.device.findFirst({ where: { id: str(form, "deviceId"), businessId: actor.businessId, revokedAt: null } });
+  if (!d) return { error: "Device not found" };
+  const language = str(form, "language") === "en" ? "en" : "hi";
+  await db.device.update({ where: { id: d.id }, data: { language } });
+  await audit(actor.businessId, actor.id, "device.language", "Device", d.id, { language });
+  revalidatePath("/devices");
+  return { ok: true, message: language === "en" ? "Scanner language: English" : "स्कैनर की भाषा: हिंदी" };
 });
 
 /** Lets a manager leave the scanner screen to log in on this device. */
