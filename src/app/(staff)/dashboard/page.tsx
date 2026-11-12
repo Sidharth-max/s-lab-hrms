@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
+import { env } from "@/lib/env";
 import { employeeScope } from "@/lib/scope";
 import { monthAttendance } from "@/lib/services";
 import { formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
@@ -20,7 +21,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
   const present = rows.filter((r) => r.d.status === "PRESENT" || r.d.status === "HALF_DAY");
   const inside = present.filter((r) => r.d.missingOut);
   const notIn = rows.filter((r) => r.d.status === "ABSENT");
-  const noFace = employees.filter((e) => !e.faceId);
+  // Faces enrolled in test mode must be enrolled again once real AWS face recognition is switched on.
+  const noFace = employees.filter((e) => !e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-")));
   const pending = await db.approvalRequest.count({ where: { businessId: actor.businessId, status: "PENDING" } });
 
   return (

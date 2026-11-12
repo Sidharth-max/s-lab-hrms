@@ -85,7 +85,7 @@ export const awsFace: FaceProvider = {
       if (!faceId) return { ok: false, error: "Face quality too low. Use good light, remove mask or cap, and retry." };
 
       const stale = [previousFaceId, ...matches.filter((m) => m.employeeId === employeeId).map((m) => m.faceId)].filter(
-        (f): f is string => !!f && f !== faceId,
+        (f): f is string => !!f && f !== faceId && !f.startsWith("mock-"),
       );
       if (stale.length) await rekognition().send(new DeleteFacesCommand({ CollectionId, FaceIds: stale }));
       return { ok: true, faceId };

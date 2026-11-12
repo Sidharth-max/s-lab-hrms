@@ -1,0 +1,103 @@
+name: Android APK
+
+# Push to the default branch (main) -> build the APK and publish it as the newest GitHub Release.
+#                  The website's "Download Android app" link (/download) always serves that release,
+#                  and the app shows the "new update" pop-up to everyone on an older version.
+# Other branches -> build the APK and keep it as a workflow artifact only (for testing).
+on:
+  push:
+    paths:
+      - "android/**"
+      - "android-web/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://hrms.s-lab.dev' }}
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 1.0.${{ github.run_number }}
+      IS_RELEASE: ${{ github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+
+      - name: Sync web shell into Android project
+        run: npx cap sync android
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not set. Building a debug-signed test APK. Updates will NOT install over an older copy until the release key is added (see DEPLOYMENT.md)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            ./gradlew --no-daemon assembleRelease -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/s-lab-hrms.apk"
+          else
+            ./gradlew --no-daemon assembleDebug -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/s-lab-hrms.apk"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s-lab-hrms-${{ env.VERSION_NAME }}
+          path: s-lab-hrms.apk
+
+      - name: Publish release (default branch only)
+        if: env.IS_RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTE="Android app ${VERSION_NAME} for ${APP_URL}. Built from ${GITHUB_SHA::7}."
+          if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
+            NOTE="$NOTE TEST BUILD (debug key): uninstall the old app before installing this one."
+          fi
+          gh release create "apk-v${VERSION_CODE}" s-lab-hrms.apk \
+            --title "${VERSION_NAME}" \
+            --notes "$NOTE" \
+            --target "$GITHUB_SHA" \
+            --latest

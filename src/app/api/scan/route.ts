@@ -88,7 +88,7 @@ export async function POST(req: Request) {
   }
 
   const employee = await db.employee.findFirst({ where: { id: match.employeeId, businessId: device.businessId, active: true } });
-  if (!employee || !employee.faceId) return NextResponse.json({ ok: false, message: "पहचान नहीं हुई, मैनेजर से मिलें" });
+  if (!employee || !employee.faceId || (env.faceProvider === "aws" && employee.faceId.startsWith("mock-"))) return NextResponse.json({ ok: false, message: "पहचान नहीं हुई, मैनेजर से मिलें" });
 
   const now = new Date();
   const result = await db.$transaction(async (tx) => {

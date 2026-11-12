@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+android
+android-web
+e2e
+backups
+*.md
+!README.md
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.apk
