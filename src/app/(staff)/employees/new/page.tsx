@@ -14,6 +14,7 @@ export default async function NewEmployee() {
   const { t } = await getT();
   const sites = await db.site.findMany({ where: { ...siteWhere(actor), active: true }, orderBy: { name: "asc" } });
   const count = await db.employee.count({ where: { businessId: actor.businessId } });
+  const business = await db.business.findUniqueOrThrow({ where: { id: actor.businessId } });
   if (sites.length === 0) {
     return (
       <div className="card">
@@ -29,6 +30,7 @@ export default async function NewEmployee() {
           sites={sites}
           isNew
           canSalary={can(actor, "salary.edit")}
+          businessWeeklyOff={business.weeklyOffDays}
           values={{ joinedOn: istDateKey(new Date()), code: `E${String(count + 1).padStart(3, "0")}` }}
         />
       </ActionForm>

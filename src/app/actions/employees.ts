@@ -12,6 +12,14 @@ import { can, canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { dateKeyToDb } from "@/lib/time";
 
+function parseWeeklyOff(form: FormData) {
+  const customWeeklyOff = str(form, "weeklyOffMode") === "custom";
+  const weeklyOffDays = customWeeklyOff
+    ? [...new Set(form.getAll("empWeeklyOff").map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort()
+    : [];
+  return { customWeeklyOff, weeklyOffDays };
+}
+
 async function loadEmployee(id: string, businessId: string) {
   const e = await db.employee.findFirst({ where: { id, businessId } });
   if (!e) throw new Error("Employee not found");
@@ -57,7 +65,7 @@ export const createEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   if (await db.employee.findFirst({ where: { businessId: actor.businessId, code } })) return { error: "This employee code is already used" };
 
   const emp = await db.employee.create({
-    data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), ...payData },
+    data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), ...payData, ...parseWeeklyOff(form) },
   });
   await audit(actor.businessId, actor.id, "employee.create", "Employee", emp.id, { name, code });
   revalidatePath("/employees", "layout");
@@ -79,7 +87,7 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   const site = await db.site.findFirst({ where: { id: siteId, businessId: actor.businessId } });
   if (!site || !canSeeSite(actor, site.id)) return { error: "Choose a site" };
 
-  const data: Prisma.EmployeeUpdateInput = { name, phone, site: { connect: { id: siteId } }, joinedOn: dateKeyToDb(joinedOn) };
+  const data: Prisma.EmployeeUpdateInput = { name, phone, site: { connect: { id: siteId } }, joinedOn: dateKeyToDb(joinedOn), ...parseWeeklyOff(form) };
   if (form.has("wage")) {
     if (!can(actor, "salary.edit")) return { error: "You cannot change salary" };
     const pay = parsePay(form);

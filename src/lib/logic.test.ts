@@ -188,3 +188,39 @@ describe("override AUTO", () => {
     expect(days[4].overridden).toBe(false);
   });
 });
+
+describe("per-weekday rules", () => {
+  const byWeekday = Array.from({ length: 7 }, (_, i) =>
+    i === 0 ? { halfDayBelowMins: 0, anyScanFullDay: true } : { halfDayBelowMins: 240, anyScanFullDay: false },
+  );
+  const rules = { weeklyOffDays: [], holidays: new Set<string>(), halfDayBelowMins: 240, byWeekday };
+  const ctx = { today: "2026-11-30", joinedOn: "2026-01-01", leftOn: null };
+
+  it("counts a short Sunday shift as a full day", () => {
+    // 8 Nov 2026 is a Sunday: 11:00 to 13:00 is only 2 hours.
+    const days = deriveMonth("2026-11", [punch("IN", "2026-11-08", "11:00"), punch("OUT", "2026-11-08", "13:00")], [], rules, ctx);
+    expect(days[7].status).toBe("PRESENT");
+  });
+
+  it("still applies the half-day rule on other days", () => {
+    const days = deriveMonth("2026-11", [punch("IN", "2026-11-09", "11:00"), punch("OUT", "2026-11-09", "13:00")], [], rules, ctx);
+    expect(days[8].status).toBe("HALF_DAY");
+  });
+
+  it("treats a Sunday without scans as absent when Sunday is a working day", () => {
+    const days = deriveMonth("2026-11", [], [], rules, ctx);
+    expect(days[7].status).toBe("ABSENT");
+  });
+});
+
+describe("day rules parsing", () => {
+  it("falls back to defaults for bad data", async () => {
+    const { parseDayRules, effectiveWeeklyOff } = await import("./day-rules");
+    const r = parseDayRules([{ open: "25:00", close: "15:00", halfDayBelowMins: -5, anyScanFullDay: "yes" }]);
+    expect(r[0]).toEqual({ open: "09:00", close: "15:00", halfDayBelowMins: 0, anyScanFullDay: true });
+    expect(r).toHaveLength(7);
+    expect(parseDayRules(null)[1].halfDayBelowMins).toBe(240);
+    expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: true, weeklyOffDays: [2] })).toEqual([2]);
+    expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: false, weeklyOffDays: [2] })).toEqual([0]);
+  });
+});

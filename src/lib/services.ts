@@ -3,6 +3,7 @@ import type { Business, Employee, Prisma } from "@prisma/client";
 import { countDays, deriveMonth, type DayResult } from "./attendance";
 import { db } from "./db";
 import { calculatePay, payableDays, grossPay, type AdvanceInput } from "./payroll";
+import { effectiveWeeklyOff, parseDayRules } from "./day-rules";
 import { daysInMonth, dbToDateKey, dateKeyToDb, istDateKey, istMonthKey, monthDates } from "./time";
 
 type Tx = Prisma.TransactionClient;
@@ -28,6 +29,7 @@ export async function businessRules(businessId: string, month: string, tx: Tx = 
       weeklyOffDays: business.weeklyOffDays,
       holidays: new Set(holidays.map((h) => dbToDateKey(h.date))),
       halfDayBelowMins: business.halfDayBelowMins,
+      byWeekday: parseDayRules(business.dayRules),
     },
   };
 }
@@ -35,7 +37,7 @@ export async function businessRules(businessId: string, month: string, tx: Tx = 
 export async function monthAttendance(
   businessId: string,
   month: string,
-  employees: Pick<Employee, "id" | "joinedOn" | "leftOn">[],
+  employees: Pick<Employee, "id" | "joinedOn" | "leftOn" | "customWeeklyOff" | "weeklyOffDays">[],
   tx: Tx = db,
 ): Promise<{ business: Business; days: Map<string, DayResult[]> }> {
   const { business, rules } = await businessRules(businessId, month, tx);
@@ -54,7 +56,7 @@ export async function monthAttendance(
         month,
         punches.filter((p) => p.employeeId === e.id).map((p) => ({ type: p.type, at: p.at, workDate: dbToDateKey(p.workDate) })),
         overrides.filter((o) => o.employeeId === e.id).map((o) => ({ workDate: dbToDateKey(o.workDate), status: o.status, createdAt: o.createdAt })),
-        rules,
+        { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e) },
         { today, joinedOn: dbToDateKey(e.joinedOn), leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null },
       ),
     );

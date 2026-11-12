@@ -18,8 +18,9 @@ model Business {
   createdAt DateTime @default(now())
 
   // Attendance rules
-  weeklyOffDays      Int[] @default([0]) // 0 = Sunday ... 6 = Saturday
-  halfDayBelowMins   Int   @default(240) // worked less than this = half day (0 disables)
+  weeklyOffDays      Int[] @default([]) // default weekly off for staff, 0 = Sunday ... 6 = Saturday
+  halfDayBelowMins   Int   @default(240) // fallback only; per-day rules are in dayRules
+  dayRules           Json? // per-weekday schedule, see src/lib/day-rules.ts (null = defaults)
   duplicateScanMins  Int   @default(2) // repeat scans inside this window are ignored
   maxShiftHours      Int   @default(16) // an open IN older than this is not closed by the next scan
 
@@ -125,6 +126,9 @@ model Employee {
   basicPercent Int      @default(100) // share of earned wage treated as basic for PF
   pfEnabled    Boolean  @default(false)
   esiEnabled   Boolean  @default(false)
+
+  customWeeklyOff Boolean @default(false) // true = use weeklyOffDays below instead of the business default
+  weeklyOffDays   Int[]   @default([])
 
   faceId         String? // Rekognition FaceId (or mock id)
   faceEnrolledAt DateTime?
