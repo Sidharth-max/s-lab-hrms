@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { useT } from "./LangProvider";
 
 export interface CameraHandle {
   /** Returns a JPEG data URL of the current frame, or null if the camera is not ready. */
@@ -15,14 +14,13 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const t = useT();
 
   useEffect(() => {
     let stream: MediaStream | null = null;
     let cancelled = false;
     (async () => {
       try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error(t("Camera not available. Open the site over https.", "कैमरा नहीं मिला। साइट https पर खोलें।"));
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera not available. Open the site over https.");
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
@@ -35,7 +33,7 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
       } catch (e) {
         setError(
           e instanceof Error && e.name === "NotAllowedError"
-            ? t("Camera permission denied. Allow camera access and reload.", "कैमरे की अनुमति नहीं मिली। अनुमति दें और फिर खोलें।")
+            ? "Camera permission denied. Allow camera access and reload."
             : (e as Error).message,
         );
       }
@@ -44,7 +42,6 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
       cancelled = true;
       stream?.getTracks().forEach((track) => track.stop());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useImperativeHandle(ref, () => ({

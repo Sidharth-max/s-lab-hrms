@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { UpdateChecker } from "@/components/UpdateChecker";
 import { Toaster } from "@/components/Toaster";
-import { LangProvider } from "@/components/LangProvider";
-import { getLang } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
   title: "S-Lab HRMS",
@@ -14,19 +13,16 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1f6feb",
+  themeColor: "#171717",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const lang = await getLang();
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang={lang}>
+    <html lang="en" className={GeistSans.variable}>
       <body className="min-h-dvh antialiased">
-        <LangProvider lang={lang}>
-          {children}
-          <UpdateChecker />
-          <Toaster />
-        </LangProvider>
+        {children}
+        <UpdateChecker />
+        <Toaster />
       </body>
     </html>
   );

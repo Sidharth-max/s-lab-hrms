@@ -87,13 +87,13 @@ await page.waitForTimeout(1500);
 await shot("03-scan");
 await page.click("button[aria-label='Scan face']");
 await page.click("button:has-text('Ramesh Kumar')");
-await page.waitForSelector("text=हाज़िरी लग गई");
+await page.waitForSelector("text=Checked in");
 await shot("04-scan-ok");
 await page.waitForTimeout(5000);
 step("repeat scan is ignored");
 await page.click("button[aria-label='Scan face']");
 await page.click("button:has-text('Ramesh Kumar')");
-await page.waitForSelector("text=पहले ही दर्ज है");
+await page.waitForSelector("text=Already marked");
 
 step("manager gives big advance -> needs approval");
 await page.waitForTimeout(5000);
@@ -116,7 +116,7 @@ await page.goto(`${BASE}/settings`);
 await page.waitForURL("**/dashboard?denied=1");
 
 step("owner prepares and locks October salary");
-await page.click("button:has-text('Log out')");
+await page.click("button[aria-label^='Log out']");
 await login(OWNER);
 await page.waitForURL("**/dashboard");
 await page.goto(`${BASE}/payroll/2026-10`);
@@ -127,14 +127,11 @@ await page.click("button:has-text('Approve and lock')");
 await page.waitForSelector("[role=status]:has-text('Salary locked')");
 await shot("05-payroll");
 
-step("Hindi: switch language on phone");
-await page.click("button:has-text('☰')");
-await page.click("button:has-text('हिंदी'):visible");
-await page.waitForSelector("text=सैलरी >> visible=true");
-await shot("06-hindi");
-await page.click("button:has-text('☰')");
-await page.click("button:has-text('English'):visible");
-await page.waitForSelector("text=Salary >> visible=true");
+step("phone menu opens and has no language switch");
+await page.click("button[aria-label=More]");
+await page.waitForSelector("text=Download Android app >> visible=true");
+if (await page.locator("text=हिंदी").count()) throw new Error("Hindi still present");
+await page.click("button[aria-label=More]");
 
 step("open foldable: list and details side by side");
 const fold = await browser.newContext({ viewport: { width: 884, height: 1104 } });
@@ -160,7 +157,7 @@ await page.reload();
 if (!(await page.isChecked("input[name=off_6]"))) throw new Error("Saturday weekly off not saved");
 
 step("employee portal");
-await page.click("button:has-text('Log out')");
+await page.click("button[aria-label^='Log out']");
 await login("9123456789");
 await page.waitForURL("**/me");
 await page.waitForSelector("text=Ramesh Kumar");

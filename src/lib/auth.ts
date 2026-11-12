@@ -5,12 +5,11 @@ import { redirect } from "next/navigation";
 import { db } from "./db";
 import { env, requireAuthSecret } from "./env";
 import { can, type Actor, type Permission } from "./permissions";
-import { sendOtpSms } from "./sms";
+import { OTP_MINUTES, sendOtpSms } from "./sms";
 
 export const SESSION_COOKIE = "hrms_session";
 export const DEVICE_COOKIE = "hrms_device";
 const SESSION_DAYS = 30;
-const OTP_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_MAX_SENDS_PER_15_MIN = 5;
 

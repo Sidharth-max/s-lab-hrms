@@ -15,7 +15,7 @@ face scanner), and a view-only web login for employees.
 | Owner (OP) | Web, Android app | Everything; approves negative advances (in app, or OTP to their mobile); reopens locked months |
 | Manager | Web, Android app | What the owner allows (per-manager permissions and sites) |
 | Employee | Web only | View own salary structure, attendance, advances, payslips |
-| Worker at the gate | Registered tablet / phone | Look at the camera: first scan IN, next scan OUT, Hindi voice confirmation |
+| Worker at the gate | Registered tablet / phone | Look at the camera: first scan IN, next scan OUT, voice confirmation |
 
 A device becomes a scanner after a one-time owner/manager login (Devices > Make this device a scanner).
 If the tablet or internet is down, a permitted manager adds the missed punch or day status later; every edit

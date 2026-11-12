@@ -8,7 +8,7 @@ Written for the person or AI agent operating the server. Production URL: **https
 | Part | Where | How it updates |
 |---|---|---|
 | Website + API (Next.js) | Server, Docker container `app` | Push to `main` → auto-deploy (CI must pass) |
-| Database (Postgres 16) | Server, Docker container `db`, volume `s-lab-hrms_pgdata` | Migrations run on every deploy |
+| Database (Postgres) | External server via `HRMS_DATABASE_URL` (production), or the bundled Docker container `db` | Migrations run on every deploy |
 | Public access | Cloudflare tunnel (`tunnel` container, or cloudflared already on the host) | n/a |
 | Android app (APK) | GitHub Releases, built by `.github/workflows/android.yml` | Push to `main` that touches `android/`, `android-web/`, `capacitor.config.ts` or `package*.json` |
 
@@ -82,10 +82,12 @@ nightly backups: `30 2 * * * cd /path/to/s-lab-hrms && ./deploy.sh backup >/dev/
 | Variable | Meaning |
 |---|---|
 | `APP_URL` | Public URL, `https://hrms.s-lab.dev` |
-| `AUTH_SECRET`, `POSTGRES_PASSWORD` | Generated on first run. Never change `POSTGRES_PASSWORD` after the DB exists. |
+| `AUTH_SECRET`, `POSTGRES_PASSWORD` | Generated on first run. `POSTGRES_PASSWORD` is for the bundled database only; never change it after that DB exists. |
+| `HRMS_DATABASE_URL` | External Postgres, e.g. `postgresql://hrms:<password>@15.207.31.179:5432/hrms`. When set, the app, migrations and backups use it instead of the bundled `db` container. |
+| `APP_PORT` | Local port the app listens on (production: `3005`, because 3000 is used by another app). |
 | `SMS_PROVIDER` | `console` (OTP only in logs) or `fast2sms` |
 | `FAST2SMS_API_KEY` | Fast2SMS Dev API key (secret) |
-| `FAST2SMS_MODE` | `otp` (uses `FAST2SMS_OTP_ID`, the OTP template ID) or `dlt` (uses `FAST2SMS_SENDER_ID` and `FAST2SMS_DLT_MESSAGE_ID`; the template's `{#var#}` is the OTP) |
+| `FAST2SMS_MODE` (production: `dlt`, sender `GNGRUH`, message `204044`) | `otp` (uses `FAST2SMS_OTP_ID`, the OTP template ID) or `dlt` (uses `FAST2SMS_SENDER_ID` and `FAST2SMS_DLT_MESSAGE_ID`; the template's `{#var#}` is the OTP) |
 | `OTP_SHOW_IN_UI` | `true` shows the OTP on screen. **Testing only; set `false` before real use.** |
 | `FACE_PROVIDER` | `mock` (test mode) or `aws`. See `AWS_SETUP.md`. |
 | `FACE_LIVENESS`, `AWS_LIVENESS_ROLE_ARN` | Anti-spoof liveness check (optional) |
@@ -102,6 +104,21 @@ nightly backups: `30 2 * * * cd /path/to/s-lab-hrms && ./deploy.sh backup >/dev/
   debug-signed test APK, and each new test APK must be installed after uninstalling the previous one.
   Never lose the key: apps signed with a different key cannot be updated in place.
 - Optional repository variable `APP_URL` (Settings > Variables) changes which site the app opens.
+
+## Server checkout must match GitHub
+
+Auto-deploy only fast-forwards to GitHub `main`. Never commit on the server: put every change on GitHub
+(pull request into `main`). If the server has local commits, deploys stop with an error. After those changes
+are on GitHub, reset the server copy (this keeps `.env.production`, which is not in git):
+
+```bash
+cd ~/s-lab-hrms
+git fetch origin main
+git status --short          # only untracked files such as .env.production should be listed
+git reset --hard origin/main
+rm -f docker-compose.override.yml .autodeploy/failed-sha   # the override is no longer needed
+./deploy.sh --no-pull
+```
 
 ## Troubleshooting
 

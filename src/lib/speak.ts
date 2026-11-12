@@ -2,9 +2,9 @@
 
 import { Capacitor } from "@capacitor/core";
 
-/** Speaks text in Hindi or English. Uses the phone's text-to-speech in the Android app, the browser voice on the web. */
-export async function speak(text: string, lang: "hi" | "en" = "hi") {
-  const locale = lang === "en" ? "en-IN" : "hi-IN";
+/** Speaks an English confirmation. Uses the phone's text-to-speech in the Android app, the browser voice on the web. */
+export async function speak(text: string) {
+  const locale = "en-IN";
   try {
     if (Capacitor.isNativePlatform()) {
       const { TextToSpeech } = await import("@capacitor-community/text-to-speech");

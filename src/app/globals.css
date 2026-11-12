@@ -1,57 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f6f7f9;
+  /* Only charcoal, white, red (errors) and green (success). Greys are tints of charcoal. */
+  --bg: #fafafa;
   --card: #ffffff;
-  --text: #1a1d23;
-  --muted: #5f6672;
-  --line: #e3e6ea;
-  --brand: #1f6feb;
-  --brand-dark: #1857c0;
+  --text: #171717;
+  --muted: #666666;
+  --line: #e5e5e5;
+  --soft: #f4f4f4;
+  --brand: #171717;
+  --brand-dark: #000000;
+  --red: #dc2626;
+  --green: #16a34a;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-[var(--line)] bg-[var(--card)] p-4 sm:p-5;
+    @apply rounded-lg border border-[var(--line)] bg-[var(--card)] p-4 sm:p-5;
   }
   .input {
-    @apply w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-base outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-blue-100;
+    @apply h-10 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-[var(--text)] focus:ring-2 focus:ring-neutral-200;
+  }
+  select.input {
+    @apply pr-8;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-[var(--muted)];
+    @apply mb-1.5 block text-[13px] font-medium text-[var(--muted)];
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)];
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50 bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)];
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 border border-[var(--line)] bg-white text-[var(--text)] hover:bg-gray-50;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50 border border-[var(--line)] bg-white text-[var(--text)] hover:bg-[var(--soft)];
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 bg-red-600 text-white hover:bg-red-700;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50 bg-[var(--red)] text-white hover:bg-red-700;
   }
   .table {
     @apply w-full text-left text-sm;
   }
   .table th {
-    @apply border-b border-[var(--line)] px-3 py-2 font-medium whitespace-nowrap text-[var(--muted)];
+    @apply border-b border-[var(--line)] px-3 py-2.5 text-xs font-medium whitespace-nowrap text-[var(--muted)];
   }
   .table td {
-    @apply border-b border-[var(--line)] px-3 py-2 align-top;
+    @apply border-b border-[var(--line)] px-3 py-2.5 align-middle;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
   }
   .badge {
-    @apply inline-block rounded-full px-2 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+  }
+  .badge-neutral {
+    @apply border-[var(--line)] bg-[var(--soft)] text-[var(--text)];
+  }
+  .badge-red {
+    @apply border-red-200 bg-red-50 text-[var(--red)];
+  }
+  .badge-green {
+    @apply border-green-200 bg-green-50 text-[var(--green)];
+  }
+  .notice {
+    @apply rounded-lg border border-[var(--line)] bg-white p-3 text-sm;
+  }
+  .notice-red {
+    @apply rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800;
+  }
+  .notice-green {
+    @apply rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800;
+  }
+  .link {
+    @apply font-medium text-[var(--text)] underline decoration-neutral-300 underline-offset-4 hover:decoration-[var(--text)];
   }
   .h1 {
-    @apply text-xl font-bold sm:text-2xl;
+    @apply text-xl font-semibold tracking-tight sm:text-2xl;
   }
   .muted {
     @apply text-sm text-[var(--muted)];

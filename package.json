@@ -26,6 +26,8 @@
     "@capacitor/core": "^8.6.0",
     "@prisma/client": "^6.19.3",
     "aws-amplify": "^6.22.2",
+    "geist": "^1.9.2",
+    "lucide-react": "^1.72.0",
     "next": "16.4.6",
     "prisma": "^6.19.3",
     "react": "19.3.0",
