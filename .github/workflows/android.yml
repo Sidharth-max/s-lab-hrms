@@ -1,6 +1,6 @@
 name: Android APK
 
-# Push to the default branch (main) -> build the APK and publish it as the newest GitHub Release.
+# Push to main -> build the APK and publish it as the newest GitHub Release.
 #                  The website's "Download Android app" link (/download) always serves that release,
 #                  and the app shows the "new update" pop-up to everyone on an older version.
 # Other branches -> build the APK and keep it as a workflow artifact only (for testing).
@@ -30,7 +30,7 @@ jobs:
       APP_URL: ${{ vars.APP_URL || 'https://hrms.s-lab.dev' }}
       VERSION_CODE: ${{ github.run_number }}
       VERSION_NAME: 1.0.${{ github.run_number }}
-      IS_RELEASE: ${{ github.ref_name == github.event.repository.default_branch }}
+      IS_RELEASE: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -86,7 +86,7 @@ jobs:
           name: s-lab-hrms-${{ env.VERSION_NAME }}
           path: s-lab-hrms.apk
 
-      - name: Publish release (default branch only)
+      - name: Publish release (main only)
         if: env.IS_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
