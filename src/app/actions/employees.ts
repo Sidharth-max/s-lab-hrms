@@ -44,7 +44,8 @@ function parsePay(form: FormData) {
   };
 }
 
-export const createEmployee = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+/** Creates the employee; returns its id (used by the website action below and the Android app API). */
+export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
   const name = str(form, "name");
   const code = str(form, "code").toUpperCase();
@@ -69,8 +70,14 @@ export const createEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   });
   await audit(actor.businessId, actor.id, "employee.create", "Employee", emp.id, { name, code });
   revalidatePath("/employees", "layout");
-  redirect(`/employees/${emp.id}?created=1`);
+  return { ok: true, message: "Employee added", data: { id: emp.id } };
 });
+
+export async function createEmployee(prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const r = await createEmployeeCore(prev, form);
+  if (r?.ok && typeof r.data?.id === "string") redirect(`/employees/${r.data.id}?created=1`);
+  return r;
+}
 
 export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
