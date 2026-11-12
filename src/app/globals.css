@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1a1d23;
+  --muted: #5f6672;
+  --line: #e3e6ea;
+  --brand: #1f6feb;
+  --brand-dark: #1857c0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-[var(--line)] bg-[var(--card)] p-4 sm:p-5;
+  }
+  .input {
+    @apply w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-base outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-blue-100;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-[var(--muted)];
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)];
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 border border-[var(--line)] bg-white text-[var(--text)] hover:bg-gray-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 bg-red-600 text-white hover:bg-red-700;
+  }
+  .table {
+    @apply w-full text-left text-sm;
+  }
+  .table th {
+    @apply border-b border-[var(--line)] px-3 py-2 font-medium whitespace-nowrap text-[var(--muted)];
+  }
+  .table td {
+    @apply border-b border-[var(--line)] px-3 py-2 align-top;
+  }
+  .badge {
+    @apply inline-block rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  .h1 {
+    @apply text-xl font-bold sm:text-2xl;
+  }
+  .muted {
+    @apply text-sm text-[var(--muted)];
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

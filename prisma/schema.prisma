@@ -1,0 +1,372 @@
+// S-Lab HRMS database schema.
+// Money is stored in paise (integer) to avoid rounding bugs.
+// Attendance punches and edits are append-only: nothing is deleted, edits are new rows.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  // Attendance rules
+  weeklyOffDays      Int[] @default([0]) // 0 = Sunday ... 6 = Saturday
+  halfDayBelowMins   Int   @default(240) // worked less than this = half day (0 disables)
+  duplicateScanMins  Int   @default(2) // repeat scans inside this window are ignored
+  maxShiftHours      Int   @default(16) // an open IN older than this is not closed by the next scan
+
+  // Statutory rates (basis points: 1200 = 12.00%)
+  pfEmployeeBps   Int @default(1200)
+  pfEmployerBps   Int @default(1200)
+  pfWageCeiling   Int @default(1500000) // paise, Rs 15,000
+  esiEmployeeBps  Int @default(75)
+  esiEmployerBps  Int @default(325)
+
+  sites       Site[]
+  users       User[]
+  employees   Employee[]
+  devices     Device[]
+  holidays    Holiday[]
+  payrollRuns PayrollRun[]
+  approvals   ApprovalRequest[]
+  auditLogs   AuditLog[]
+}
+
+model Site {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  business  Business   @relation(fields: [businessId], references: [id])
+  employees Employee[]
+  devices   Device[]
+
+  @@unique([businessId, name])
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  EMPLOYEE
+}
+
+model User {
+  id          String   @id @default(cuid())
+  businessId  String
+  phone       String   @unique // 10 digit Indian mobile, no +91
+  name        String
+  role        Role
+  permissions String[] @default([]) // only used for MANAGER
+  siteIds     String[] @default([]) // MANAGER site scope, empty = all sites
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  business   Business  @relation(fields: [businessId], references: [id])
+  employee   Employee? // set when role = EMPLOYEE
+  sessions   Session[]
+
+  @@index([businessId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  purpose   String // "login" | "approval:<approvalId>"
+  codeHash  String
+  attempts  Int      @default(0)
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+}
+
+enum WageType {
+  MONTHLY
+  DAILY
+}
+
+model Employee {
+  id         String    @id @default(cuid())
+  businessId String
+  siteId     String
+  userId     String?   @unique // web login for view-only portal
+  code       String // short employee code, unique per business
+  name       String
+  phone      String?
+  joinedOn   DateTime  @db.Date
+  leftOn     DateTime? @db.Date
+  active     Boolean   @default(true)
+
+  wageType     WageType
+  monthlyWage  Int      @default(0) // paise, used when MONTHLY
+  dailyWage    Int      @default(0) // paise, used when DAILY
+  basicPercent Int      @default(100) // share of earned wage treated as basic for PF
+  pfEnabled    Boolean  @default(false)
+  esiEnabled   Boolean  @default(false)
+
+  faceId         String? // Rekognition FaceId (or mock id)
+  faceEnrolledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business      Business           @relation(fields: [businessId], references: [id])
+  site          Site               @relation(fields: [siteId], references: [id])
+  user          User?              @relation(fields: [userId], references: [id])
+  punches       AttendancePunch[]
+  dayOverrides  DayOverride[]
+  advances      Advance[]
+  adjustments   Adjustment[]
+  payrollLines  PayrollLine[]
+
+  @@unique([businessId, code])
+  @@index([businessId, siteId])
+}
+
+model Device {
+  id           String    @id @default(cuid())
+  businessId   String
+  siteId       String
+  name         String
+  tokenHash    String    @unique
+  registeredBy String
+  createdAt    DateTime  @default(now())
+  lastSeenAt   DateTime?
+  revokedAt    DateTime?
+
+  business Business @relation(fields: [businessId], references: [id])
+  site     Site     @relation(fields: [siteId], references: [id])
+}
+
+model Holiday {
+  id         String   @id @default(cuid())
+  businessId String
+  date       DateTime @db.Date
+  name       String
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, date])
+}
+
+enum PunchType {
+  IN
+  OUT
+}
+
+enum PunchSource {
+  FACE
+  MANUAL
+}
+
+model AttendancePunch {
+  id         String      @id @default(cuid())
+  businessId String
+  employeeId String
+  type       PunchType
+  at         DateTime
+  workDate   DateTime    @db.Date // IST date of the shift this punch belongs to
+  source     PunchSource
+  deviceId   String?
+  score      Float? // face similarity
+  liveness   Float? // liveness confidence when used
+  reason     String? // required for MANUAL
+  createdBy  String? // user id for MANUAL
+  createdAt  DateTime    @default(now())
+  voidedAt   DateTime?
+  voidedBy   String?
+  voidReason String?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, workDate])
+  @@index([businessId, workDate])
+}
+
+enum DayStatus {
+  PRESENT
+  HALF_DAY
+  ABSENT
+  PAID_LEAVE
+  UNPAID_LEAVE
+  AUTO // back to automatic (from scans)
+}
+
+// Manual decision for a day. The newest row for (employee, date) wins; older rows stay as history.
+model DayOverride {
+  id         String    @id @default(cuid())
+  employeeId String
+  workDate   DateTime  @db.Date
+  status     DayStatus
+  reason     String
+  createdBy  String
+  createdAt  DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, workDate])
+}
+
+enum AdvanceStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  REJECTED
+  CLEARED
+}
+
+model Advance {
+  id             String        @id @default(cuid())
+  businessId     String
+  employeeId     String
+  amount         Int // paise
+  givenOn        DateTime      @db.Date
+  recoveryMonths Int           @default(1) // 1 = full at month end
+  startMonth     String // "YYYY-MM", first salary month to recover from
+  note           String?
+  status         AdvanceStatus @default(ACTIVE)
+  createdBy      String
+  approvedBy     String?
+  createdAt      DateTime      @default(now())
+
+  employee   Employee          @relation(fields: [employeeId], references: [id])
+  recoveries AdvanceRecovery[]
+
+  @@index([employeeId, status])
+}
+
+model AdvanceRecovery {
+  id            String   @id @default(cuid())
+  advanceId     String
+  payrollLineId String
+  amount        Int // paise
+  createdAt     DateTime @default(now())
+
+  advance     Advance     @relation(fields: [advanceId], references: [id])
+  payrollLine PayrollLine @relation(fields: [payrollLineId], references: [id], onDelete: Cascade)
+}
+
+// One-off earning (+) or deduction (-) applied to a salary month, e.g. a fix after a month was locked.
+model Adjustment {
+  id         String   @id @default(cuid())
+  employeeId String
+  month      String // "YYYY-MM"
+  amount     Int // paise, positive = add, negative = deduct
+  reason     String
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, month])
+}
+
+enum PayrollStatus {
+  DRAFT
+  LOCKED
+}
+
+model PayrollRun {
+  id         String        @id @default(cuid())
+  businessId String
+  month      String // "YYYY-MM"
+  status     PayrollStatus @default(DRAFT)
+  lockedBy   String?
+  lockedAt   DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  business Business      @relation(fields: [businessId], references: [id])
+  lines    PayrollLine[]
+
+  @@unique([businessId, month])
+}
+
+model PayrollLine {
+  id           String   @id @default(cuid())
+  runId        String
+  employeeId   String
+  wageType     WageType
+  rate         Int // monthly or daily wage, paise
+  daysInMonth  Int
+  payableDays  Float
+  presentDays  Float
+  paidOffDays  Float
+  gross        Int
+  adjustments  Int
+  pfEmployee   Int
+  pfEmployer   Int
+  esiEmployee  Int
+  esiEmployer  Int
+  advanceRecovered Int
+  net          Int
+  paidAmount   Int      @default(0)
+  paidOn       DateTime? @db.Date
+  paymentMode  String?
+  paymentRef   String?
+  createdAt    DateTime @default(now())
+
+  run        PayrollRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employee   Employee          @relation(fields: [employeeId], references: [id])
+  recoveries AdvanceRecovery[]
+
+  @@unique([runId, employeeId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ApprovalRequest {
+  id          String         @id @default(cuid())
+  businessId  String
+  kind        String // "advance"
+  refId       String
+  summary     String
+  requestedBy String
+  status      ApprovalStatus @default(PENDING)
+  decidedBy   String?
+  decidedAt   DateTime?
+  createdAt   DateTime       @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, status])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  actorId    String?
+  action     String
+  entity     String
+  entityId   String?
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, createdAt])
+}
