@@ -6,7 +6,8 @@ import { env } from "@/lib/env";
 import { getT } from "@/lib/i18n-server";
 import { employeeScope } from "@/lib/scope";
 import { monthAttendance } from "@/lib/services";
-import { formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
+import { formatDateKey, formatIstTime, istDateKey, weekday } from "@/lib/time";
+import { parseDayRules } from "@/lib/day-rules";
 
 export default async function Dashboard({ searchParams }: PageProps<"/dashboard">) {
   const actor = await requireStaff();
@@ -25,7 +26,12 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
   const notIn = rows.filter((r) => r.d.status === "ABSENT");
   // Faces enrolled in test mode must be enrolled again once real AWS face recognition is switched on.
   const noFace = employees.filter((e) => !e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-")));
-  const pending = await db.approvalRequest.count({ where: { businessId: actor.businessId, status: "PENDING" } });
+  const [pending, business] = await Promise.all([
+    db.approvalRequest.count({ where: { businessId: actor.businessId, status: "PENDING" } }),
+    db.business.findUniqueOrThrow({ where: { id: actor.businessId } }),
+  ]);
+  const todayRule = parseDayRules(business.dayRules)[weekday(today)];
+  const offToday = business.weeklyOffDays.includes(weekday(today));
 
   return (
     <div className="flex flex-col gap-4">
@@ -36,7 +42,12 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
       )}
       <div>
         <h1 className="h1">{t("Today", "आज")} · {formatDateKey(today)}</h1>
-        <p className="muted">{t("Hello", "नमस्ते")} {actor.name}</p>
+        <p className="muted">
+          {t("Hello", "नमस्ते")} {actor.name} ·{" "}
+          {offToday
+            ? t("Weekly off today", "आज साप्ताहिक छुट्टी")
+            : `${t("Store hours", "दुकान का समय")} ${todayRule.open} – ${todayRule.close}${todayRule.anyScanFullDay ? t(" · any scan = full day", " · कोई भी स्कैन = पूरा दिन") : ""}`}
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
         <Stat label={t("Present", "हाज़िर")} value={present.length} of={employees.length} />

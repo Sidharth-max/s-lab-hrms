@@ -29,7 +29,9 @@ export interface OverrideInput {
 export interface DayRules {
   weeklyOffDays: number[];
   holidays: Set<string>;
-  halfDayBelowMins: number;
+  halfDayBelowMins: number; // used when a weekday has no rule of its own
+  /** Optional per-weekday rules (index 0 = Sunday). */
+  byWeekday?: { halfDayBelowMins: number; anyScanFullDay: boolean }[];
 }
 
 export interface DayResult {
@@ -78,7 +80,10 @@ export function deriveDay(
 
   if (firstIn) {
     // A missing OUT punch still counts as present; it is flagged for the manager to fix.
-    const half = !missingOut && rules.halfDayBelowMins > 0 && workedMins < rules.halfDayBelowMins;
+    // Short days (e.g. Sunday) can be set so that any scan is a full day.
+    const dayRule = rules.byWeekday?.[weekday(date)];
+    const halfBelow = dayRule ? dayRule.halfDayBelowMins : rules.halfDayBelowMins;
+    const half = !dayRule?.anyScanFullDay && !missingOut && halfBelow > 0 && workedMins < halfBelow;
     return { ...base, status: half ? "HALF_DAY" : "PRESENT", overridden: false };
   }
   if (date > ctx.today) return { ...base, status: "FUTURE", overridden: false };

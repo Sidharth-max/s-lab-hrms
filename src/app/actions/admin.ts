@@ -10,6 +10,8 @@ import { env } from "@/lib/env";
 import { isPermission } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { dateKeyToDb } from "@/lib/time";
+import { isTime, type DayRule } from "@/lib/day-rules";
+import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 // ---------- Business settings ----------
@@ -24,12 +26,25 @@ export const updateSettings = safe(async (_p: ActionResult, form: FormData): Pro
   const actor = await assertStaff("settings.manage");
   const name = str(form, "name");
   if (!name) return { error: "Enter the business name" };
-  const weeklyOffDays = form.getAll("weeklyOffDays").map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
   const pct = (k: string, label: string) => Math.round(intIn(form, k, 0, 100, label) * 100);
+
+  // Weekly schedule: one row per weekday (0 = Sunday).
+  const weeklyOffDays: number[] = [];
+  const dayRules: DayRule[] = [];
+  for (let i = 0; i < 7; i++) {
+    const open = str(form, `open_${i}`);
+    const close = str(form, `close_${i}`);
+    if (!isTime(open) || !isTime(close)) return { error: "Enter open and close times as HH:MM" };
+    const halfHours = Number(str(form, `half_${i}`) || "0");
+    if (!Number.isFinite(halfHours) || halfHours < 0 || halfHours > 12) return { error: "Half day hours must be between 0 and 12" };
+    if (form.get(`off_${i}`) === "on") weeklyOffDays.push(i);
+    dayRules.push({ open, close, halfDayBelowMins: Math.round(halfHours * 60), anyScanFullDay: form.get(`any_${i}`) === "on" });
+  }
+
   const data = {
     name,
     weeklyOffDays,
-    halfDayBelowMins: Math.round(intIn(form, "halfDayBelowHours", 0, 12, "Half day hours") * 60),
+    dayRules: dayRules as unknown as Prisma.InputJsonValue,
     duplicateScanMins: intIn(form, "duplicateScanMins", 1, 60, "Repeat scan minutes"),
     maxShiftHours: intIn(form, "maxShiftHours", 4, 24, "Longest shift hours"),
     pfEmployeeBps: pct("pfEmployeePct", "PF employee %"),
@@ -40,7 +55,7 @@ export const updateSettings = safe(async (_p: ActionResult, form: FormData): Pro
   };
   await db.business.update({ where: { id: actor.businessId }, data });
   await audit(actor.businessId, actor.id, "settings.update", "Business", actor.businessId, data);
-  revalidatePath("/settings");
+  revalidatePath("/", "layout");
   return { ok: true, message: "Saved" };
 });
 

@@ -149,6 +149,16 @@ if (await fp.locator("button[role=tab]").first().isVisible()) console.log("  (ta
 if (shots) await fp.screenshot({ path: `${shots}/07-foldable.png` });
 await fold.close();
 
+step("weekly schedule: Sunday short day saved in settings");
+await page.goto(`${BASE}/settings`);
+if (!(await page.isChecked("input[name=any_0]"))) throw new Error("Sunday should default to any scan = full day");
+if ((await page.inputValue("input[name=close_0]")) !== "15:00") throw new Error("Sunday should close at 15:00");
+await page.check("input[name=off_6]"); // make Saturday a weekly off
+await page.click("button:has-text('Save') >> nth=0");
+await page.waitForSelector("[role=status]:has-text('Saved')");
+await page.reload();
+if (!(await page.isChecked("input[name=off_6]"))) throw new Error("Saturday weekly off not saved");
+
 step("employee portal");
 await page.click("button:has-text('Log out')");
 await login("9123456789");

@@ -22,7 +22,8 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
-  const [sites, advances, pendingAdvances, balance, lines] = await Promise.all([
+  const [business, sites, advances, pendingAdvances, balance, lines] = await Promise.all([
+    db.business.findUniqueOrThrow({ where: { id: actor.businessId } }),
     db.site.findMany({ where: siteWhere(actor), orderBy: { name: "asc" } }),
     outstandingAdvances(emp.id),
     db.advance.findMany({ where: { employeeId: emp.id, status: "PENDING_APPROVAL" } }),
@@ -118,6 +119,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           sites={sites}
           isNew={false}
           canSalary={can(actor, "salary.edit")}
+          businessWeeklyOff={business.weeklyOffDays}
           values={{
             name: emp.name,
             code: emp.code,
@@ -129,6 +131,8 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
             basicPercent: emp.basicPercent,
             pfEnabled: emp.pfEnabled,
             esiEnabled: emp.esiEnabled,
+            customWeeklyOff: emp.customWeeklyOff,
+            weeklyOffDays: emp.weeklyOffDays,
           }}
         />
       </ActionForm>

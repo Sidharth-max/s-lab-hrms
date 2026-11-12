@@ -14,6 +14,8 @@ interface Values {
   basicPercent?: number;
   pfEnabled?: boolean;
   esiEnabled?: boolean;
+  customWeeklyOff?: boolean;
+  weeklyOffDays?: number[];
 }
 
 export function EmployeeFields({
@@ -21,14 +23,19 @@ export function EmployeeFields({
   values = {},
   isNew,
   canSalary,
+  businessWeeklyOff,
 }: {
+  businessWeeklyOff: number[];
   sites: { id: string; name: string }[];
   values?: Values;
   isNew: boolean;
   canSalary: boolean;
 }) {
   const [wageType, setWageType] = useState(values.wageType ?? "MONTHLY");
+  const [customOff, setCustomOff] = useState(values.customWeeklyOff ?? false);
   const t = useT();
+  const DAYS = [t("Sun", "रवि"), t("Mon", "सोम"), t("Tue", "मंगल"), t("Wed", "बुध"), t("Thu", "गुरु"), t("Fri", "शुक्र"), t("Sat", "शनि")];
+  const businessOffText = businessWeeklyOff.length ? businessWeeklyOff.map((d) => DAYS[d]).join(", ") : t("none", "कोई नहीं");
   return (
     <div className="grid gap-3 @lg:grid-cols-2">
       <div>
@@ -52,6 +59,26 @@ export function EmployeeFields({
       <div>
         <label className="label">{t("Joining date", "जॉइनिंग की तारीख़")}</label>
         <input name="joinedOn" type="date" className="input" defaultValue={values.joinedOn} required />
+      </div>
+      <div className="@lg:col-span-2">
+        <label className="label">{t("Weekly off", "साप्ताहिक छुट्टी")}</label>
+        <div className="flex flex-wrap items-center gap-2">
+          {[false, true].map((c) => (
+            <label key={String(c)} className={`btn-secondary cursor-pointer ${customOff === c ? "!border-[var(--brand)] !text-[var(--brand)]" : ""}`}>
+              <input type="radio" name="weeklyOffMode" value={c ? "custom" : "business"} checked={customOff === c} onChange={() => setCustomOff(c)} className="sr-only" />
+              {c ? t("Own days", "अपने दिन") : `${t("Same as business", "बिज़नेस जैसा")} (${businessOffText})`}
+            </label>
+          ))}
+        </div>
+        {customOff && (
+          <div className="mt-2 flex flex-wrap gap-3">
+            {DAYS.map((d, i) => (
+              <label key={i} className="flex items-center gap-1 text-sm">
+                <input type="checkbox" name="empWeeklyOff" value={i} defaultChecked={values.weeklyOffDays?.includes(i)} className="h-4 w-4" /> {d}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
       {(isNew || canSalary) && (
         <fieldset className="contents" disabled={!isNew && !canSalary}>
