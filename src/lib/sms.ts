@@ -1,12 +1,15 @@
 import { env } from "./env";
 
+/** How long an OTP is valid. Also shown in the SMS text. */
+export const OTP_MINUTES = 5;
+
 /**
  * Sends an OTP by SMS.
  * - "console": prints to the server log only (testing; no SMS is sent).
  * - "fast2sms": Fast2SMS. Needs FAST2SMS_API_KEY and one of:
  *     FAST2SMS_MODE=otp  + FAST2SMS_OTP_ID (OTP template ID from the Fast2SMS OTP section), or
- *     FAST2SMS_MODE=dlt  + FAST2SMS_SENDER_ID + FAST2SMS_DLT_MESSAGE_ID (DLT template whose only
- *                          variable {#var#} is the OTP).
+ *     FAST2SMS_MODE=dlt  + FAST2SMS_SENDER_ID + FAST2SMS_DLT_MESSAGE_ID (DLT template with two
+ *                          variables: the OTP, then the minutes it is valid for).
  * The app always creates and checks the OTP itself; Fast2SMS only delivers it.
  */
 export async function sendOtpSms(phone: string, code: string, purpose: string): Promise<void> {
@@ -26,7 +29,8 @@ export function fast2SmsRequest(phone: string, code: string): { url: string; bod
         route: "dlt",
         sender_id: env.fast2sms.senderId,
         message: Number(env.fast2sms.dltMessageId),
-        variables_values: code,
+        // DLT template has two variables: the OTP, then the minutes it is valid for.
+        variables_values: `${code}|${OTP_MINUTES}`,
         numbers: phone,
       },
     };
@@ -34,7 +38,7 @@ export function fast2SmsRequest(phone: string, code: string): { url: string; bod
   if (!env.fast2sms.otpId) throw new Error("Fast2SMS OTP template is not configured");
   return {
     url: "https://www.fast2sms.com/dev/otp/send",
-    body: { mobile: phone, otp_id: env.fast2sms.otpId, otp: code, otp_length: code.length, otp_expiry: 5 },
+    body: { mobile: phone, otp_id: env.fast2sms.otpId, otp: code, otp_length: code.length, otp_expiry: OTP_MINUTES },
   };
 }
 

@@ -25,7 +25,8 @@ services:
       target: builder
     env_file: .env.production
     environment:
-      DATABASE_URL: postgresql://hrms:${POSTGRES_PASSWORD}@db:5432/hrms
+      # HRMS_DATABASE_URL (in .env.production) points at an external Postgres; otherwise the bundled db is used.
+      DATABASE_URL: ${HRMS_DATABASE_URL:-postgresql://hrms:${POSTGRES_PASSWORD}@db:5432/hrms}
     depends_on:
       db:
         condition: service_healthy
@@ -42,7 +43,8 @@ services:
     restart: unless-stopped
     env_file: .env.production
     environment:
-      DATABASE_URL: postgresql://hrms:${POSTGRES_PASSWORD}@db:5432/hrms
+      # HRMS_DATABASE_URL (in .env.production) points at an external Postgres; otherwise the bundled db is used.
+      DATABASE_URL: ${HRMS_DATABASE_URL:-postgresql://hrms:${POSTGRES_PASSWORD}@db:5432/hrms}
     depends_on:
       db:
         condition: service_healthy

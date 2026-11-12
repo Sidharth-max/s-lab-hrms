@@ -21,10 +21,10 @@ describe("Fast2SMS", () => {
   });
 
   it("builds the DLT request", async () => {
-    const { fast2SmsRequest } = await load({ FAST2SMS_MODE: "dlt", FAST2SMS_SENDER_ID: "SLABHR", FAST2SMS_DLT_MESSAGE_ID: "171234" });
+    const { fast2SmsRequest } = await load({ FAST2SMS_MODE: "dlt", FAST2SMS_SENDER_ID: "GNGRUH", FAST2SMS_DLT_MESSAGE_ID: "204044" });
     expect(fast2SmsRequest("9876543210", "482913")).toEqual({
       url: "https://www.fast2sms.com/dev/bulkV2",
-      body: { route: "dlt", sender_id: "SLABHR", message: 171234, variables_values: "482913", numbers: "9876543210" },
+      body: { route: "dlt", sender_id: "GNGRUH", message: 204044, variables_values: "482913|5", numbers: "9876543210" },
     });
   });
 

@@ -1,25 +1,24 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requireStaff } from "@/lib/auth";
 import { countDays, STATUS_SHORT, type DerivedStatus } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
 import { addMonths, formatMonth, isMonthKey, istMonthKey, monthDates } from "@/lib/time";
-import { getT } from "@/lib/i18n-server";
 
 const COLOR: Partial<Record<DerivedStatus, string>> = {
-  PRESENT: "bg-green-100 text-green-900",
-  HALF_DAY: "bg-lime-100 text-lime-900",
-  ABSENT: "bg-red-100 text-red-900",
-  PAID_LEAVE: "bg-blue-100 text-blue-900",
-  UNPAID_LEAVE: "bg-orange-100 text-orange-900",
-  WEEKLY_OFF: "bg-gray-100 text-gray-600",
-  HOLIDAY: "bg-purple-100 text-purple-900",
+  PRESENT: "bg-green-50 text-[var(--green)]",
+  HALF_DAY: "bg-green-50 text-[var(--green)] opacity-70",
+  ABSENT: "bg-red-50 text-[var(--red)]",
+  PAID_LEAVE: "bg-[var(--soft)] text-[var(--text)]",
+  UNPAID_LEAVE: "bg-red-50 text-[var(--red)] opacity-70",
+  WEEKLY_OFF: "text-[var(--muted)]",
+  HOLIDAY: "bg-[var(--soft)] text-[var(--muted)]",
 };
 
 export default async function Register({ searchParams }: PageProps<"/attendance/register">) {
   const actor = await requireStaff();
-  const { t } = await getT();
   const sp = await searchParams;
   const current = istMonthKey(new Date());
   const month = typeof sp.month === "string" && isMonthKey(sp.month) && sp.month <= current ? sp.month : current;
@@ -34,21 +33,21 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="h1">{t("Register", "रजिस्टर")} · {formatMonth(month)}</h1>
+        <h1 className="h1">{"Register"} · {formatMonth(month)}</h1>
         <div className="flex gap-2">
-          <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : ""}`}>← {t("Prev", "पिछला")}</Link>
-          {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : ""}`}>{t("Next", "अगला")} →</Link>}
-          {only && <Link className="btn-secondary" href={`?month=${month}`}>{t("All employees", "सभी कर्मचारी")}</Link>}
+          <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : ""}`}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden />Prev</Link>
+          {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : ""}`}>Next<ChevronRight size={16} strokeWidth={1.75} aria-hidden /></Link>}
+          {only && <Link className="btn-secondary" href={`?month=${month}`}>All employees</Link>}
         </div>
       </div>
-      <p className="muted">{t("P present · H half day · A absent · PL paid leave · UL unpaid leave · WO weekly off · HO holiday · * edited · ! no out punch. Tap a day to edit.", "P हाज़िर · H आधा दिन · A ग़ैरहाज़िर · PL सवेतन छुट्टी · UL बिना वेतन छुट्टी · WO साप्ताहिक छुट्टी · HO त्योहार · * बदला गया · ! जाने का पंच नहीं। बदलने के लिए दिन पर टैप करें।")}</p>
+      <p className="muted">P present · H half day · A absent · PL paid leave · UL unpaid leave · WO weekly off · HO holiday · * edited · ! no out punch. Tap a day to edit.</p>
       <div className="card overflow-x-auto !p-0">
         <table className="table text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-white">{t("Employee", "कर्मचारी")}</th>
+              <th className="sticky left-0 bg-white">Employee</th>
               {dates.map((d) => <th key={d} className="!px-1 text-center">{Number(d.slice(8))}</th>)}
-              <th>{t("Present", "हाज़िर")}</th><th>{t("Absent", "ग़ैरहाज़िर")}</th><th>{t("Leave", "छुट्टी")}</th>
+              <th>Present</th><th>Absent</th><th>Leave</th>
             </tr>
           </thead>
           <tbody>
@@ -71,7 +70,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
                 </tr>
               );
             })}
-            {employees.length === 0 && <tr><td colSpan={dates.length + 4} className="muted">{t("No employees.", "कोई कर्मचारी नहीं।")}</td></tr>}
+            {employees.length === 0 && <tr><td colSpan={dates.length + 4} className="muted">No employees.</td></tr>}
           </tbody>
         </table>
       </div>

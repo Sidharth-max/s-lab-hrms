@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useRef } from "react";
 import type { ActionResult } from "@/lib/action";
 import { toast } from "./Toaster";
-import { useT } from "./LangProvider";
 
 /** A form bound to a server action that shows success/error messages and disables itself while saving. */
 export function ActionForm({
@@ -26,7 +25,6 @@ export function ActionForm({
   hideSubmit?: boolean;
 }) {
   // Toast as soon as the server answers, before the page refreshes and maybe removes this form.
-  const t = useT();
   const [state, formAction, pending] = useActionState(async (prev: ActionResult, form: FormData) => {
     const r = await action(prev, form);
     if (r?.ok && r.message) toast(r.message, true);
@@ -52,7 +50,7 @@ export function ActionForm({
         {!hideSubmit && (
           <div className="flex items-center gap-3">
             <button type="submit" className={submitClass}>
-              {pending ? t("Please wait…", "रुकिए…") : (submitLabel ?? t("Save", "सेव करें"))}
+              {pending ? "Please wait…" : (submitLabel ?? "Save")}
             </button>
             {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
             {state?.ok && state.message && <p className="text-sm text-green-700">{state.message}</p>}

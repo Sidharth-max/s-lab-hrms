@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="hi">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>No internet</title></head>
-<body style="font-family:sans-serif;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px;text-align:center;background:#b91c1c;color:#fff">
-<h1 style="margin:0">इंटरनेट नहीं है</h1>
-<p style="margin:0">No internet connection. Attendance cannot be marked right now. The manager will enter it later.</p>
-<button onclick="location.href=window.HRMS_URL||'/'" style="font-size:18px;padding:12px 24px;border:0;border-radius:8px">फिर से कोशिश करें / Retry</button>
-<script>setTimeout(function(){history.back()},15000)</script>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline</title></head>
+<body style="font-family:system-ui,-apple-system,Roboto,sans-serif;margin:0;background:#fafafa;color:#171717">
+<div style="position:fixed;top:0;left:0;right:0;padding:12px 16px;background:#fff;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px">
+  <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:8px"></span>No internet connection</span>
+  <button onclick="history.back()" style="font:inherit;padding:6px 12px;border:1px solid #e5e5e5;background:#fff;border-radius:6px">Retry</button>
+</div>
+<script>setTimeout(function(){history.back()},10000)</script>
 </body>
 </html>

@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { useT } from "./LangProvider";
 
 /** Inside the Android app only: shows "There is a new update" when GitHub has a newer APK. */
 export function UpdateChecker() {
   const [update, setUpdate] = useState<{ name: string; url: string } | null>(null);
-  const t = useT();
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -33,10 +31,10 @@ export function UpdateChecker() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
       <div className="card w-full max-w-sm text-center">
-        <h2 className="mb-1 text-lg font-bold">{t("There is a new update", "नया अपडेट आया है")}</h2>
-        <p className="muted mb-4">{t(`Version ${update.name}. Download it and install.`, `वर्ज़न ${update.name}। डाउनलोड करके इंस्टॉल करें।`)}</p>
+        <h2 className="mb-1 text-lg font-bold">There is a new update</h2>
+        <p className="muted mb-4">{`Version ${update.name}. Download it and install.`}</p>
         <div className="flex flex-col gap-2">
-          <a href={update.url} className="btn-primary">{t("Download update", "अपडेट डाउनलोड करें")}</a>
+          <a href={update.url} className="btn-primary">Download update</a>
           <button
             className="btn-secondary"
             onClick={() => {
@@ -46,7 +44,7 @@ export function UpdateChecker() {
               setUpdate(null);
             }}
           >
-            {t("Later", "बाद में")}
+            {"Later"}
           </button>
         </div>
       </div>

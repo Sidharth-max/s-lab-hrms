@@ -45,6 +45,8 @@ APP_URL=https://hrms.s-lab.dev
 APP_PORT=$PORT_DEFAULT
 AUTH_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
+# External database (leave empty to use the bundled one): postgresql://user:password@host:5432/hrms
+HRMS_DATABASE_URL=
 SECURE_COOKIES=true
 
 # First owner (OP) account, created by: ./deploy.sh seed
@@ -95,16 +97,23 @@ health() {
 
 backup() {
   mkdir -p backups
-  if "${COMPOSE[@]}" ps --status running db 2>/dev/null | grep -q db; then
-    local f="backups/hrms-$(date +%Y%m%d-%H%M%S).sql.gz"
+  local f="backups/hrms-$(date +%Y%m%d-%H%M%S).sql.gz"
+  local remote; remote="$(envval HRMS_DATABASE_URL)"
+  if [ -n "$remote" ]; then
+    # External database (HRMS_DATABASE_URL): dump it with a throwaway Postgres client container.
+    log "Backing up external database to $f"
+    docker run --rm --network host -e PGURL="$remote" public.ecr.aws/docker/library/postgres:16-alpine \
+      sh -c 'pg_dump "$PGURL" --no-owner' | gzip > "$f.part"
+  elif "${COMPOSE[@]}" ps --status running db 2>/dev/null | grep -q db; then
     log "Backing up database to $f"
     "${COMPOSE[@]}" exec -T db pg_dump -U hrms -d hrms --no-owner | gzip > "$f.part"
-    mv "$f.part" "$f"
-    # Keep the newest 30 backups.
-    ls -1t backups/hrms-*.sql.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
   else
     echo "Database not running yet, no backup needed."
+    return 0
   fi
+  mv "$f.part" "$f"
+  # Keep the newest 30 backups.
+  ls -1t backups/hrms-*.sql.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
 }
 
 seed() {
@@ -142,7 +151,8 @@ deploy() {
     log "Pulling latest code ($BRANCH)"
     git fetch origin "$BRANCH"
     git checkout "$BRANCH"
-    git merge --ff-only "origin/$BRANCH"
+    git merge --ff-only "origin/$BRANCH" || die "This server has local commits that are not on GitHub, so it cannot update.
+Put those changes on GitHub first, then run: git reset --hard origin/$BRANCH"
   fi
   local version; version="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
 

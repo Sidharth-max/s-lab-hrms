@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
-import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { Tabs } from "@/components/Tabs";
 import { getActor } from "@/lib/auth";
 import { countDays, STATUS_SHORT } from "@/lib/attendance";
 import { db } from "@/lib/db";
-import { getT } from "@/lib/i18n-server";
 import { formatRs } from "@/lib/money";
 import { monthAttendance, outstandingAdvances } from "@/lib/services";
 import { dbToDateKey, formatDateKey, formatMonth, istMonthKey } from "@/lib/time";
@@ -16,7 +14,6 @@ export default async function MePage() {
   const actor = await getActor();
   if (!actor) redirect("/login");
   if (actor.role !== "EMPLOYEE") redirect("/dashboard");
-  const { t } = await getT();
   const emp = await db.employee.findUnique({ where: { userId: actor.id }, include: { business: true, site: true } });
   if (!emp) redirect("/login");
   const month = istMonthKey(new Date());
@@ -31,24 +28,24 @@ export default async function MePage() {
 
   const salary = (
     <section className="card">
-      <h2 className="mb-2 font-semibold">{t("My salary", "मेरी सैलरी")}</h2>
+      <h2 className="mb-2 font-semibold">My salary</h2>
       <div className="grid grid-cols-1 gap-2 text-sm min-[420px]:grid-cols-2">
-        <div><span className="muted">{t("Type", "प्रकार")}:</span> {emp.wageType === "MONTHLY" ? t("Monthly", "महीना") : t("Daily", "रोज़")}</div>
+        <div><span className="muted">{"Type"}:</span> {emp.wageType === "MONTHLY" ? "Monthly" : "Daily"}</div>
         <div>
-          <span className="muted">{t("Rate", "दर")}:</span> {formatRs(emp.wageType === "MONTHLY" ? emp.monthlyWage : emp.dailyWage)}
-          {emp.wageType === "MONTHLY" ? t(" / month", " / महीना") : t(" / day", " / दिन")}
+          <span className="muted">{"Rate"}:</span> {formatRs(emp.wageType === "MONTHLY" ? emp.monthlyWage : emp.dailyWage)}
+          {emp.wageType === "MONTHLY" ? " / month" : " / day"}
         </div>
-        <div><span className="muted">PF:</span> {emp.pfEnabled ? t("Yes", "हाँ") : t("No", "नहीं")}</div>
-        <div><span className="muted">ESIC:</span> {emp.esiEnabled ? t("Yes", "हाँ") : t("No", "नहीं")}</div>
-        <div><span className="muted">{t("Joined", "जॉइन किया")}:</span> {formatDateKey(dbToDateKey(emp.joinedOn))}</div>
+        <div><span className="muted">PF:</span> {emp.pfEnabled ? "Yes" : "No"}</div>
+        <div><span className="muted">ESIC:</span> {emp.esiEnabled ? "Yes" : "No"}</div>
+        <div><span className="muted">{"Joined"}:</span> {formatDateKey(dbToDateKey(emp.joinedOn))}</div>
       </div>
     </section>
   );
   const attendance = (
     <section className="card">
-      <h2 className="mb-2 font-semibold">{t("Attendance", "हाज़िरी")} · {formatMonth(month)}</h2>
+      <h2 className="mb-2 font-semibold">{"Attendance"} · {formatMonth(month)}</h2>
       <p className="mb-2 text-sm">
-        {t("Present", "हाज़िर")} {c.present} · {t("Absent", "ग़ैरहाज़िर")} {c.absent} · {t("Leave", "छुट्टी")} {c.paidLeave + c.unpaidLeave}
+        {"Present"} {c.present} · {"Absent"} {c.absent} · {"Leave"} {c.paidLeave + c.unpaidLeave}
       </p>
       <div className="grid grid-cols-7 gap-1 text-center text-xs">
         {list.map((d) => (
@@ -62,16 +59,16 @@ export default async function MePage() {
   );
   const advance = (
     <section className="card">
-      <h2 className="mb-2 font-semibold">{t("Advance", "एडवांस")}</h2>
-      {open.length === 0 ? <p className="muted">{t("No advance to repay.", "कोई एडवांस बाकी नहीं।")}</p> : (
+      <h2 className="mb-2 font-semibold">Advance</h2>
+      {open.length === 0 ? <p className="muted">No advance to repay.</p> : (
         <table className="table table-cards">
-          <thead><tr><th>{t("Given", "दिया")}</th><th>{t("Amount", "रकम")}</th><th>{t("Left to repay", "चुकाना बाकी")}</th></tr></thead>
+          <thead><tr><th>Given</th><th>Amount</th><th>Left to repay</th></tr></thead>
           <tbody>
             {open.map((a) => (
               <tr key={a.id}>
-                <td data-label={t("Given", "दिया")}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
-                <td data-label={t("Amount", "रकम")}>{formatRs(a.amount)}</td>
-                <td data-label={t("Left to repay", "चुकाना बाकी")} className="font-semibold">{formatRs(a.remaining)}</td>
+                <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
+                <td data-label={"Amount"}>{formatRs(a.amount)}</td>
+                <td data-label={"Left to repay"} className="font-semibold">{formatRs(a.remaining)}</td>
               </tr>
             ))}
           </tbody>
@@ -81,12 +78,12 @@ export default async function MePage() {
   );
   const payslips = (
     <section className="card">
-      <h2 className="mb-2 font-semibold">{t("Payslips", "सैलरी स्लिप")}</h2>
-      {lines.length === 0 ? <p className="muted">{t("No payslips yet.", "अभी कोई सैलरी स्लिप नहीं।")}</p> : (
+      <h2 className="mb-2 font-semibold">Payslips</h2>
+      {lines.length === 0 ? <p className="muted">No payslips yet.</p> : (
         <ul className="flex flex-col gap-1">
           {lines.map((l) => (
             <li key={l.id} className="flex justify-between">
-              <Link className="text-[var(--brand)] underline" href={`/me/payslip/${l.id}`}>{formatMonth(l.run.month)}</Link>
+              <Link className="link" href={`/me/payslip/${l.id}`}>{formatMonth(l.run.month)}</Link>
               <span className="font-semibold">{formatRs(l.net)}</span>
             </li>
           ))}
@@ -103,16 +100,15 @@ export default async function MePage() {
           <div className="muted">{emp.name} · {emp.code} · {emp.site.name}</div>
         </div>
         <div className="flex items-center gap-2">
-          <LanguageSwitch />
-          <form action={logout}><button className="btn-secondary">{t("Log out", "लॉग आउट")}</button></form>
+          <form action={logout}><button className="btn-secondary">Log out</button></form>
         </div>
       </header>
       <Tabs
         tabs={[
-          { id: "salary", label: t("Salary", "सैलरी"), content: salary },
-          { id: "attendance", label: t("Attendance", "हाज़िरी"), content: attendance },
-          { id: "advance", label: t("Advance", "एडवांस"), content: advance },
-          { id: "payslips", label: t("Payslips", "सैलरी स्लिप"), content: payslips },
+          { id: "salary", label: "Salary", content: salary },
+          { id: "attendance", label: "Attendance", content: attendance },
+          { id: "advance", label: "Advance", content: advance },
+          { id: "payslips", label: "Payslips", content: payslips },
         ]}
       />
     </main>

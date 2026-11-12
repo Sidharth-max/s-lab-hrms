@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
-import { statusLabel } from "@/lib/attendance";
+import { STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { getT } from "@/lib/i18n-server";
 import { employeeScope } from "@/lib/scope";
 import { monthAttendance } from "@/lib/services";
 import { formatDateKey, formatIstTime, istDateKey, weekday } from "@/lib/time";
@@ -11,7 +10,6 @@ import { parseDayRules } from "@/lib/day-rules";
 
 export default async function Dashboard({ searchParams }: PageProps<"/dashboard">) {
   const actor = await requireStaff();
-  const { t, lang } = await getT();
   const sp = await searchParams;
   const today = istDateKey(new Date());
   const employees = await db.employee.findMany({
@@ -36,28 +34,28 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
   return (
     <div className="flex flex-col gap-4">
       {sp.denied && (
-        <div className="card border-red-200 bg-red-50 text-sm text-red-800">
-          {t("You do not have permission for that page. Ask the owner.", "आपको उस पेज की अनुमति नहीं है। मालिक से पूछें।")}
+        <div className="notice-red">
+          {"You do not have permission for that page. Ask the owner."}
         </div>
       )}
       <div>
-        <h1 className="h1">{t("Today", "आज")} · {formatDateKey(today)}</h1>
+        <h1 className="h1">{"Today"} · {formatDateKey(today)}</h1>
         <p className="muted">
-          {t("Hello", "नमस्ते")} {actor.name} ·{" "}
+          {"Hello"} {actor.name} ·{" "}
           {offToday
-            ? t("Weekly off today", "आज साप्ताहिक छुट्टी")
-            : `${t("Store hours", "दुकान का समय")} ${todayRule.open} – ${todayRule.close}${todayRule.anyScanFullDay ? t(" · any scan = full day", " · कोई भी स्कैन = पूरा दिन") : ""}`}
+            ? "Weekly off today"
+            : `${"Store hours"} ${todayRule.open} – ${todayRule.close}${todayRule.anyScanFullDay ? " · any scan = full day" : ""}`}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
-        <Stat label={t("Present", "हाज़िर")} value={present.length} of={employees.length} />
-        <Stat label={t("Still inside", "अभी अंदर")} value={inside.length} />
-        <Stat label={t("Not came yet", "अभी नहीं आए")} value={notIn.length} />
-        <Link href="/approvals"><Stat label={t("Waiting approval", "मंज़ूरी बाकी")} value={pending} warn={pending > 0} /></Link>
+        <Stat label={"Present"} value={present.length} of={employees.length} />
+        <Stat label={"Still inside"} value={inside.length} />
+        <Stat label={"Not came yet"} value={notIn.length} />
+        <Link href="/approvals"><Stat label={"Waiting approval"} value={pending} warn={pending > 0} /></Link>
       </div>
       {noFace.length > 0 && (
-        <div className="card border-amber-200 bg-amber-50 text-sm text-amber-900">
-          {t(`${noFace.length} employee(s) need a face photo before they can use the scanner:`, `${noFace.length} कर्मचारी का चेहरा दर्ज नहीं है, वे स्कैनर इस्तेमाल नहीं कर सकते:`)}{" "}
+        <div className="notice-red">
+          {`${noFace.length} employee(s) need a face photo before they can use the scanner:`}{" "}
           {noFace.slice(0, 8).map((e, i) => (
             <span key={e.id}>{i > 0 && ", "}<Link className="underline" href={`/employees/${e.id}`}>{e.name}</Link></span>
           ))}
@@ -67,20 +65,20 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
       <div className="card overflow-x-auto !p-0">
         <table className="table table-cards">
           <thead>
-            <tr><th>{t("Employee", "कर्मचारी")}</th><th>{t("Site", "साइट")}</th><th>{t("Status", "स्थिति")}</th><th>{t("In", "आए")}</th><th>{t("Out", "गए")}</th></tr>
+            <tr><th>Employee</th><th>Site</th><th>Status</th><th>In</th><th>Out</th></tr>
           </thead>
           <tbody>
             {rows.map(({ e, d }) => (
               <tr key={e.id}>
-                <td className="card-title"><Link className="font-medium text-[var(--brand)]" href={`/attendance/${e.id}/${today}`}>{e.name}</Link> <span className="muted">{e.code}</span></td>
-                <td data-label={t("Site", "साइट")}>{e.site.name}</td>
-                <td data-label={t("Status", "स्थिति")}>{statusLabel(d.status, lang) || "—"}{d.overridden && <span className="muted"> ({t("manual", "हाथ से")})</span>}</td>
-                <td data-label={t("In", "आए")}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
-                <td data-label={t("Out", "गए")}>{d.outAt ? formatIstTime(d.outAt) : d.missingOut ? <span className="text-amber-700">{t("inside", "अंदर")}</span> : "—"}</td>
+                <td className="card-title"><Link className="font-medium text-[var(--text)] hover:underline" href={`/attendance/${e.id}/${today}`}>{e.name}</Link> <span className="muted">{e.code}</span></td>
+                <td data-label={"Site"}>{e.site.name}</td>
+                <td data-label={"Status"}>{STATUS_LABEL[d.status] || "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
+                <td data-label={"In"}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
+                <td data-label={"Out"}>{d.outAt ? formatIstTime(d.outAt) : d.missingOut ? <span className="text-[var(--red)]">inside</span> : "—"}</td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="muted">{t("No employees yet.", "अभी कोई कर्मचारी नहीं।")} <Link className="underline" href="/employees/new">{t("Add one", "जोड़ें")}</Link></td></tr>
+              <tr><td colSpan={5} className="muted">{"No employees yet."} <Link className="underline" href="/employees/new">Add one</Link></td></tr>
             )}
           </tbody>
         </table>
