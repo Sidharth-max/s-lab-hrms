@@ -83,7 +83,9 @@ nightly backups: `30 2 * * * cd /path/to/s-lab-hrms && ./deploy.sh backup >/dev/
 |---|---|
 | `APP_URL` | Public URL, `https://hrms.s-lab.dev` |
 | `AUTH_SECRET`, `POSTGRES_PASSWORD` | Generated on first run. Never change `POSTGRES_PASSWORD` after the DB exists. |
-| `SMS_PROVIDER` | `console` (OTP only in logs) or `msg91` (needs `MSG91_AUTH_KEY`, `MSG91_TEMPLATE_ID`) |
+| `SMS_PROVIDER` | `console` (OTP only in logs) or `fast2sms` |
+| `FAST2SMS_API_KEY` | Fast2SMS Dev API key (secret) |
+| `FAST2SMS_MODE` | `otp` (uses `FAST2SMS_OTP_ID`, the OTP template ID) or `dlt` (uses `FAST2SMS_SENDER_ID` and `FAST2SMS_DLT_MESSAGE_ID`; the template's `{#var#}` is the OTP) |
 | `OTP_SHOW_IN_UI` | `true` shows the OTP on screen. **Testing only; set `false` before real use.** |
 | `FACE_PROVIDER` | `mock` (test mode) or `aws`. See `AWS_SETUP.md`. |
 | `FACE_LIVENESS`, `AWS_LIVENESS_ROLE_ARN` | Anti-spoof liveness check (optional) |
@@ -107,7 +109,7 @@ nightly backups: `30 2 * * * cd /path/to/s-lab-hrms && ./deploy.sh backup >/dev/
 |---|---|
 | Deploy says not healthy, rolled back | `./deploy.sh logs`; usually a bad `.env.production` value or a failed migration |
 | Site 502 via Cloudflare, local health OK | Tunnel: `docker compose --env-file .env.production -p s-lab-hrms logs tunnel`, check hostname → `http://app:3000` |
-| Login OTP never arrives | `SMS_PROVIDER=console` only logs it: `./deploy.sh logs | grep OTP` |
+| Login OTP never arrives | With `SMS_PROVIDER=console` it is only in the logs: `./deploy.sh logs \| grep OTP`. With Fast2SMS: `./deploy.sh logs \| grep Fast2SMS` shows the reason (balance, template ID, number). |
 | Scanner says "not registered" | An owner/manager logs in on the tablet once: Devices > Make this device a scanner |
 | Camera does not open | Must be https (the tunnel) and camera permission allowed in the app / browser |
 | `429 Too Many Requests` pulling images | Base images come from `public.ecr.aws` mirrors; retry later |

@@ -57,11 +57,15 @@ SITE_NAME=Main
 # Leave empty if cloudflared already runs on this server; then point it to http://localhost:$PORT_DEFAULT
 CLOUDFLARE_TUNNEL_TOKEN=
 
-# Login OTP. For testing keep console + OTP_SHOW_IN_UI=true. For real use set an SMS provider and false.
+# Login OTP. For testing keep console + OTP_SHOW_IN_UI=true.
+# For real use: SMS_PROVIDER=fast2sms, fill the FAST2SMS_* values, and OTP_SHOW_IN_UI=false.
 SMS_PROVIDER=console
 OTP_SHOW_IN_UI=true
-MSG91_AUTH_KEY=
-MSG91_TEMPLATE_ID=
+FAST2SMS_API_KEY=
+FAST2SMS_MODE=otp
+FAST2SMS_OTP_ID=
+FAST2SMS_SENDER_ID=
+FAST2SMS_DLT_MESSAGE_ID=
 
 # Face recognition: mock (test mode) or aws. See AWS_SETUP.md.
 FACE_PROVIDER=mock

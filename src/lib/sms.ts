@@ -2,20 +2,54 @@ import { env } from "./env";
 
 /**
  * Sends an OTP by SMS.
- * - "console": prints to the server log (testing; no SMS is sent).
- * - "msg91": MSG91 OTP template. Needs MSG91_AUTH_KEY and MSG91_TEMPLATE_ID
- *   (a DLT-approved template with an ##OTP## variable).
+ * - "console": prints to the server log only (testing; no SMS is sent).
+ * - "fast2sms": Fast2SMS. Needs FAST2SMS_API_KEY and one of:
+ *     FAST2SMS_MODE=otp  + FAST2SMS_OTP_ID (OTP template ID from the Fast2SMS OTP section), or
+ *     FAST2SMS_MODE=dlt  + FAST2SMS_SENDER_ID + FAST2SMS_DLT_MESSAGE_ID (DLT template whose only
+ *                          variable {#var#} is the OTP).
+ * The app always creates and checks the OTP itself; Fast2SMS only delivers it.
  */
 export async function sendOtpSms(phone: string, code: string, purpose: string): Promise<void> {
-  if (env.smsProvider === "msg91") {
-    if (!env.msg91AuthKey || !env.msg91TemplateId) throw new Error("MSG91 is not configured");
-    const url = new URL("https://control.msg91.com/api/v5/otp");
-    url.searchParams.set("template_id", env.msg91TemplateId);
-    url.searchParams.set("mobile", `91${phone}`);
-    url.searchParams.set("otp", code);
-    const res = await fetch(url, { method: "POST", headers: { authkey: env.msg91AuthKey } });
-    if (!res.ok) throw new Error(`SMS failed (${res.status})`);
+  if (env.smsProvider === "fast2sms") {
+    await sendFast2Sms(phone, code);
     return;
   }
   console.log(`[sms:console] OTP for ${phone} (${purpose}): ${code}`);
+}
+
+export function fast2SmsRequest(phone: string, code: string): { url: string; body: Record<string, unknown> } {
+  if (env.fast2sms.mode === "dlt") {
+    if (!env.fast2sms.senderId || !env.fast2sms.dltMessageId) throw new Error("Fast2SMS DLT is not configured");
+    return {
+      url: "https://www.fast2sms.com/dev/bulkV2",
+      body: {
+        route: "dlt",
+        sender_id: env.fast2sms.senderId,
+        message: Number(env.fast2sms.dltMessageId),
+        variables_values: code,
+        numbers: phone,
+      },
+    };
+  }
+  if (!env.fast2sms.otpId) throw new Error("Fast2SMS OTP template is not configured");
+  return {
+    url: "https://www.fast2sms.com/dev/otp/send",
+    body: { mobile: phone, otp_id: env.fast2sms.otpId, otp: code, otp_length: code.length, otp_expiry: 5 },
+  };
+}
+
+async function sendFast2Sms(phone: string, code: string) {
+  if (!env.fast2sms.apiKey) throw new Error("FAST2SMS_API_KEY is not set");
+  const { url, body } = fast2SmsRequest(phone, code);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: env.fast2sms.apiKey, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = (await res.json().catch(() => null)) as { return?: boolean; message?: unknown; status_code?: number } | null;
+  if (!res.ok || !data?.return) {
+    // Never log the key; the message from Fast2SMS explains what is wrong (balance, template, number).
+    throw new Error(`Fast2SMS failed (${res.status}): ${JSON.stringify(data?.message ?? data)}`);
+  }
 }
