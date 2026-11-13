@@ -3,9 +3,10 @@ import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, View, t
 import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { C, isDark, R } from "@/lib/theme";
+import { C, isDark, R, shadow, type Ink } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 import { FLOATING_NAV_SPACE } from "@/lib/layout";
+import { PressScale, SkeletonList } from "@/lib/motion";
 
 export function Screen({
   children,
@@ -13,6 +14,7 @@ export function Screen({
   refreshControl,
   padded = true,
   tabs = false,
+  bottomSpace = 0,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
@@ -20,18 +22,14 @@ export function Screen({
   padded?: boolean;
   /** A tab screen: on phones leave room at the bottom for the floating navigation bar. */
   tabs?: boolean;
+  /** Extra room at the bottom (e.g. for a sticky action bar). */
+  bottomSpace?: number;
 }) {
-  // The tab bar always floats at the bottom (phones and tablets alike).
-  const inner = <View style={[styles.inner, padded && styles.padded, tabs && { paddingBottom: FLOATING_NAV_SPACE + 16 }]}>{children}</View>;
+  const inner = <View style={[styles.inner, padded && styles.padded, { paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace }]}>{children}</View>;
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
       {scroll ? (
-        <KeyboardAwareScrollView
-          bottomOffset={32}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={refreshControl}
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
+        <KeyboardAwareScrollView bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }}>
           {inner}
         </KeyboardAwareScrollView>
       ) : (
@@ -39,6 +37,20 @@ export function Screen({
       )}
     </SafeAreaView>
   );
+}
+
+/** Pull-to-refresh colours: brand spinner on the card colour, with a haptic tick when it starts. */
+export function refreshProps(refreshing: boolean, onRefresh: () => void) {
+  return {
+    refreshing,
+    onRefresh: () => {
+      haptic.heavy();
+      onRefresh();
+    },
+    colors: [C.brand],
+    tintColor: C.brand,
+    progressBackgroundColor: C.card,
+  };
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -53,11 +65,31 @@ export function H2({ children }: { children: React.ReactNode }) {
   return <Text style={styles.h2}>{children}</Text>;
 }
 
+/** Small uppercase label above a group of cards. */
+export function SectionLabel({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginTop: 4 }}>
+      <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.6, color: C.muted, textTransform: "uppercase" }}>{children}</Text>
+      {right}
+    </View>
+  );
+}
+
 export function Muted({ children, style }: { children: React.ReactNode; style?: object }) {
   return <Text style={[styles.muted, style]}>{children}</Text>;
 }
 
-type Variant = "primary" | "secondary" | "danger";
+/** Coloured text (amounts, key labels). Colour goes on the words, not on the background. */
+export function InkText({ ink, children, style }: { ink: Ink; children: React.ReactNode; style?: object }) {
+  return <Text style={[{ color: C.ink[ink], fontWeight: "600" }, style]}>{children}</Text>;
+}
+
+/** Round soft chip with an icon inside, tinted to match an ink. */
+export function IconChip({ ink, children, size = 36 }: { ink: Ink; children: React.ReactNode; size?: number }) {
+  return <View style={{ width: size, height: size, borderRadius: size / 2.6, backgroundColor: C.tint[ink], alignItems: "center", justifyContent: "center" }}>{children}</View>;
+}
+
+type Variant = "primary" | "secondary" | "danger" | "brand" | "ghost";
 
 export function Button({
   title,
@@ -69,26 +101,26 @@ export function Button({
   style,
   ...rest
 }: { title: string; variant?: Variant; loading?: boolean; icon?: React.ReactNode; style?: ViewStyle } & Omit<PressableProps, "style">) {
-  const bg = variant === "primary" ? C.text : variant === "danger" ? C.red : C.white;
-  const fg = variant === "secondary" ? C.text : C.white;
+  const bg = { primary: C.head, danger: C.red, secondary: C.card, brand: C.brand, ghost: "transparent" }[variant];
+  const fg = variant === "secondary" || variant === "ghost" ? C.text : variant === "primary" ? C.headText : "#ffffff";
+  const off = disabled || loading;
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
-      onPress={(e) => {
-        haptic.tap();
-        onPress?.(e);
-      }}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
+      accessibilityState={{ disabled: !!off, busy: !!loading }}
+      onPress={onPress}
+      disabled={off}
+      style={[
         styles.button,
-        { backgroundColor: bg, borderColor: variant === "secondary" ? C.line : bg, opacity: disabled || loading ? 0.5 : pressed ? 0.85 : 1 },
+        { backgroundColor: bg, borderColor: variant === "secondary" ? C.line : bg, opacity: off ? 0.5 : 1 },
+        variant === "primary" || variant === "brand" ? shadow(1) : null,
         style,
       ]}
       {...rest}
     >
       {loading ? <ActivityIndicator color={fg} /> : icon}
-      <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
-    </Pressable>
+      <Text style={[styles.buttonText, { color: fg }]} numberOfLines={1}>{title}</Text>
+    </PressScale>
   );
 }
 
@@ -99,7 +131,7 @@ export function Field({ label, hint, style, onFocus, onBlur, ...props }: TextInp
       <Text style={styles.label}>{label}</Text>
       <TextInput
         placeholderTextColor={C.placeholder}
-        style={[styles.input, focused && { borderColor: C.text }, style]}
+        style={[styles.input, focused && { borderColor: C.brand, borderWidth: 1.5 }, style]}
         onFocus={(e) => { setFocused(true); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         {...props}
@@ -109,7 +141,7 @@ export function Field({ label, hint, style, onFocus, onBlur, ...props }: TextInp
   );
 }
 
-/** Choice between a few options in a form (Monthly / Daily, AM / PM): squared buttons, the chosen one filled. */
+/** Choice between a few options in a form (Monthly / Daily, AM / PM): pill track, the chosen one raised. */
 export function Segmented<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
     <View style={styles.segment} accessibilityRole="radiogroup">
@@ -117,7 +149,7 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
         const active = o.value === value;
         return (
           <Pressable key={o.value} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.white }]}>{o.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.text }]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -137,9 +169,9 @@ export function Tabs<T extends string>({ options, value, onChange }: { options: 
             onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: active ? C.text : pressed ? C.trackPressed : C.track })}
+            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: active ? C.head : C.hairline, backgroundColor: active ? C.head : pressed ? C.trackPressed : C.card })}
           >
-            <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.white : C.text }}>{o.label}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.headText : C.muted }}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -147,18 +179,21 @@ export function Tabs<T extends string>({ options, value, onChange }: { options: 
   );
 }
 
-/** Round initials avatar. */
+const AVATAR_INKS: Ink[] = ["violet", "blue", "teal", "pink", "orange", "green"];
+
+/** Round initials avatar, tinted by name so people are easy to tell apart. */
 export function Avatar({ name, size = 40, muted }: { name: string; size?: number; muted?: boolean }) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const text = ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+  const ink = AVATAR_INKS[[...name].reduce((s, ch) => s + ch.charCodeAt(0), 0) % AVATAR_INKS.length];
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: muted ? C.soft : C.head, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: muted ? C.muted : C.white, fontWeight: "700", fontSize: Math.round(size * 0.38) }}>{text}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: muted ? C.soft : C.tint[ink], alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: muted ? C.muted : C.ink[ink], fontWeight: "700", fontSize: Math.round(size * 0.36) }}>{text}</Text>
     </View>
   );
 }
 
-/** Our on / off switch (charcoal track when on, green for the "on" accent). */
+/** Our on / off switch (green when on). */
 export function Toggle({ value, onValueChange, disabled, label }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean; label?: string }) {
   const [x] = useState(() => new Animated.Value(value ? 1 : 0));
   useEffect(() => {
@@ -177,15 +212,7 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
       hitSlop={8}
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
-      <Animated.View
-        style={{
-          width: 50,
-          height: 30,
-          borderRadius: 15,
-          padding: 3,
-          backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [isDark ? "#3a3a3a" : "#d4d4d4", C.green] }),
-        }}
-      >
+      <Animated.View style={{ width: 50, height: 30, borderRadius: 15, padding: 3, backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [isDark ? "#3a3d45" : "#d5d8de", C.green] }) }}>
         <Animated.View
           style={{
             width: 24,
@@ -205,62 +232,58 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
   );
 }
 
-/** Round floating action button, bottom right (e.g. add employee). */
-export function Fab({ icon, label, onPress, lift = 0 }: { icon: React.ReactNode; label: string; onPress: () => void; lift?: number }) {
+/** Round floating action button, bottom right, in the thumb zone (e.g. add employee). */
+export function Fab({ icon, label, onPress, lift = 0, extended }: { icon: React.ReactNode; label: string; onPress: () => void; lift?: number; extended?: boolean }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [styles.fab, lift ? { bottom: 20 + lift } : null, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
-    >
+    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.94} style={[styles.fab, extended && { width: "auto", minWidth: 58, paddingHorizontal: 20, flexDirection: "row", gap: 8 }, lift ? { bottom: 20 + lift } : null]}>
       {icon}
-    </Pressable>
+      {extended ? <Text style={{ color: C.headText, fontWeight: "600", fontSize: 15 }}>{label}</Text> : null}
+    </PressScale>
   );
 }
 
-export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green" | "amber"; dot?: boolean }) {
+export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green" | "amber" | "blue" | "violet"; dot?: boolean }) {
   const map = {
-    neutral: { bg: C.track, fg: C.text, border: C.line },
-    red: { bg: C.redTint, fg: C.redInk, border: C.redLine },
-    green: { bg: C.greenTint, fg: C.greenInk, border: C.greenLine },
-    amber: { bg: C.amberTint, fg: C.amberInk, border: C.amberLine },
+    neutral: { bg: C.track, fg: C.muted },
+    red: { bg: C.tint.red, fg: C.ink.red },
+    green: { bg: C.tint.green, fg: C.ink.green },
+    amber: { bg: C.tint.amber, fg: C.ink.amber },
+    blue: { bg: C.tint.blue, fg: C.ink.blue },
+    violet: { bg: C.tint.violet, fg: C.ink.violet },
   }[tone];
   return (
     <View style={[styles.badge, { backgroundColor: map.bg }]}>
+      {dot ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: map.fg }} /> : null}
       <Text style={[styles.badgeText, { color: map.fg }]}>{label}</Text>
     </View>
   );
 }
 
-export function Row({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean }) {
+export function Row({ label, value, strong, ink }: { label: string; value: React.ReactNode; strong?: boolean; ink?: Ink }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      {typeof value === "string" || typeof value === "number" ? <Text style={[styles.rowValue, strong && { fontWeight: "700" }]}>{value}</Text> : value}
+      <Text style={[styles.rowLabel, ink && { color: C.ink[ink], fontWeight: "500" }]}>{label}</Text>
+      {typeof value === "string" || typeof value === "number" ? <Text style={[styles.rowValue, strong && { fontWeight: "700" }, ink && { color: C.ink[ink], fontWeight: "600" }]}>{value}</Text> : value}
     </View>
   );
 }
 
 export function Notice({ text, tone = "neutral" }: { text: string; tone?: "neutral" | "red" | "green" }) {
   const map = {
-    neutral: { bg: C.white, fg: C.text, border: C.line },
+    neutral: { bg: C.card, fg: C.text, border: C.line },
     red: { bg: C.redSoft, fg: C.redInk, border: C.redLine },
     green: { bg: C.greenSoft, fg: C.greenInk, border: C.greenLine },
   }[tone];
   return (
-    <View style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]}>
+    <View style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]} accessibilityLiveRegion="polite">
       <Text style={{ color: map.fg, fontSize: 14, lineHeight: 20 }}>{text}</Text>
     </View>
   );
 }
 
-export function Loading() {
-  return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-      <ActivityIndicator color={C.text} />
-    </View>
-  );
+/** Loading state: card-shaped placeholders instead of a bare spinner. */
+export function Loading({ header = true }: { header?: boolean }) {
+  return <SkeletonList header={header} />;
 }
 
 export function ErrorView({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -279,38 +302,32 @@ export const styles = StyleSheet.create({
     bottom: 20,
     width: 58,
     height: 58,
-    borderRadius: 30,
+    borderRadius: 29,
     backgroundColor: C.head,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    ...shadow(3),
   },
   screen: { flex: 1, backgroundColor: C.bg },
   inner: { flex: 1, gap: 14 },
-  padded: { padding: 16, paddingTop: 18 },
-  card: { backgroundColor: C.card, borderColor: C.hairline, borderWidth: 1, borderRadius: 20, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
-  h1: { fontSize: 22, fontWeight: "700", color: C.text, letterSpacing: -0.3 },
+  padded: { padding: 16, paddingTop: 16 },
+  card: { backgroundColor: C.card, borderColor: C.hairline, borderWidth: 1, borderRadius: 20, padding: 16, gap: 10, ...shadow(1) },
+  h1: { fontSize: 24, fontWeight: "700", color: C.text, letterSpacing: -0.5 },
   h2: { fontSize: 16, fontWeight: "600", color: C.text, letterSpacing: -0.2 },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
-  button: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  buttonText: { fontSize: 15, fontWeight: "500" },
+  button: { minHeight: 50, borderRadius: 999, borderWidth: 1, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  buttonText: { fontSize: 15, fontWeight: "600", flexShrink: 1 },
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },
-  input: { minHeight: 48, borderWidth: 1, borderColor: C.hairline, borderRadius: 14, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
-  // Full width with equal parts, so five tabs still fit on a narrow phone.
-  // Pill group: grey pill track, the chosen option a filled charcoal pill.
+  input: { minHeight: 50, borderWidth: 1, borderColor: C.hairline, borderRadius: R.md + 2, paddingHorizontal: 14, fontSize: 16, color: C.text, backgroundColor: C.card },
   segment: { flexDirection: "row", gap: 2, padding: 4, borderRadius: 999, alignSelf: "stretch", backgroundColor: C.track },
   segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 9, borderRadius: 999, alignItems: "center", justifyContent: "center" },
-  segmentActive: { backgroundColor: C.text },
-  segmentText: { fontSize: 13, fontWeight: "600", color: C.text },
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
+  segmentActive: { backgroundColor: C.card, ...shadow(1) },
+  segmentText: { fontSize: 13, fontWeight: "600", color: C.muted },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
   badgeText: { fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 4 },
-  rowLabel: { fontSize: 14, color: C.muted },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 5 },
+  rowLabel: { fontSize: 14, color: C.muted, flexShrink: 1 },
   rowValue: { fontSize: 15, color: C.text, textAlign: "right", flexShrink: 1, fontVariant: ["tabular-nums"] },
   notice: { borderWidth: 1, borderRadius: R.md, padding: 12 },
 });

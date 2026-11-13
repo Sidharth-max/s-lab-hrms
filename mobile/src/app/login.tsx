@@ -43,11 +43,11 @@ export default function Login() {
     }
   }
 
-  async function verify() {
+  async function verify(otp = code) {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.post<{ token: string }>("/api/m/auth/verify", { phone, code });
+      const r = await api.post<{ token: string }>("/api/m/auth/verify", { phone, code: otp });
       await signIn(r.token);
       router.replace("/(tabs)");
     } catch (e) {
@@ -82,8 +82,26 @@ export default function Login() {
             <>
               <Muted>OTP sent to {phone}</Muted>
               {devCode ? <Notice text={`Test mode: your OTP is ${devCode}`} /> : null}
-              <Field label="OTP" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} autoFocus style={{ letterSpacing: 6 }} />
-              <Button title="Log in" onPress={verify} loading={busy} disabled={code.length !== 6} />
+              {/* OTP from SMS: autoComplete "sms-otp" sets Android's autofill hint, so Google autofill / Gboard
+                  offer the code from the incoming SMS with one tap above the keyboard. When 6 digits
+                  arrive (typed or filled), we log in by ourselves. */}
+              <Field
+                label="OTP"
+                value={code}
+                onChangeText={(t) => {
+                  const digits = t.replace(/\D/g, "").slice(0, 6);
+                  setCode(digits);
+                  if (digits.length === 6 && !busy) void verify(digits);
+                }}
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus
+                autoComplete="sms-otp"
+                textContentType="oneTimeCode"
+                importantForAutofill="yes"
+                style={{ letterSpacing: 6 }}
+              />
+              <Button title="Log in" onPress={() => verify()} loading={busy} disabled={code.length !== 6} />
               <Pressable onPress={() => { setStep("phone"); setCode(""); }}>
                 <Text style={{ color: C.text, textDecorationLine: "underline", textAlign: "center" }}>Change number / resend OTP</Text>
               </Pressable>

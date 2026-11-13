@@ -30,6 +30,8 @@ export function ActionForm({
     const r = await action(prev, form);
     if (r?.ok) ref.current?.removeAttribute("data-dirty");
     if (r?.ok && r.message) toast(r.message, true);
+    // Lets a surrounding pop-up (e.g. the leave dialog) close itself after a successful save.
+    if (r?.ok) ref.current?.dispatchEvent(new CustomEvent("action:success", { bubbles: true }));
     if (r?.error) toast(r.error, false);
     return r;
   }, null);

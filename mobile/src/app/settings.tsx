@@ -2,11 +2,13 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Plus, Trash2 } from "@/components/icons";
-import { Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
+import { Beach, Building, ChevronDown, ChevronUp, Clock, Coins, Plus, Trash2, type IconType } from "@/components/icons";
+import { Button, Card, ErrorView, Field, IconChip, Loading, Muted, Notice, refreshProps, Screen, Toggle } from "@/components/ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { haptic } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, type Ink } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { DateField, TimeField } from "@/components/pickers";
 import { useDialog } from "@/components/dialog";
@@ -84,6 +86,8 @@ function SettingsForm({
     }
   }
 
+  const [open, setOpen] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
   const setDay = (i: number, patch: Partial<DayForm>) => setDays((d) => d.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   function saveSettings() {
@@ -103,28 +107,31 @@ function SettingsForm({
     <Field key={k} label={label} value={nums[k] ?? ""} onChangeText={(t) => setNums((n) => ({ ...n, [k]: t }))} keyboardType="decimal-pad" />
   );
 
+  const dirty = JSON.stringify({ name, days, nums }) !== saved;
+  const workDays = days.filter((d) => !d.off).length;
+  const offNames = days.map((d, i) => (d.off ? DAYS[i].slice(0, 3) : null)).filter(Boolean).join(", ");
   return (
-    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
+    <View style={{ flex: 1 }}>
+    <Screen refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} bottomSpace={dirty ? 90 : 0}>
       <Stack.Screen options={{ title: "Settings" }} />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
+      <Muted>Tap a section to open it. Changes to the business, hours and rates are saved together with the button at the bottom.</Muted>
 
-      <Card>
-        <H2>Business</H2>
+      <Section id="business" open={open} setOpen={setOpen} icon={Building} ink="blue" title="Business" summary={name}>
         <Field label="Business name" value={name} onChangeText={setName} />
         {num("duplicateScanMins", "Ignore repeat scans within (minutes)")}
         {num("maxShiftHours", "Longest shift (hours)")}
-      </Card>
+      </Section>
 
-      <Card>
-        <H2>Weekly schedule</H2>
+      <Section id="hours" open={open} setOpen={setOpen} icon={Clock} ink="teal" title="Working hours" summary={`${workDays} working days${offNames ? ` · off ${offNames}` : ""}`}>
         <Muted>Weekly off is paid for monthly staff. Half day: worked less than these hours (0 = never). Any scan = full day: for short days like Sunday.</Muted>
         {days.map((d, i) => (
-          <View key={i} style={{ borderTopWidth: 1, borderTopColor: C.line, paddingTop: 10, gap: 8 }}>
+          <View key={i} style={{ borderTopWidth: 1, borderTopColor: C.hairline, paddingTop: 10, gap: 8 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontWeight: "600", color: C.text, fontSize: 15 }}>{DAYS[i]}</Text>
+              <Text style={{ fontWeight: "600", color: d.off ? C.muted : C.text, fontSize: 15 }}>{DAYS[i]}{d.off ? " · off" : <Text style={{ color: C.ink.teal, fontWeight: "500" }}>{`  ${d.open} – ${d.close}`}</Text>}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ color: C.muted }}>Weekly off</Text>
-                <Toggle value={d.off} onValueChange={(b) => setDay(i, { off: b })} />
+                <Text style={{ color: C.muted, fontSize: 13 }}>Off</Text>
+                <Toggle value={d.off} onValueChange={(b) => setDay(i, { off: b })} label={`${DAYS[i]} weekly off`} />
               </View>
             </View>
             {!d.off ? (
@@ -136,58 +143,78 @@ function SettingsForm({
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ color: C.text }}>Any scan = full day</Text>
-                  <Toggle value={d.any} onValueChange={(b) => setDay(i, { any: b })} />
+                  <Toggle value={d.any} onValueChange={(b) => setDay(i, { any: b })} label={`${DAYS[i]} any scan counts as full day`} />
                 </View>
               </>
             ) : null}
           </View>
         ))}
-      </Card>
+      </Section>
 
-      <Card>
-        <H2>PF and ESIC rates</H2>
+      <Section id="holidays" open={open} setOpen={setOpen} icon={Beach} ink="pink" title="Holidays" summary={data.holidays.length ? `${data.holidays.length} added · paid for monthly staff` : "None added"}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flex: 1 }}><DateField label="Date" value={hDate} onChange={setHDate} /></View>
+          <View style={{ flex: 1 }}><Field label="Name" value={hName} onChangeText={setHName} placeholder="e.g. Diwali" /></View>
+        </View>
+        <Button title="Add holiday" variant="secondary" icon={<Plus size={18} color={C.ink.pink} />} loading={busy === "holiday"} disabled={!/^\d{4}-\d{2}-\d{2}$/.test(hDate) || !hName.trim()} onPress={() => run("holiday", "addHoliday", { date: hDate, name: hName }, () => { setHDate(""); setHName(""); })} />
+        {data.holidays.map((h) => (
+          <View key={h.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 4 }}>
+            <Text style={{ color: C.text }}><Text style={{ color: C.ink.pink, fontWeight: "600" }}>{dateLabel(h.date)}</Text> · {h.name}</Text>
+            <Pressable
+              hitSlop={10}
+              accessibilityLabel={`Remove ${h.name}`}
+              onPress={async () => { if (await dialog.confirm({ title: `Remove ${h.name}?`, confirmText: "Remove", danger: true })) void run(h.id, "removeHoliday", { holidayId: h.id }); }}
+            >
+              <Trash2 size={18} color={C.ink.red} />
+            </Pressable>
+          </View>
+        ))}
+      </Section>
+
+      <Section id="sites" open={open} setOpen={setOpen} icon={Building} ink="violet" title="Sites and branches" summary={`${data.sites.filter((x) => x.active).length} active`}>
+        {data.sites.map((x) => (
+          <View key={x.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <Text style={{ flex: 1, color: x.active ? C.text : C.muted, textDecorationLine: x.active ? "none" : "line-through", fontSize: 15 }}>{x.name}</Text>
+            <Toggle value={x.active} onValueChange={() => run(x.id, "toggleSite", { siteId: x.id })} label={`${x.name} active`} disabled={busy === x.id} />
+          </View>
+        ))}
+        <Field label="New site name" value={newSite} onChangeText={setNewSite} />
+        <Button title="Add site" variant="secondary" icon={<Plus size={18} color={C.ink.violet} />} loading={busy === "site"} disabled={!newSite.trim()} onPress={() => run("site", "addSite", { name: newSite }, () => setNewSite(""))} />
+      </Section>
+
+      <Section id="rates" open={open} setOpen={setOpen} icon={Coins} ink="orange" title="PF and ESIC rates" summary={`PF ${nums.pfEmployeePct}% · ESIC ${nums.esiEmployeePct}%`}>
         <Muted>Used only for employees with PF / ESIC switched on. Check the current official rates with your accountant.</Muted>
         {num("pfEmployeePct", "PF employee %")}
         {num("pfEmployerPct", "PF employer %")}
         {num("pfWageCeiling", "PF wage ceiling (₹)")}
         {num("esiEmployeePct", "ESIC employee %")}
         {num("esiEmployerPct", "ESIC employer %")}
-      </Card>
-      <Button title="Save settings" loading={busy === "settings"} onPress={saveSettings} />
-
-      <Card>
-        <H2>Sites / branches</H2>
-        {data.sites.map((s) => (
-          <View key={s.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: s.active ? C.text : C.muted, textDecorationLine: s.active ? "none" : "line-through", fontSize: 15 }}>{s.name}</Text>
-            <Button title={s.active ? "Disable" : "Enable"} variant="secondary" loading={busy === s.id} onPress={() => run(s.id, "toggleSite", { siteId: s.id })} />
-          </View>
-        ))}
-        <Field label="New site name" value={newSite} onChangeText={setNewSite} />
-        <Button title="Add site" variant="secondary" icon={<Plus size={18} color={C.text} />} loading={busy === "site"} disabled={!newSite.trim()} onPress={() => run("site", "addSite", { name: newSite }, () => setNewSite(""))} />
-      </Card>
-
-      <Card>
-        <H2>Holidays (paid for monthly staff)</H2>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <View style={{ flex: 1 }}><DateField label="Date" value={hDate} onChange={setHDate} /></View>
-          <View style={{ flex: 1 }}><Field label="Name" value={hName} onChangeText={setHName} /></View>
-        </View>
-        <Button title="Add holiday" variant="secondary" icon={<Plus size={18} color={C.text} />} loading={busy === "holiday"} disabled={!/^\d{4}-\d{2}-\d{2}$/.test(hDate) || !hName.trim()} onPress={() => run("holiday", "addHoliday", { date: hDate, name: hName }, () => { setHDate(""); setHName(""); })} />
-        {data.holidays.length === 0 ? <Muted>No holidays added.</Muted> : null}
-        {data.holidays.map((h) => (
-          <View key={h.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: C.text }}>{dateLabel(h.date)} · {h.name}</Text>
-            <Pressable
-              hitSlop={10}
-              accessibilityLabel={`Remove ${h.name}`}
-              onPress={async () => { if (await dialog.confirm({ title: `Remove ${h.name}?`, confirmText: "Remove", danger: true })) void run(h.id, "removeHoliday", { holidayId: h.id }); }}
-            >
-              <Trash2 size={18} color={C.red} />
-            </Pressable>
-          </View>
-        ))}
-      </Card>
+      </Section>
     </Screen>
+    {dirty ? (
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: insets.bottom + 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.hairline, flexDirection: "row", gap: 10 }}>
+        <View style={{ flex: 1 }}><Button title="Undo" variant="secondary" onPress={() => { const o = JSON.parse(saved); setName(o.name); setDays(o.days); setNums(o.nums); }} /></View>
+        <View style={{ flex: 2 }}><Button title="Save changes" loading={busy === "settings"} onPress={saveSettings} /></View>
+      </View>
+    ) : null}
+    </View>
+  );
+}
+
+/** One collapsible settings group: icon, title and a one-line summary; tap to open. Only one is open at a time. */
+function Section({ id, open, setOpen, icon: Icon, ink, title, summary, children }: { id: string; open: string | null; setOpen: (v: string | null) => void; icon: IconType; ink: Ink; title: string; summary: string; children: React.ReactNode }) {
+  const isOpen = open === id;
+  return (
+    <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
+      <Pressable onPress={() => { haptic.select(); setOpen(isOpen ? null : id); }} accessibilityRole="button" accessibilityState={{ expanded: isOpen }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 16, backgroundColor: pressed ? C.soft : "transparent" })}>
+        <IconChip ink={ink}><Icon size={20} color={C.ink[ink]} /></IconChip>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{title}</Text>
+          <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={1}>{summary}</Text>
+        </View>
+        {isOpen ? <ChevronUp size={20} color={C.muted} /> : <ChevronDown size={20} color={C.muted} />}
+      </Pressable>
+      {isOpen ? <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>{children}</View> : null}
+    </Card>
   );
 }

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- S-Lab HRMS app icon: face-scan frame with a check mark (scan in, marked present). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a1bff"/>
+      <stop offset="0.55" stop-color="#4a3cff"/>
+      <stop offset="1" stop-color="#1f6bff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.25" cy="0.15" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <g id="mark" fill="none" stroke="#ffffff" stroke-width="64" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M300 404v-48a56 56 0 0 1 56-56h48"/>
+    <path d="M620 300h48a56 56 0 0 1 56 56v48"/>
+    <path d="M724 620v48a56 56 0 0 1-56 56h-48"/>
+    <path d="M404 724h-48a56 56 0 0 1-56-56v-48"/>
+    <path d="M420 520l64 64l124-132"/>
+  </g>
+</svg>

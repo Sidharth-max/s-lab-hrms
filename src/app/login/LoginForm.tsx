@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { requestLoginOtp, verifyLoginOtp } from "@/app/actions/auth";
 
 export function LoginForm() {
@@ -10,6 +10,29 @@ export function LoginForm() {
   const phone = (sent?.data?.phone as string | undefined) ?? "";
   const devCode = sent?.data?.devCode as string | undefined;
   const step = sent?.ok && !editPhone ? "code" : "phone";
+  const form = useRef<HTMLFormElement>(null);
+  const codeBox = useRef<HTMLInputElement>(null);
+
+  // OTP from SMS on the website:
+  //  - autocomplete="one-time-code" lets Android Chrome / iOS Safari offer the code from the SMS.
+  //  - WebOTP (Chrome on Android) reads it automatically when the SMS's last line is
+  //    "@hrms.s-lab.dev #123456" (needs that line in the Fast2SMS / DLT template).
+  // Either way, 6 digits submit the form by themselves.
+  useEffect(() => {
+    if (step !== "code" || !("OTPCredential" in window)) return;
+    const ac = new AbortController();
+    navigator.credentials
+      .get({ otp: { transport: ["sms"] }, signal: ac.signal } as CredentialRequestOptions)
+      .then((c) => {
+        const otp = (c as unknown as { code?: string } | null)?.code;
+        if (otp && codeBox.current) {
+          codeBox.current.value = otp;
+          form.current?.requestSubmit();
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [step]);
 
   if (step === "phone") {
     return (
@@ -23,7 +46,7 @@ export function LoginForm() {
   }
 
   return (
-    <form action={verifyAction} className="flex flex-col gap-3">
+    <form ref={form} action={verifyAction} className="flex flex-col gap-3">
       <input type="hidden" name="phone" value={phone} />
       <p className="text-sm">{sent?.message} <span className="font-semibold">{phone}</span></p>
       {devCode && (
@@ -32,7 +55,20 @@ export function LoginForm() {
         </p>
       )}
       <label className="label" htmlFor="code">OTP</label>
-      <input id="code" name="code" className="input tracking-[0.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus />
+      <input
+        ref={codeBox}
+        id="code"
+        name="code"
+        className="input tracking-[0.4em]"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        required
+        autoFocus
+        onChange={(e) => {
+          if (e.target.value.replace(/\D/g, "").length === 6 && !verifying) form.current?.requestSubmit();
+        }}
+      />
       <button className="btn-primary" disabled={verifying}>{verifying ? "Checking…" : "Log in"}</button>
       {verified?.error && <p className="text-sm text-[var(--red)]">{verified.error}</p>}
       <button type="button" className="text-sm link" onClick={() => setEditPhone(true)}>

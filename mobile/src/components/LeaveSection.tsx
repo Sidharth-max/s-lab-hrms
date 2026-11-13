@@ -2,8 +2,9 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "./Text";
 import { CalendarCheck } from "./icons";
-import { Badge, Button, Card, Field, H2, Muted, Notice, Segmented } from "./ui";
+import { Badge, Button, Card, Field, Muted, Notice, Segmented } from "./ui";
 import { DateField } from "./pickers";
+import { Sheet } from "./Sheet";
 import { EmployeePicker, type PickEmployee } from "./EmployeePicker";
 import { useDialog } from "./dialog";
 import { api } from "@/lib/api";
@@ -29,18 +30,45 @@ function today() {
   return new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
 }
 
-function LeaveForm({ employeeId: fixedId, employees, onDone }: { employeeId?: string; employees?: PickEmployee[]; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
+/**
+ * Schedule leave, in a bottom sheet. Before, "Schedule leave" expanded a form at the top of a long
+ * page without scrolling to it, so it looked like nothing happened. A pop-up keeps the person in
+ * place and puts the form (and its button) in the thumb zone.
+ */
+function LeaveSheet({ visible, employeeId: fixedId, employees, onClose, onDone }: { visible: boolean; employeeId?: string; employees?: PickEmployee[]; onClose: () => void; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
   const [employeeId, setEmployeeId] = useState(fixedId ?? "");
   const [from, setFrom] = useState(today());
   const [to, setTo] = useState(today());
   const [paid, setPaid] = useState<"1" | "0">("1");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  useUnsavedGuard(!busy && (!!reason || from !== today() || to !== today()));
+  useUnsavedGuard(visible && !busy && (!!reason || from !== today() || to !== today()));
   const days = to >= from ? Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86400000) + 1 : 0;
+  const button = (
+    <Button
+      title={days ? `Schedule ${days} day${days === 1 ? "" : "s"}` : "Schedule leave"}
+      icon={<CalendarCheck size={18} color={C.headText} />}
+      loading={busy}
+      disabled={!employeeId || !days}
+      onPress={async () => {
+        setBusy(true);
+        try {
+          const r = await api.action("scheduleLeave", { employeeId, fromDate: from, toDate: to, paid, reason });
+          // Start the form fresh so it no longer counts as unsaved.
+          setReason("");
+          setFrom(today());
+          setTo(today());
+          await onDone({ text: r.message ?? "Scheduled", ok: true });
+        } catch (e) {
+          await onDone({ text: (e as Error).message, ok: false });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    />
+  );
   return (
-    <Card>
-      <H2>Schedule leave</H2>
+    <Sheet visible={visible} onClose={onClose} title="Schedule leave" footer={button}>
       <Muted>Every working day in the range is marked as leave. If they come back early and scan in, the leave ends the day before by itself.</Muted>
       {!fixedId && employees ? <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} /> : null}
       <View style={{ flexDirection: "row", gap: 10 }}>
@@ -49,28 +77,7 @@ function LeaveForm({ employeeId: fixedId, employees, onDone }: { employeeId?: st
       </View>
       <Segmented options={[{ value: "1", label: "Paid leave" }, { value: "0", label: "Unpaid leave" }]} value={paid} onChange={setPaid} />
       <Field label="Reason (optional)" value={reason} onChangeText={setReason} placeholder="e.g. family function…" />
-      <Button
-        title={days ? `Schedule ${days} day${days === 1 ? "" : "s"}` : "Schedule leave"}
-        icon={<CalendarCheck size={18} color={C.white} />}
-        loading={busy}
-        disabled={!employeeId || !days}
-        onPress={async () => {
-          setBusy(true);
-          try {
-            const r = await api.action("scheduleLeave", { employeeId, fromDate: from, toDate: to, paid, reason });
-            // Start the form fresh so it no longer counts as unsaved.
-            setReason("");
-            setFrom(today());
-            setTo(today());
-            await onDone({ text: r.message ?? "Scheduled", ok: true });
-          } catch (e) {
-            await onDone({ text: (e as Error).message, ok: false });
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
-    </Card>
+    </Sheet>
   );
 }
 
@@ -150,15 +157,9 @@ export function LeaveSection({ employeeId, employees, active = true }: { employe
     <View style={{ gap: 12 }}>
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       {canEdit && active ? (
-        adding ? (
-          <>
-            <LeaveForm employeeId={employeeId} employees={employees} onDone={done} />
-            <Button title="Close" variant="secondary" onPress={() => setAdding(false)} />
-          </>
-        ) : (
-          <Button title="Schedule leave" icon={<CalendarCheck size={18} color={C.white} />} onPress={() => { setMsg(null); setAdding(true); }} />
-        )
+        <Button title="Schedule leave" icon={<CalendarCheck size={18} color={C.headText} />} onPress={() => { setMsg(null); setAdding(true); }} />
       ) : null}
+      {adding ? <LeaveSheet visible employeeId={employeeId} employees={employees} onClose={() => setAdding(false)} onDone={done} /> : null}
       {data && leaves.length === 0 ? <Card><Muted>No leave scheduled.</Muted></Card> : null}
       {leaves.map((l) => <LeaveCard key={l.id} l={l} showName={!employeeId} canEdit={canEdit} onDone={done} />)}
     </View>

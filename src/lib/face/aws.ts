@@ -137,7 +137,17 @@ export const awsFace: FaceProvider = {
       // The largest face is the person being enrolled.
       const face = (res.FaceDetails ?? []).sort((a, b) => (b.BoundingBox?.Width ?? 0) * (b.BoundingBox?.Height ?? 0) - (a.BoundingBox?.Width ?? 0) * (a.BoundingBox?.Height ?? 0))[0];
       if (!face?.Pose) return { ok: false, reason: "no_face" };
-      return { ok: true, yaw: face.Pose.Yaw ?? 0, pitch: face.Pose.Pitch ?? 0 };
+      const b = face.BoundingBox ?? {};
+      return {
+        ok: true,
+        yaw: face.Pose.Yaw ?? 0,
+        pitch: face.Pose.Pitch ?? 0,
+        roll: face.Pose.Roll ?? 0,
+        box: { left: b.Left ?? 0, top: b.Top ?? 0, width: b.Width ?? 0, height: b.Height ?? 0 },
+        brightness: face.Quality?.Brightness ?? null,
+        sharpness: face.Quality?.Sharpness ?? null,
+        faces: res.FaceDetails?.length ?? 1,
+      };
     } catch (e) {
       if (errName(e) === "InvalidParameterException" || errName(e) === "InvalidImageFormatException") return { ok: false, reason: "no_face" };
       // e.g. AccessDeniedException when rekognition:DetectFaces is not in the IAM policy yet.

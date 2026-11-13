@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Sheet as BaseSheet } from "./Sheet";
+import { haptic } from "@/lib/haptics";
 import { Text } from "@/components/Text";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Minus, Plus } from "@/components/icons";
 import { dateLabel, monthLabel } from "@/lib/format";
@@ -31,17 +33,7 @@ function time12(t: string) {
 
 /** Bottom sheet frame shared by the pickers. */
 function Sheet({ visible, title, onClose, children }: { visible: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <Modal transparent visible={visible} animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,10,10,0.55)", justifyContent: "flex-end" }}>
-        <Pressable onPress={() => {}} style={{ backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 28, gap: 12, width: "100%", maxWidth: 520, alignSelf: "center" }}>
-          <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: C.line }} />
-          <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>{title}</Text>
-          {children}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
+  return <BaseSheet visible={visible} title={title} onClose={onClose} maxWidth={520}>{children}</BaseSheet>;
 }
 
 /** Month calendar in a sheet. */
@@ -59,6 +51,7 @@ export function DatePickerSheet({ visible, value, onChange, onClose, min, max, t
   const canBack = !min || shiftMonth(shown, -1) >= min.slice(0, 7);
   const canNext = !max || shiftMonth(shown, 1) <= max.slice(0, 7);
   const pick = (d: string) => {
+    haptic.select();
     onChange(d);
     onClose();
   };
@@ -91,11 +84,11 @@ export function DatePickerSheet({ visible, value, onChange, onClose, min, max, t
                   accessibilityLabel={dateLabel(d)}
                   style={({ pressed }) => [
                     { flex: 1, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
-                    sel ? { backgroundColor: C.head } : d === today ? { borderWidth: 1, borderColor: C.text } : null,
+                    sel ? { backgroundColor: C.brand } : d === today ? { borderWidth: 1.5, borderColor: C.brand } : null,
                     pressed && !sel && { backgroundColor: C.soft },
                   ]}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: sel || d === today ? "700" : "400", color: sel ? C.white : enabled ? C.text : C.faint }}>{Number(d.slice(8))}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: sel || d === today ? "700" : "400", color: sel ? "#ffffff" : d === today ? C.brandInk : enabled ? C.text : C.faint }}>{Number(d.slice(8))}</Text>
                 </Pressable>
               );
             })}
@@ -215,12 +208,12 @@ export function MonthField({ label, value, onChange, min, max }: { label?: strin
 const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   box: {
-    minHeight: 46,
+    minHeight: 50,
     borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: R.md,
-    paddingHorizontal: 12,
-    backgroundColor: C.white,
+    borderColor: C.hairline,
+    borderRadius: R.md + 2,
+    paddingHorizontal: 14,
+    backgroundColor: C.card,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",

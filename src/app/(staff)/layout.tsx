@@ -45,7 +45,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
             <span className="hidden md:inline muted">
               {actor.name} · {actor.role === "OWNER" ? "Owner" : "Manager"}
             </span>
-            <a href="/download" className="hidden link lg:inline">Android app</a>
+            <a href="/get-app" className="hidden link lg:inline">Android app</a>
             <ThemeToggle />
             <form action={logout}>
               <button className="btn-secondary !h-8 !px-3" aria-label={logoutLabel}>
@@ -62,13 +62,13 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
           {`This device is a scanner (${device.name}). Log out when done so workers only see the face scan.`}
         </div>
       )}
-      <main className="cq mx-auto max-w-7xl p-3 sm:p-4">{children}</main>
+      <main className="cq mx-auto max-w-7xl p-3 pb-6 sm:p-4">{children}</main>
       <MobileNav
         links={links}
         moreLabel={"More"}
         extra={
           <>
-            <a href="/download" className="text-sm link">Download Android app</a>
+            <a href="/get-app" className="text-sm link">Get the Android app</a>
             <span className="muted w-full text-xs">{actor.name} · {actor.phone}</span>
           </>
         }
