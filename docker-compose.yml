@@ -3,14 +3,15 @@
 
 services:
   db:
-    image: public.ecr.aws/docker/library/postgres:16-alpine
+    # Postgres 18 keeps its data under /var/lib/postgresql/18/docker, so the volume mounts at /var/lib/postgresql.
+    image: public.ecr.aws/docker/library/postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: hrms
       POSTGRES_USER: hrms
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hrms -d hrms"]
       interval: 5s
@@ -65,4 +66,4 @@ services:
     profiles: ["tunnel"]
 
 volumes:
-  pgdata:
+  pgdata18:
