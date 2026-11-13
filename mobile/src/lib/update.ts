@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { useEffect, useState } from "react";
-import { Linking, Platform } from "react-native";
+import { AppState, Linking, Platform } from "react-native";
 import { API_URL } from "./api";
 
 export interface AppUpdate {
@@ -36,16 +36,23 @@ export function checkForUpdate(force = false): Promise<AppUpdate | null> {
   return pending;
 }
 
-/** The newer app version, if there is one. Checks again every 30 minutes. */
+/** The newer app version, if there is one. Checks on start, when the user returns to the
+ * app (unlock, app switch), and every 30 minutes while it stays open. */
 export function useAppUpdate() {
   const [update, setUpdate] = useState<AppUpdate | null>(null);
   useEffect(() => {
     let alive = true;
     const run = () => void checkForUpdate().then((u) => alive && setUpdate(u));
     run();
+    // Returning to the app is the most common moment to notice a new build; check then
+    // instead of waiting for the 30-minute tick (checkForUpdate's own 10-min cache still applies).
+    const appState = AppState.addEventListener("change", (s) => {
+      if (s === "active") run();
+    });
     const t = setInterval(run, 30 * 60000);
     return () => {
       alive = false;
+      appState.remove();
       clearInterval(t);
     };
   }, []);
