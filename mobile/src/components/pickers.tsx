@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/Text";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Minus, Plus } from "lucide-react-native";
 import { dateLabel, monthLabel } from "@/lib/format";
 import { C, R } from "@/lib/theme";

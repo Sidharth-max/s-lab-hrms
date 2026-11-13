@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/Text";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScanFace } from "lucide-react-native";
-import { Button, Card, Field, Muted, Notice } from "@/components/ui";
+import { Button, Field, Muted, Notice } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
@@ -48,19 +49,21 @@ export default function Login() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: C.white }}>
       {/* Two-tone: charcoal band behind the status bar with the name; the form sits on the light part. */}
-      <View style={{ backgroundColor: C.head, paddingTop: insets.top + 28, paddingBottom: 28, alignItems: "center", gap: 8 }}>
-        <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: C.white, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: C.head, fontWeight: "800", fontSize: 22 }}>S</Text>
+      <View style={{ paddingTop: insets.top + 56, paddingHorizontal: 24, paddingBottom: 8, gap: 14, width: "100%", maxWidth: 480, alignSelf: "center" }}>
+        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: C.text, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: C.white, fontWeight: "700", fontSize: 20 }}>S</Text>
         </View>
-        <Text style={{ fontSize: 22, fontWeight: "700", color: C.headText }}>S-Lab HRMS</Text>
-        <Text style={{ fontSize: 14, color: C.headMuted }}>Attendance and salary</Text>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 28, fontWeight: "700", color: C.text, letterSpacing: -0.8 }}>Log in to S-Lab HRMS</Text>
+          <Text style={{ fontSize: 15, color: C.muted }}>Attendance and salary for your business.</Text>
+        </View>
       </View>
       {/* The page shrinks to the space above the keyboard, so the number and OTP boxes stay visible. */}
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 20, paddingBottom: insets.bottom + 20, gap: 20, width: "100%", maxWidth: 480, alignSelf: "center" }}>
-        <Card>
+        <View style={{ gap: 14 }}>
           {step === "phone" ? (
             <>
               <Field label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="10 digit mobile" autoFocus maxLength={14} />
@@ -78,7 +81,7 @@ export default function Login() {
             </>
           )}
           {error ? <Notice text={error} tone="red" /> : null}
-        </Card>
+        </View>
         {scannerMode ? (
           <Button title="Back to face scan" variant="secondary" icon={<ScanFace size={18} color={C.text} />} onPress={() => router.replace("/scanner")} />
         ) : null}

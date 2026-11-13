@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Text } from "react-native";
+import { Text } from "@/components/Text";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { api } from "@/lib/api";

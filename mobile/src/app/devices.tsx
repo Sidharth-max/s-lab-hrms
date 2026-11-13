@@ -1,6 +1,7 @@
 import { router, Stack } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { ChevronDown, ChevronUp, Pencil, ScanFace } from "lucide-react-native";
 import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";

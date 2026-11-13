@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { RefreshControl, Text, View } from "react-native";
+import { RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

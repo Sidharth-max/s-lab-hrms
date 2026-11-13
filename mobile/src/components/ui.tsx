@@ -1,17 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type PressableProps,
-  type RefreshControlProps,
-  type TextInputProps,
-  type ViewStyle,
-} from "react-native";
+import { ActivityIndicator, Animated, Pressable, StyleSheet, View, type PressableProps, type RefreshControlProps, type TextInputProps, type ViewStyle } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, R } from "@/lib/theme";
@@ -94,11 +83,18 @@ export function Button({
   );
 }
 
-export function Field({ label, hint, style, ...props }: TextInputProps & { label: string; hint?: string }) {
+export function Field({ label, hint, style, onFocus, onBlur, ...props }: TextInputProps & { label: string; hint?: string }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 6 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput placeholderTextColor="#a3a3a3" style={[styles.input, style]} {...props} />
+      <TextInput
+        placeholderTextColor="#a3a3a3"
+        style={[styles.input, focused && { borderColor: C.text }, style]}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+        {...props}
+      />
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
@@ -259,17 +255,17 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   screen: { flex: 1, backgroundColor: C.bg },
-  inner: { flex: 1, gap: 12 },
-  padded: { padding: 16 },
+  inner: { flex: 1, gap: 14 },
+  padded: { padding: 16, paddingTop: 18 },
   card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 14, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
   h1: { fontSize: 22, fontWeight: "700", color: C.text, letterSpacing: -0.3 },
-  h2: { fontSize: 16, fontWeight: "600", color: C.text },
+  h2: { fontSize: 16, fontWeight: "600", color: C.text, letterSpacing: -0.2 },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
-  button: { minHeight: 44, borderRadius: R.md, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  buttonText: { fontSize: 15, fontWeight: "600" },
+  button: { minHeight: 46, borderRadius: 10, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  buttonText: { fontSize: 15, fontWeight: "500" },
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },
-  input: { minHeight: 44, borderWidth: 1, borderColor: C.line, borderRadius: R.md, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
+  input: { minHeight: 46, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 10, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
   // Full width with equal parts, so five tabs still fit on a narrow phone.
   segment: { flexDirection: "row", borderRadius: 10, padding: 3, gap: 2, alignSelf: "stretch", backgroundColor: "#efefef" },
   segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center", justifyContent: "center" },

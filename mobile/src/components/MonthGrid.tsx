@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 

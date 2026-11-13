@@ -52,7 +52,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
       <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
         <Stat label={"Present"} value={present.length} of={employees.length} />
         <Stat label={"Still inside"} value={inside.length} />
-        <Stat label={"Not came yet"} value={notIn.length} />
+        <Stat label={"Not in yet"} value={notIn.length} />
         <Link href="/approvals"><Stat label={"Waiting approval"} value={pending} warn={pending > 0} /></Link>
       </div>
       {noFace.length > 0 && (
@@ -74,7 +74,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
               <tr key={e.id}>
                 <td className="card-title"><Link className="font-medium text-[var(--text)] hover:underline" href={`/attendance/${e.id}/${today}`}>{e.name}</Link> <span className="muted">{e.code}</span></td>
                 <td data-label={"Site"}>{e.site.name}</td>
-                <td data-label={"Status"}>{STATUS_LABEL[d.status] ? <span className={statusBadgeClass(d.status)}>{STATUS_LABEL[d.status]}</span> : "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
+                <td data-label={"Status"}>{d.status === "ABSENT" ? <span className="badge badge-neutral">Not in yet</span> : STATUS_LABEL[d.status] ? <span className={statusBadgeClass(d.status)}>{STATUS_LABEL[d.status]}</span> : "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
                 <td data-label={"In"}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
                 <td data-label={"Out"}>{d.outAt ? formatIstTime(d.outAt) : d.missingOut ? <span className="text-[var(--red)]">inside</span> : "—"}</td>
               </tr>

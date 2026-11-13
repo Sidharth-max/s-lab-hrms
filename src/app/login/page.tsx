@@ -10,14 +10,15 @@ export default async function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-4">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold">S-Lab HRMS</h1>
-        <p className="muted">Attendance and salary</p>
+      <div className="flex flex-col gap-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand)] text-lg font-bold text-white">S</span>
+        <div>
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">Log in to S-Lab HRMS</h1>
+          <p className="mt-1 text-[15px] text-[var(--muted)]">Attendance and salary for your business.</p>
+        </div>
       </div>
-      <div className="card">
-        <LoginForm />
-      </div>
-      <div className="flex flex-col items-center gap-2 text-sm">
+      <LoginForm />
+      <div className="flex flex-col items-start gap-2 border-t border-[var(--line)] pt-4 text-sm">
         {device && (
           <Link href="/scan" className="btn-secondary w-full">
             {"Back to face scan"} ({device.name})

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
 import { CircleAlert, CircleCheck } from "lucide-react-native";
 import { C } from "@/lib/theme";
 import { Button } from "./ui";

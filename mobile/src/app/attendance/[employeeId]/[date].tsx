@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Segmented, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";

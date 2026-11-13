@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Badge, Card, ErrorView, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
@@ -53,7 +54,7 @@ export default function Today() {
           <View style={{ flex: 1 }}><Stat label="Still inside" value={data.counts.inside} /></View>
         </View>
         <View style={{ flexDirection: "row", gap: 10 }}>
-          <View style={{ flex: 1 }}><Stat label="Not came yet" value={data.counts.notIn} /></View>
+          <View style={{ flex: 1 }}><Stat label="Not in yet" value={data.counts.notIn} /></View>
           <Pressable style={{ flex: 1 }} onPress={() => router.push("/approvals")} accessibilityRole="button">
             <Stat label="Waiting approval" value={data.counts.pendingApprovals} tone={data.counts.pendingApprovals ? "red" : undefined} />
           </Pressable>
@@ -72,7 +73,7 @@ export default function Today() {
               <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
                 {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}</Text>
               </Text>
-              <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} />
+              <Badge label={r.statusLabel || "—"} tone={r.status === "ABSENT" ? "neutral" : statusTone(r.status)} dot />
             </View>
             <Muted>
               {r.site} · In {r.inAt ?? "—"} · Out {r.outAt ?? (r.inside ? "inside" : "—")}

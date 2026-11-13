@@ -1,6 +1,8 @@
 import { Redirect, Tabs } from "expo-router";
 import { CalendarDays, House, Menu, Users } from "lucide-react-native";
 import { useAuth } from "@/lib/auth";
+import { View } from "react-native";
+import { FONT } from "@/components/Text";
 import { C } from "@/lib/theme";
 
 export default function TabsLayout() {
@@ -12,10 +14,12 @@ export default function TabsLayout() {
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.muted,
         tabBarStyle: { borderTopColor: C.line, backgroundColor: C.white },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-        headerStyle: { backgroundColor: C.head },
-        headerTintColor: C.headText,
-        headerTitleStyle: { fontWeight: "600", color: C.headText },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: FONT.medium },
+        headerStyle: { backgroundColor: C.white },
+        headerBackground: () => <View style={{ flex: 1, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.line }} />,
+        headerTintColor: C.text,
+        headerTitleStyle: { fontFamily: FONT.bold, fontSize: 20, color: C.text, letterSpacing: -0.4 },
+        headerTitleAlign: "left",
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: C.bg },
       }}

@@ -1,6 +1,7 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "lucide-react-native";
 import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
@@ -142,12 +143,12 @@ export default function EmployeeDetail() {
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen
         options={{
-          title: e.name,
+          title: "Employee",
           headerRight: manage
             ? () => (
                 <Pressable onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} hitSlop={10} accessibilityLabel="Edit employee" style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8 }}>
-                  <Pencil size={18} color={C.headText} strokeWidth={1.75} />
-                  <Text style={{ color: C.headText, fontWeight: "600" }}>Edit</Text>
+                  <Pencil size={18} color={C.text} strokeWidth={1.75} />
+                  <Text style={{ color: C.text, fontWeight: "600" }}>Edit</Text>
                 </Pressable>
               )
             : undefined,

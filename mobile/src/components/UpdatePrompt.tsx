@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { Modal, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Download } from "lucide-react-native";
 import { Button, Muted, Notice } from "./ui";
 import { installUpdate, useAppUpdate, useInstallState } from "@/lib/update";

@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, SectionList, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, SectionList, View } from "react-native";
+import { Text } from "@/components/Text";
 import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type LucideIcon } from "lucide-react-native";
 import { ErrorView, Loading, Muted } from "@/components/ui";
 import { api } from "@/lib/api";

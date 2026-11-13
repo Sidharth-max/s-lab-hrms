@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, View } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { ChevronRight, Plus, Search } from "lucide-react-native";
 import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";

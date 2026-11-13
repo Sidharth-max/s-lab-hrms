@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { DatePickerSheet } from "@/components/pickers";
 import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
