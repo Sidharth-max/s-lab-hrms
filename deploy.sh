@@ -102,7 +102,7 @@ backup() {
   if [ -n "$remote" ]; then
     # External database (HRMS_DATABASE_URL): dump it with a throwaway Postgres client container.
     log "Backing up external database to $f"
-    docker run --rm --network host -e PGURL="$remote" public.ecr.aws/docker/library/postgres:16-alpine \
+    docker run --rm --network host -e PGURL="$remote" public.ecr.aws/docker/library/postgres:18-alpine \
       sh -c 'pg_dump "$PGURL" --no-owner' | gzip > "$f.part"
   elif "${COMPOSE[@]}" ps --status running db 2>/dev/null | grep -q db; then
     log "Backing up database to $f"
