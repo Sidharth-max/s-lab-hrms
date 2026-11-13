@@ -1,8 +1,9 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
-import { Image, Text, View } from "react-native";
-import { Camera, RotateCcw } from "lucide-react-native";
+import { Image, View } from "react-native";
+import { Text } from "@/components/Text";
+import { Camera, RotateCcw } from "@/components/icons";
 import { Button, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useCameraSession } from "@/lib/camera";

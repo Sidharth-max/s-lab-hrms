@@ -2,7 +2,7 @@
 
 :root {
   /* Only charcoal, white, red (errors) and green (success). Greys are tints of charcoal. */
-  --bg: #fafafa;
+  --bg: #ffffff;
   --card: #ffffff;
   --text: #171717;
   --muted: #666666;
@@ -12,6 +12,7 @@
   --brand-dark: #000000;
   --red: #dc2626;
   --green: #16a34a;
+  --amber: #b45309; /* half day */
 }
 
 body {
@@ -26,15 +27,16 @@ body {
   .card {
     @apply rounded-xl border border-[var(--line)] bg-[var(--card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:p-5;
   }
-  /* Pill switcher: grey track, white raised active item. */
+  /* View switcher: text tabs with a black underline under the open one. */
   .segmented {
-    @apply inline-flex gap-0.5 rounded-lg bg-[var(--soft)] p-0.5 text-sm;
+    @apply flex gap-5 border-b border-[var(--line)] text-sm;
   }
-  .segmented > button {
-    @apply rounded-md px-3 py-1.5 font-medium text-[var(--muted)] transition hover:text-[var(--text)];
+  .segmented > button,
+  .segmented > a {
+    @apply -mb-px border-b-2 border-transparent pb-2.5 pt-1 font-medium text-[var(--muted)] transition hover:text-[var(--text)];
   }
-  .segmented > button[data-active="true"] {
-    @apply bg-white text-[var(--text)] shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.04)];
+  .segmented > [data-active="true"] {
+    @apply border-[var(--text)] text-[var(--text)];
   }
   .input {
     @apply h-10 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-[var(--text)] focus:ring-2 focus:ring-neutral-200;
@@ -70,13 +72,16 @@ body {
     @apply border-b-0;
   }
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-xs font-medium;
   }
   .badge-neutral {
     @apply border-[var(--line)] bg-[var(--soft)] text-[var(--text)];
   }
   .badge-red {
     @apply border-red-200 bg-red-50 text-[var(--red)];
+  }
+  .badge-amber {
+    @apply border-amber-200 bg-amber-50 text-[var(--amber)];
   }
   .badge-green {
     @apply border-green-200 bg-green-50 text-[var(--green)];
@@ -94,7 +99,7 @@ body {
     @apply font-medium text-[var(--text)] underline decoration-neutral-300 underline-offset-4 hover:decoration-[var(--text)];
   }
   .h1 {
-    @apply text-xl font-semibold tracking-tight sm:text-2xl;
+    @apply text-2xl font-semibold tracking-[-0.03em] sm:text-3xl;
   }
   .muted {
     @apply text-sm text-[var(--muted)];
@@ -238,4 +243,14 @@ summary {
 }
 summary::-webkit-details-marker {
   display: none;
+}
+
+/* Our typing cursor and text selection (charcoal) everywhere. */
+input,
+textarea,
+[contenteditable] {
+  caret-color: var(--brand);
+}
+::selection {
+  background: rgba(23, 23, 23, 0.14);
 }

@@ -121,7 +121,7 @@ await page.waitForURL("**/dashboard");
 await page.goto(empUrl + "?advance=1");
 await page.fill("input[name=amount]", "900000");
 await page.click("button:has-text('Save advance')");
-await page.waitForSelector("text=Sent for owner approval");
+await page.waitForSelector("text=Sent for approval");
 await page.goto(`${BASE}/approvals`);
 await page.click("button:has-text('Send OTP to owner')");
 const msg = await page.locator("p.text-green-700:has-text('test code')").first().textContent();

@@ -18,7 +18,7 @@ export default async function ApprovalsPage() {
     <div className="flex flex-col gap-4">
       <h1 className="h1">Approvals</h1>
       <p className="muted">
-        {"An advance that makes an employee's balance negative needs the owner's approval: either here in the app, or by an OTP sent to the owner's mobile."}
+        {"An advance that makes an employee's balance negative needs approval by the owner or a manager allowed to approve (Managers > Advances > Approve advances): here, or by an OTP sent to the owner's mobile."}
       </p>
       {pending.length === 0 && <div className="card muted">Nothing waiting.</div>}
       {pending.map((r) => (

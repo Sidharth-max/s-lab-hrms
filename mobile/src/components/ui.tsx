@@ -1,17 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type PressableProps,
-  type RefreshControlProps,
-  type TextInputProps,
-  type ViewStyle,
-} from "react-native";
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, View, type PressableProps, type RefreshControlProps, type TextInputProps, type ViewStyle } from "react-native";
+import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, R } from "@/lib/theme";
@@ -94,27 +83,53 @@ export function Button({
   );
 }
 
-export function Field({ label, hint, style, ...props }: TextInputProps & { label: string; hint?: string }) {
+export function Field({ label, hint, style, onFocus, onBlur, ...props }: TextInputProps & { label: string; hint?: string }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 6 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput placeholderTextColor="#a3a3a3" style={[styles.input, style]} {...props} />
+      <TextInput
+        placeholderTextColor="#a3a3a3"
+        style={[styles.input, focused && { borderColor: C.text }, style]}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
+        {...props}
+      />
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
 }
 
+/** Choice between a few options in a form (Monthly / Daily, AM / PM): squared buttons, the chosen one filled. */
 export function Segmented<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <View style={styles.segment}>
+    <View style={styles.segment} accessibilityRole="radiogroup">
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable key={o.value} onPress={() => onChange(o.value)} style={[styles.segmentItem, active && styles.segmentActive]}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.text }]}>{o.label}</Text>
+          <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.white }]}>{o.label}</Text>
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** Switch between views on a screen: text tabs with a black underline under the open one. Scrolls if they do not fit. */
+export function Tabs<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <View style={{ borderBottomWidth: 1, borderBottomColor: C.line }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 20, paddingRight: 8 }} accessibilityRole="tablist">
+        {options.map((o) => {
+          const active = o.value === value;
+          return (
+            <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="tab" accessibilityState={{ selected: active }} style={{ paddingTop: 6, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: active ? C.text : "transparent", marginBottom: -1 }}>
+              <Text style={{ fontSize: 14, fontWeight: active ? "600" : "500", color: active ? C.text : C.muted }}>{o.label}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -124,7 +139,7 @@ export function Avatar({ name, size = 40, muted }: { name: string; size?: number
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const text = ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: muted ? C.soft : C.head, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), backgroundColor: muted ? C.soft : C.head, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: muted ? C.muted : C.white, fontWeight: "700", fontSize: Math.round(size * 0.38) }}>{text}</Text>
     </View>
   );
@@ -147,18 +162,18 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
     >
       <Animated.View
         style={{
-          width: 46,
-          height: 28,
-          borderRadius: 14,
+          width: 44,
+          height: 26,
+          borderRadius: 7,
           padding: 3,
           backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [C.line, C.green] }),
         }}
       >
         <Animated.View
           style={{
-            width: 22,
-            height: 22,
-            borderRadius: 11,
+            width: 20,
+            height: 20,
+            borderRadius: 5,
             backgroundColor: C.white,
             transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) }],
             shadowColor: "#000",
@@ -187,15 +202,16 @@ export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: st
   );
 }
 
-export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green"; dot?: boolean }) {
+export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green" | "amber"; dot?: boolean }) {
   const map = {
     neutral: { bg: C.soft, fg: C.text, border: C.line },
     red: { bg: C.redSoft, fg: C.red, border: "#fecaca" },
     green: { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" },
+    amber: { bg: C.amberSoft, fg: C.amber, border: C.amberLine },
   }[tone];
   return (
     <View style={[styles.badge, { backgroundColor: map.bg, borderColor: map.border }]}>
-      {dot ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: map.fg }} /> : null}
+      {dot ? <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: map.fg }} /> : null}
       <Text style={[styles.badgeText, { color: map.fg }]}>{label}</Text>
     </View>
   );
@@ -247,7 +263,7 @@ export const styles = StyleSheet.create({
     bottom: 20,
     width: 58,
     height: 58,
-    borderRadius: 29,
+    borderRadius: 16,
     backgroundColor: C.head,
     alignItems: "center",
     justifyContent: "center",
@@ -258,23 +274,23 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   screen: { flex: 1, backgroundColor: C.bg },
-  inner: { flex: 1, gap: 12 },
-  padded: { padding: 16 },
-  card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 14, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
+  inner: { flex: 1, gap: 14 },
+  padded: { padding: 16, paddingTop: 18 },
+  card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 12, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
   h1: { fontSize: 22, fontWeight: "700", color: C.text, letterSpacing: -0.3 },
-  h2: { fontSize: 16, fontWeight: "600", color: C.text },
+  h2: { fontSize: 16, fontWeight: "600", color: C.text, letterSpacing: -0.2 },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
-  button: { minHeight: 44, borderRadius: R.md, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  buttonText: { fontSize: 15, fontWeight: "600" },
+  button: { minHeight: 46, borderRadius: 10, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  buttonText: { fontSize: 15, fontWeight: "500" },
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },
-  input: { minHeight: 44, borderWidth: 1, borderColor: C.line, borderRadius: R.md, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
+  input: { minHeight: 46, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 10, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
   // Full width with equal parts, so five tabs still fit on a narrow phone.
-  segment: { flexDirection: "row", borderRadius: 10, padding: 3, gap: 2, alignSelf: "stretch", backgroundColor: "#efefef" },
-  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  segmentActive: { backgroundColor: C.white, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  segmentText: { fontSize: 13, fontWeight: "600", color: C.muted },
-  badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5 },
+  segment: { flexDirection: "row", gap: 6, alignSelf: "stretch" },
+  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#e4e4e4", backgroundColor: C.white, alignItems: "center", justifyContent: "center" },
+  segmentActive: { backgroundColor: C.text, borderColor: C.text },
+  segmentText: { fontSize: 13, fontWeight: "600", color: C.text },
+  badge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
   badgeText: { fontSize: 12, fontWeight: "600" },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 4 },
   rowLabel: { fontSize: 14, color: C.muted },

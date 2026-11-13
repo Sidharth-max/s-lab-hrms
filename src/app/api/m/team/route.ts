@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { apiError, json, staff } from "@/lib/api";
-import { ALL_PERMISSIONS, PERMISSIONS } from "@/lib/permissions";
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSIONS } from "@/lib/permissions";
 
 export async function GET() {
   return staff(async (actor) => {
@@ -14,6 +14,7 @@ export async function GET() {
       owners: owners.map((o) => ({ name: o.name, phone: o.phone })),
       managers: managers.map((m) => ({ id: m.id, name: m.name, phone: m.phone, active: m.active, permissions: m.permissions, siteIds: m.siteIds })),
       permissions: ALL_PERMISSIONS.map((p) => ({ key: p, label: PERMISSIONS[p] })),
+      groups: PERMISSION_GROUPS.map((g) => ({ title: g.title, items: g.keys.map((k) => ({ key: k, label: PERMISSIONS[k] })) })),
       sites,
     });
   });

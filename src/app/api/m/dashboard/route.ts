@@ -25,7 +25,8 @@ export async function GET() {
         code: e.code,
         site: e.site.name,
         status: d.status,
-        statusLabel: STATUS_LABEL[d.status],
+        // On the Today screen "absent" just means not scanned in yet.
+        statusLabel: d.status === "ABSENT" ? "Not in yet" : STATUS_LABEL[d.status],
         inAt: d.inAt ? formatIstTime(d.inAt) : null,
         outAt: d.outAt ? formatIstTime(d.outAt) : null,
         inside: d.missingOut,

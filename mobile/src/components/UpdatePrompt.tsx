@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Modal, Text, View } from "react-native";
-import { Download } from "lucide-react-native";
+import { Modal, View } from "react-native";
+import { Text } from "@/components/Text";
+import { Download } from "@/components/icons";
 import { Button, Muted, Notice } from "./ui";
 import { installUpdate, useAppUpdate, useInstallState } from "@/lib/update";
 import { C } from "@/lib/theme";
@@ -21,7 +22,7 @@ export function UpdatePrompt() {
       <View style={{ flex: 1, backgroundColor: "rgba(10,10,10,0.55)", justifyContent: "center", padding: 24 }}>
         <View style={{ backgroundColor: C.white, borderRadius: 16, padding: 20, gap: 12, maxWidth: 420, width: "100%", alignSelf: "center" }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.greenSoft, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.greenSoft, alignItems: "center", justifyContent: "center" }}>
               <Download size={18} color={C.green} />
             </View>
             <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>New version {update.name}</Text>

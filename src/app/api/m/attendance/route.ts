@@ -19,8 +19,10 @@ export async function GET(req: Request) {
     const { days } = await monthAttendance(actor.businessId, date.slice(0, 7), employees);
     const rows = employees
       .map((e) => ({ e, d: days.get(e.id)!.find((x) => x.date === date)! }))
-      .filter((r) => r.d.status !== "NOT_EMPLOYED")
+      // Archived people are hidden from today; past days they worked still show (salary uses them).
+      .filter((r) => r.d.status !== "NOT_EMPLOYED" && (r.e.active || date < today))
       .map(({ e, d }) => ({
+        archived: !e.active,
         employeeId: e.id,
         name: e.name,
         code: e.code,

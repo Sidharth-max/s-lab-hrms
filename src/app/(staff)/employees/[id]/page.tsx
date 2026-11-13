@@ -5,10 +5,11 @@ import { removeFace, setEmployeeLeft, setEmployeeLogin } from "@/app/actions/emp
 import { giveAdvance } from "@/app/actions/advances";
 import { ActionForm } from "@/components/ActionForm";
 import { Avatar } from "@/components/Avatar";
-import { CalendarRange, Pencil } from "lucide-react";
+import { CalendarRange, Pencil } from "@/components/icons";
 import { FaceEnroll } from "@/components/FaceEnroll";
 import { Tabs } from "@/components/Tabs";
 import { requireStaff } from "@/lib/auth";
+import { statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
@@ -82,7 +83,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
       )}
       {pendingAdvances.length > 0 && (
         <p className="text-sm text-[var(--red)]">
-          {`${pendingAdvances.length} advance(s) waiting for owner approval.`}{" "}
+          {`${pendingAdvances.length} advance(s) waiting for approval.`}{" "}
           <Link className="underline" href="/approvals">Open approvals</Link>
         </p>
       )}
@@ -119,7 +120,8 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     ["Joined", formatDateKey(dbToDateKey(emp.joinedOn))],
     ["Pay", pay],
     ["Basic for PF", `${emp.basicPercent}%`],
-    ["PF / ESIC", [emp.pfEnabled ? "PF" : null, emp.esiEnabled ? "ESIC" : null].filter(Boolean).join(" + ") || "Off"],
+    ["PF", emp.pfEnabled ? `On${emp.uanNumber ? ` · UAN ${emp.uanNumber}` : " · UAN not added"}` : "Off"],
+    ["ESIC", emp.esiEnabled ? `On${emp.esicNumber ? ` · IP ${emp.esicNumber}` : " · IP number not added"}` : "Off"],
     ["Weekly off", emp.customWeeklyOff ? (emp.weeklyOffDays.map((d) => DAYS[d]).join(", ") || "None") : "Same as business"],
   ];
   const details = (
@@ -219,8 +221,8 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
                 <h1 className="h1 truncate">{emp.name}</h1>
                 {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
                 {today && (
-                  <span className={`badge ${today.status === "PRESENT" || today.status === "HALF_DAY" ? "badge-green" : today.status === "ABSENT" || today.status === "UNPAID_LEAVE" ? "badge-red" : "badge-neutral"}`}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-current" />Today: {today.label}
+                  <span className={statusBadgeClass(today.status)}>
+                    <span className="h-1.5 w-1.5 rounded-[2px] bg-current" />Today: {today.label}
                   </span>
                 )}
               </div>

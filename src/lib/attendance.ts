@@ -198,3 +198,11 @@ export function nextPunch(
   return { action: "punch", type: "IN", workDate: todayKey };
 }
 
+
+/** Badge class for a status: present green, half day yellow, absent / unpaid leave red. */
+export function statusBadgeClass(status: string): string {
+  if (status === "PRESENT") return "badge badge-green";
+  if (status === "HALF_DAY") return "badge badge-amber";
+  if (status === "ABSENT" || status === "UNPAID_LEAVE") return "badge badge-red";
+  return "badge badge-neutral";
+}

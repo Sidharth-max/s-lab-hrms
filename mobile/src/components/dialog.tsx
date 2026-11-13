@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
-import { CircleAlert, CircleCheck } from "lucide-react-native";
+import { Modal, Pressable, View } from "react-native";
+import { Text } from "@/components/Text";
+import { CircleAlert, CircleCheck } from "@/components/icons";
 import { C } from "@/lib/theme";
 import { Button } from "./ui";
 
@@ -69,7 +70,7 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
             {state ? (
               <>
                 <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: tone === "red" ? C.redSoft : tone === "green" ? C.greenSoft : C.soft }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: tone === "red" ? C.redSoft : tone === "green" ? C.greenSoft : C.soft }}>
                     {tone === "green" ? <CircleCheck size={20} color={C.green} /> : <CircleAlert size={20} color={tone === "red" ? C.red : C.text} />}
                   </View>
                   <View style={{ flex: 1, gap: 4, paddingTop: 6 }}>

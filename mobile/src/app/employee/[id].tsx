@@ -1,21 +1,22 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Text, View } from "react-native";
-import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "lucide-react-native";
-import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
+import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "@/components/icons";
+import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented, Tabs } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
 
 interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
-    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; customWeeklyOff: boolean; weeklyOffDays: number[];
+    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
     face: boolean; faceEnrolledAt: string | null; webLogin: boolean;
   };
   balance: { earned: number; outstanding: number; balance: number };
@@ -142,12 +143,12 @@ export default function EmployeeDetail() {
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen
         options={{
-          title: e.name,
+          title: "Employee",
           headerRight: manage
             ? () => (
                 <Pressable onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} hitSlop={10} accessibilityLabel="Edit employee" style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8 }}>
-                  <Pencil size={18} color={C.headText} strokeWidth={1.75} />
-                  <Text style={{ color: C.headText, fontWeight: "600" }}>Edit</Text>
+                  <Pencil size={18} color={C.text} />
+                  <Text style={{ color: C.text, fontWeight: "600" }}>Edit</Text>
                 </Pressable>
               )
             : undefined,
@@ -165,7 +166,7 @@ export default function EmployeeDetail() {
               {data.today ? (
                 <Badge
                   label={`Today: ${data.today.label}`}
-                  tone={data.today.status === "PRESENT" || data.today.status === "HALF_DAY" ? "green" : data.today.status === "ABSENT" || data.today.status === "UNPAID_LEAVE" ? "red" : "neutral"}
+                  tone={statusTone(data.today.status)}
                   dot
                 />
               ) : null}
@@ -184,7 +185,7 @@ export default function EmployeeDetail() {
       {created ? <Notice tone="green" text="Employee added. Now take the face photos." /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
 
-      <Segmented
+      <Tabs
         options={[
           { value: "overview", label: "Info" },
           { value: "attendance", label: "Attendance" },
@@ -223,7 +224,8 @@ export default function EmployeeDetail() {
             <Row label="Joined" value={dateLabel(e.joinedOn)} />
             <Row label="Pay" value={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "per month" : "per day"}`} />
             <Row label="Basic for PF" value={`${e.basicPercent}%`} />
-            <Row label="PF / ESIC" value={[e.pfEnabled ? "PF" : null, e.esiEnabled ? "ESIC" : null].filter(Boolean).join(" + ") || "Off"} />
+            <Row label="PF" value={e.pfEnabled ? (e.uanNumber ? `UAN ${e.uanNumber}` : "On · UAN not added") : "Off"} />
+            <Row label="ESIC" value={e.esiEnabled ? (e.esicNumber ? `IP ${e.esicNumber}` : "On · IP number not added") : "Off"} />
             <Row label="Weekly off" value={weeklyOff} />
             {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} /> : null}
           </Card>
@@ -239,7 +241,7 @@ export default function EmployeeDetail() {
             <Row label="Earned this month" value={rs(data.balance.earned)} />
             <Row label="Advance to recover" value={rs(data.balance.outstanding)} />
             <Row label="Balance" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
-            {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for owner approval.`} /> : null}
+            {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for approval.`} /> : null}
           </Card>
           {data.advances.length ? (
             <Card style={{ padding: 0, gap: 0 }}>

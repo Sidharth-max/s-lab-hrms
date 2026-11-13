@@ -1,5 +1,6 @@
 import { router, Stack } from "expo-router";
-import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
 import { Badge, Button, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { monthLabel, rs } from "@/lib/format";

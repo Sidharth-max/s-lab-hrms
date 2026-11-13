@@ -14,7 +14,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/payslip/[line
       business: l.employee.business.name,
       month: l.run.month,
       locked: l.run.status === "LOCKED",
-      employee: { name: l.employee.name, code: l.employee.code, site: l.employee.site.name },
+      employee: { name: l.employee.name, code: l.employee.code, site: l.employee.site.name, uanNumber: l.employee.uanNumber, esicNumber: l.employee.esicNumber },
       wageType: l.wageType,
       rate: l.rate,
       daysInMonth: l.daysInMonth,

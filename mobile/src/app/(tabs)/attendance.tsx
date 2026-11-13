@@ -1,18 +1,19 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Text, View } from "react-native";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { Pressable, RefreshControl, View } from "react-native";
+import { Text } from "@/components/Text";
+import { CalendarDays, ChevronLeft, ChevronRight } from "@/components/icons";
 import { DatePickerSheet } from "@/components/pickers";
 import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { addDays, dateLabel, hours } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 
 interface Day {
   date: string;
   today: string;
-  rows: { employeeId: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; workedMins: number; missingOut: boolean; manual: boolean }[];
+  rows: { archived?: boolean; employeeId: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; workedMins: number; missingOut: boolean; manual: boolean }[];
 }
 
 export default function Attendance() {
@@ -30,7 +31,7 @@ export default function Attendance() {
           <ChevronLeft color={C.text} size={24} />
         </Pressable>
         <Pressable onPress={() => setPicking(true)} hitSlop={8} accessibilityLabel="Choose date" style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.line, backgroundColor: C.white }}>
-          <CalendarDays size={18} color={C.text} strokeWidth={1.75} />
+          <CalendarDays size={18} color={C.text} />
           <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{data.date === data.today ? `Today · ${dateLabel(data.date)}` : dateLabel(data.date)}</Text>
         </Pressable>
         <Pressable
@@ -52,9 +53,9 @@ export default function Attendance() {
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
-                {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}</Text>
+                {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}{r.archived ? " · archived" : ""}</Text>
               </Text>
-              <Badge label={r.statusLabel || "—"} tone={r.status === "PRESENT" || r.status === "HALF_DAY" ? "green" : r.status === "ABSENT" || r.status === "UNPAID_LEAVE" ? "red" : "neutral"} />
+              <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} />
             </View>
             <Muted>
               In {r.inAt ?? "—"} · Out {r.outAt ?? "—"} · {hours(r.workedMins)}

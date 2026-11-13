@@ -1,8 +1,9 @@
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, SectionList, Text, View } from "react-native";
-import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type LucideIcon } from "lucide-react-native";
-import { ErrorView, Loading, Muted } from "@/components/ui";
+import { RefreshControl, SectionList, View } from "react-native";
+import { Text } from "@/components/Text";
+import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type IconType } from "@/components/icons";
+import { ErrorView, Loading, Muted, Tabs } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
@@ -21,7 +22,7 @@ const AREAS: { key: Area | "all"; label: string }[] = [
   { key: "settings", label: "Settings" },
   { key: "device", label: "Scanners" },
 ];
-const ICON: Record<Area, LucideIcon> = { employee: Users, attendance: CalendarCheck, advance: HandCoins, salary: IndianRupee, team: UserCog, settings: Settings, device: Smartphone };
+const ICON: Record<Area, IconType> = { employee: Users, attendance: CalendarCheck, advance: HandCoins, salary: IndianRupee, team: UserCog, settings: Settings, device: Smartphone };
 
 /** India date key (YYYY-MM-DD) of an ISO time. */
 function istKey(iso: string) {
@@ -56,16 +57,7 @@ export default function HistoryScreen() {
         ListHeaderComponent={
           <View style={{ gap: 10, marginBottom: 4 }}>
             <Muted>Every change by the owner and managers (latest 200).</Muted>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {AREAS.map((a) => {
-                const on = area === a.key;
-                return (
-                  <Pressable key={a.key} onPress={() => setArea(a.key)} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
-                    <Text style={{ color: on ? C.white : C.text, fontWeight: "600", fontSize: 13 }}>{a.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <Tabs options={AREAS.map((a) => ({ value: a.key, label: a.label }))} value={area} onChange={setArea} />
           </View>
         }
         ListEmptyComponent={<Muted>Nothing here yet.</Muted>}
@@ -74,8 +66,8 @@ export default function HistoryScreen() {
           const Icon = ICON[i.area] ?? Settings;
           return (
             <View style={{ flexDirection: "row", gap: 12, backgroundColor: C.white, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" }}>
-                <Icon size={16} color={C.text} strokeWidth={1.75} />
+              <View style={{ width: 32, height: 32, borderRadius: 8, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" }}>
+                <Icon size={16} color={C.text} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={{ fontWeight: "600", color: C.text, fontSize: 14 }}>{i.title}</Text>

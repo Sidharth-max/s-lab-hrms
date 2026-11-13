@@ -126,6 +126,8 @@ model Employee {
   basicPercent Int      @default(100) // share of earned wage treated as basic for PF
   pfEnabled    Boolean  @default(false)
   esiEnabled   Boolean  @default(false)
+  uanNumber    String? // PF UAN, 12 digits
+  esicNumber   String? // ESIC IP number, 10 digits
 
   customWeeklyOff Boolean @default(false) // true = use weeklyOffDays below instead of the business default
   weeklyOffDays   Int[]   @default([])

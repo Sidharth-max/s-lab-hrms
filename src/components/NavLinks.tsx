@@ -16,8 +16,8 @@ import {
   UserCog,
   Users,
   X,
-  type LucideIcon,
-} from "lucide-react";
+  type IconType,
+} from "@/components/icons";
 
 export const ICONS = {
   home: House,
@@ -30,7 +30,7 @@ export const ICONS = {
   managers: UserCog,
   settings: Settings,
   history: History,
-} satisfies Record<string, LucideIcon>;
+} satisfies Record<string, IconType>;
 
 export type IconName = keyof typeof ICONS;
 
@@ -48,7 +48,7 @@ function isActive(path: string, href: string) {
 
 function Count({ n }: { n?: number }) {
   if (!n) return null;
-  return <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--red)] px-1.5 text-[11px] font-medium text-white">{n}</span>;
+  return <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-[var(--red)] px-1.5 text-[11px] font-medium text-white">{n}</span>;
 }
 
 /** Tabs under the header on tablets, desktops and open foldables. */
@@ -67,7 +67,7 @@ export function NavLinks({ links }: { links: NavItem[] }) {
               active ? "border-[var(--text)] font-medium text-[var(--text)]" : "border-transparent text-[var(--muted)] hover:text-[var(--text)]"
             }`}
           >
-            <Icon size={16} strokeWidth={1.75} aria-hidden />
+            <Icon size={16} aria-hidden />
             {l.label}
             <Count n={l.badge} />
           </Link>
@@ -104,7 +104,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
                       onClick={() => setOpen(false)}
                       className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm ${isActive(path, l.href) ? "bg-[var(--soft)] font-medium" : ""}`}
                     >
-                      <Icon size={18} strokeWidth={1.75} aria-hidden />
+                      <Icon size={18} aria-hidden />
                       {l.label}
                       <Count n={l.badge} />
                     </Link>
@@ -134,7 +134,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
               onClick={() => setOpen(false)}
               className={`relative flex flex-col items-center gap-1 py-2 text-[11px] ${active ? "font-medium text-[var(--text)]" : "text-[var(--muted)]"}`}
             >
-              <Icon size={20} strokeWidth={active ? 2.25 : 1.75} aria-hidden />
+              <Icon size={20} aria-hidden />
               {l.label}
               {l.badge ? <span className="absolute top-1.5 right-1/4 h-2 w-2 rounded-full bg-[var(--red)]" /> : null}
             </Link>
@@ -146,7 +146,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
           aria-label={moreLabel}
           className={`relative flex flex-col items-center gap-1 py-2 text-[11px] ${open || restActive ? "font-medium text-[var(--text)]" : "text-[var(--muted)]"}`}
         >
-          {open ? <X size={20} strokeWidth={1.75} aria-hidden /> : <Menu size={20} strokeWidth={1.75} aria-hidden />}
+          {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
           {moreLabel}
           {restBadge ? <span className="absolute top-1.5 right-1/4 h-2 w-2 rounded-full bg-[var(--red)]" /> : null}
         </button>

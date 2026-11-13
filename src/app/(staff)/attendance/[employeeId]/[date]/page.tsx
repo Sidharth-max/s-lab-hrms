@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { addManualPunch, clearDayStatus, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL } from "@/lib/attendance";
+import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
@@ -42,7 +42,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
         <BackLink href={`/attendance?date=${date}`} label="Attendance" />
         <h1 className="h1">{emp.name} · {formatDateKey(date)}</h1>
         <p className="text-lg">
-          {STATUS_LABEL[day.status] || "—"} {day.overridden && <span className="badge badge-neutral">manual</span>}
+          {STATUS_LABEL[day.status] ? <span className={`${statusBadgeClass(day.status)} !text-base`}>{STATUS_LABEL[day.status]}</span> : "—"} {day.overridden && <span className="badge badge-neutral">manual</span>}
         </p>
       </div>
       {locked && (

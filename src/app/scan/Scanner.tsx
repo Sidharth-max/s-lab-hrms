@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { CircleCheck, CircleX, ScanFace } from "lucide-react";
+import { CircleCheck, CircleX, ScanFace } from "@/components/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, type CameraHandle } from "@/components/Camera";
 import { beep, speak } from "@/lib/speak";
@@ -137,9 +137,9 @@ export function Scanner() {
             <div className="h-[55%] aspect-[3/4] rounded-[50%] border-4 border-white/70" />
           </div>
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-6 text-center">
-            <ScanFace size={40} strokeWidth={1.5} className="mx-auto mb-3" aria-hidden />
+            <ScanFace size={40} className="mx-auto mb-3" aria-hidden />
             <div className="text-2xl font-semibold tracking-tight">{busy ? "Checking…" : "Tap the screen and look at the camera"}</div>
-            {config?.mode === "mock" && <div className="mt-2 inline-block rounded-full border border-white/30 px-2.5 py-0.5 text-xs font-medium text-white">TEST MODE</div>}
+            {config?.mode === "mock" && <div className="mt-2 inline-block rounded-md border border-white/30 px-2.5 py-0.5 text-xs font-medium text-white">TEST MODE</div>}
           </div>
         </button>
       )}
@@ -174,7 +174,7 @@ export function Scanner() {
           className={`absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center ${result.ok ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
           onClick={() => setResult(null)}
         >
-          {result.ok ? <CircleCheck size={96} strokeWidth={1.5} aria-hidden /> : <CircleX size={96} strokeWidth={1.5} aria-hidden />}
+          {result.ok ? <CircleCheck size={96} aria-hidden /> : <CircleX size={96} aria-hidden />}
           <div className="mt-6 text-4xl font-semibold tracking-tight">{result.title}</div>
           {result.detail && <div className="mt-4 text-2xl">{result.detail}</div>}
         </div>

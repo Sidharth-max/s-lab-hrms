@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type LucideIcon } from "lucide-react";
+import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type IconType } from "@/components/icons";
 import { requireOwner } from "@/lib/auth";
 import { describeHistory, type HistoryArea } from "@/lib/audit-text";
 import { db } from "@/lib/db";
@@ -16,7 +16,7 @@ const AREAS: { key: HistoryArea | "all"; label: string }[] = [
   { key: "device", label: "Scanners" },
 ];
 
-const ICON: Record<HistoryArea, LucideIcon> = {
+const ICON: Record<HistoryArea, IconType> = {
   employee: Users,
   attendance: CalendarCheck,
   advance: HandCoins,
@@ -47,12 +47,13 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
         <h1 className="h1">History</h1>
         <p className="muted">Every change made by the owner and managers (latest 300).</p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="segmented overflow-x-auto">
         {AREAS.map((a) => (
           <Link
             key={a.key}
             href={a.key === "all" ? "/audit" : `/audit?area=${a.key}`}
-            className={`btn-secondary !py-1 ${area === a.key ? "!border-[var(--brand)] !bg-[var(--brand)] !text-white" : ""}`}
+            data-active={area === a.key}
+            className="whitespace-nowrap"
           >
             {a.label}
           </Link>
@@ -67,8 +68,8 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
               const Icon = ICON[i.area];
               return (
                 <li key={i.id} className="flex items-start gap-3 px-4 py-3">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--line)]">
-                    <Icon size={16} strokeWidth={1.75} />
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--line)]">
+                    <Icon size={16} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{i.title}</p>
