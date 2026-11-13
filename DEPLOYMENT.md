@@ -8,7 +8,7 @@ Written for the person or AI agent operating the server. Production URL: **https
 | Part | Where | How it updates |
 |---|---|---|
 | Website + API (Next.js) | Server, Docker container `app` | Push to `main` → auto-deploy (CI must pass) |
-| Database (Postgres) | External server via `HRMS_DATABASE_URL` (production), or the bundled Docker container `db` | Migrations run on every deploy |
+| Database (Postgres 18) | Bundled Docker container `db`, volume `s-lab-hrms_pgdata18` (production since 2026-11-13) | Migrations run on every deploy |
 | Public access | Cloudflare tunnel (`tunnel` container, or cloudflared already on the host) | n/a |
 | Android app (APK) | GitHub Releases, built by `.github/workflows/android.yml` | Push to `main` that touches `android/`, `android-web/`, `capacitor.config.ts` or `package*.json` |
 
@@ -83,7 +83,7 @@ nightly backups: `30 2 * * * cd /path/to/s-lab-hrms && ./deploy.sh backup >/dev/
 |---|---|
 | `APP_URL` | Public URL, `https://hrms.s-lab.dev` |
 | `AUTH_SECRET`, `POSTGRES_PASSWORD` | Generated on first run. `POSTGRES_PASSWORD` is for the bundled database only; never change it after that DB exists. |
-| `HRMS_DATABASE_URL` | External Postgres, e.g. `postgresql://hrms:<password>@15.207.31.179:5432/hrms`. When set, the app, migrations and backups use it instead of the bundled `db` container. |
+| `HRMS_DATABASE_URL` | Optional, not set in production. External Postgres, e.g. `postgresql://hrms:<password>@<host>:5432/hrms`. When set, the app, migrations and backups use it instead of the bundled `db` container. |
 | `APP_PORT` | Local port the app listens on (production: `3005`, because 3000 is used by another app). |
 | `SMS_PROVIDER` | `console` (OTP only in logs) or `fast2sms` |
 | `FAST2SMS_API_KEY` | Fast2SMS Dev API key (secret) |
