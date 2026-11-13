@@ -10,7 +10,7 @@ import { rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 
-interface Emp { id: string; name: string; code: string; phone: string | null; site: string; active: boolean; wageType: "MONTHLY" | "DAILY"; wage: number; face: boolean }
+interface Emp { id: string; name: string; code: string; phone: string | null; site: string; active: boolean; wageType: "MONTHLY" | "DAILY"; wage: number; face: boolean; inHouse?: boolean }
 
 export default function Employees() {
   const { can } = useAuth();
@@ -39,7 +39,7 @@ export default function Employees() {
         <View style={{ gap: 10, marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 8, backgroundColor: C.white, paddingHorizontal: 12 }}>
             <Search size={18} color={C.muted} />
-            <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or mobile" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
+            <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or mobile…" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
           </View>
           <Tabs
             options={[
@@ -68,6 +68,7 @@ export default function Employees() {
             </Text>
             <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={1}>{e.site} · {rs(e.wage)} {e.wageType === "MONTHLY" ? "/ month" : "/ day"}</Text>
           </View>
+          {e.inHouse && e.active ? <Badge label="In-house" /> : null}
           {!e.face && e.active ? <Badge label="No face" tone="red" dot /> : null}
           <ChevronRight size={18} color={C.muted} />
         </Pressable>

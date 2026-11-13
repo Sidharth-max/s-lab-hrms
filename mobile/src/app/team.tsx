@@ -7,6 +7,7 @@ import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen, 
 import { api } from "@/lib/api";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useUnsavedGuard } from "@/lib/unsaved";
 
 interface Manager { id: string; name: string; phone: string; active: boolean; permissions: string[]; siteIds: string[] }
 interface Team {
@@ -23,6 +24,8 @@ function ManagerForm({ team, m, onSave, busy }: { team: Team; m?: Manager; onSav
   const [perms, setPerms] = useState<string[]>(m?.permissions ?? []);
   const [sites, setSites] = useState<string[]>(m?.siteIds ?? []);
   const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  const same = (a: string[], b: string[]) => [...a].sort().join() === [...b].sort().join();
+  useUnsavedGuard(!busy && (name !== (m?.name ?? "") || phone !== (m?.phone ?? "") || !same(perms, m?.permissions ?? []) || !same(sites, m?.siteIds ?? [])));
   return (
     <View style={{ gap: 10 }}>
       <Field label="Name" value={name} onChangeText={setName} />

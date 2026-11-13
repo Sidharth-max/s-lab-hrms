@@ -58,6 +58,23 @@ describe("attendance", () => {
     expect(days[3].status).toBe("ABSENT");
   });
 
+  it("marks in-house staff present on working days without scans; short scan is still a full day", () => {
+    const inHouse = { ...ctx, inHouse: true, today: "2026-11-10" };
+    const days = deriveMonth(
+      "2026-11",
+      [punch("IN", "2026-11-03", "09:00"), punch("OUT", "2026-11-03", "10:00")],
+      [{ workDate: "2026-11-05", status: "UNPAID_LEAVE", createdAt: new Date("2026-11-05T10:00:00Z") }],
+      noRules,
+      inHouse,
+    );
+    expect(days[1].status).toBe("PRESENT"); // 2 Nov, no scan
+    expect(days[1].auto).toBe(true);
+    expect(days[2].status).toBe("PRESENT"); // 3 Nov, scanned 1 hour: still full day
+    expect(days[0].status).toBe("WEEKLY_OFF"); // Sunday stays off
+    expect(days[4].status).toBe("UNPAID_LEAVE"); // manual leave wins
+    expect(days[10].status).toBe("FUTURE"); // 11 Nov is after "today"
+  });
+
   it("counts a missing OUT as present but flags it", () => {
     const days = deriveMonth("2026-11", [punch("IN", "2026-11-04", "09:00")], [], noRules, ctx);
     expect(days[3].status).toBe("PRESENT");

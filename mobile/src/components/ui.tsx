@@ -4,6 +4,7 @@ import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, R } from "@/lib/theme";
+import { haptic } from "@/lib/haptics";
 
 export function Screen({
   children,
@@ -68,7 +69,10 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={(e) => {
+        haptic.tap();
+        onPress?.(e);
+      }}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,
@@ -107,7 +111,7 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
+          <Pressable key={o.value} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.white }]}>{o.label}</Text>
           </Pressable>
         );
@@ -124,7 +128,7 @@ export function Tabs<T extends string>({ options, value, onChange }: { options: 
         {options.map((o) => {
           const active = o.value === value;
           return (
-            <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="tab" accessibilityState={{ selected: active }} style={{ paddingTop: 6, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: active ? C.text : "transparent", marginBottom: -1 }}>
+            <Pressable key={o.value} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="tab" accessibilityState={{ selected: active }} style={{ paddingTop: 6, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: active ? C.text : "transparent", marginBottom: -1 }}>
               <Text style={{ fontSize: 14, fontWeight: active ? "600" : "500", color: active ? C.text : C.muted }}>{o.label}</Text>
             </Pressable>
           );
@@ -153,7 +157,11 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
   }, [value, x]);
   return (
     <Pressable
-      onPress={() => !disabled && onValueChange(!value)}
+      onPress={() => {
+        if (disabled) return;
+        haptic.toggle(!value);
+        onValueChange(!value);
+      }}
       accessibilityRole="switch"
       accessibilityState={{ checked: value, disabled }}
       accessibilityLabel={label}
@@ -291,9 +299,9 @@ export const styles = StyleSheet.create({
   segmentActive: { backgroundColor: C.text, borderColor: C.text },
   segmentText: { fontSize: 13, fontWeight: "600", color: C.text },
   badge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
-  badgeText: { fontSize: 12, fontWeight: "600" },
+  badgeText: { fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 4 },
   rowLabel: { fontSize: 14, color: C.muted },
-  rowValue: { fontSize: 15, color: C.text, textAlign: "right", flexShrink: 1 },
+  rowValue: { fontSize: 15, color: C.text, textAlign: "right", flexShrink: 1, fontVariant: ["tabular-nums"] },
   notice: { borderWidth: 1, borderRadius: R.md, padding: 12 },
 });

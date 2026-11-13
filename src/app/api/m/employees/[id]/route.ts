@@ -37,6 +37,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
         customWeeklyOff: e.customWeeklyOff,
         weeklyOffDays: e.weeklyOffDays,
         face: !!e.faceId,
+        inHouse: e.inHouse,
         faceEnrolledAt: e.faceEnrolledAt?.toISOString() ?? null,
         webLogin: !!e.user?.active,
       },

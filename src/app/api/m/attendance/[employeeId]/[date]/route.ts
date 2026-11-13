@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { apiError, json, staff } from "@/lib/api";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
-import { dateKeyToDb, formatIstTime, istDateKey } from "@/lib/time";
+import { parseDayRules } from "@/lib/day-rules";
+import { dateKeyToDb, formatIstTime, istDateKey, weekday } from "@/lib/time";
 
 // One employee's day: punches, manual edits and whether it can still be edited.
 export async function GET(_req: Request, ctx: RouteContext<"/api/m/attendance/[employeeId]/[date]">) {
@@ -12,7 +13,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/attendance/[e
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return apiError("Bad date");
     const emp = await db.employee.findFirst({ where: { id: employeeId, businessId: actor.businessId } });
     if (!emp || !canSeeSite(actor, emp.siteId)) return apiError("Employee not found", 404);
-    const [punches, overrides, run, { days }] = await Promise.all([
+    const [punches, overrides, run, { days, business }] = await Promise.all([
       db.attendancePunch.findMany({ where: { employeeId, workDate: dateKeyToDb(date) }, orderBy: { at: "asc" } }),
       db.dayOverride.findMany({ where: { employeeId, workDate: dateKeyToDb(date) }, orderBy: { createdAt: "desc" } }),
       db.payrollRun.findUnique({ where: { businessId_month: { businessId: actor.businessId, month: date.slice(0, 7) } } }),
@@ -29,6 +30,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/attendance/[e
       statusLabel: STATUS_LABEL[day.status],
       manual: day.overridden,
       locked,
+      // Store hours for that weekday: the default "full day" for marking attendance by hand.
+      hours: (() => { const r = parseDayRules(business.dayRules)[weekday(date)]; return { open: r.open, close: r.close }; })(),
       editable: can(actor, "attendance.edit") && !locked && date <= istDateKey(new Date()),
       punches: punches.map((p) => ({
         id: p.id,

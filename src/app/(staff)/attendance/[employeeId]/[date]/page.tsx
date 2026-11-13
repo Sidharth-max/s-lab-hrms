@@ -1,13 +1,14 @@
 import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
-import { addManualPunch, clearDayStatus, setDayStatus, voidPunch } from "@/app/actions/attendance";
+import { clearDayStatus, markAttendance, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
 import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
-import { dateKeyToDb, formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
+import { parseDayRules } from "@/lib/day-rules";
+import { dateKeyToDb, formatDateKey, formatIstTime, istDateKey, weekday } from "@/lib/time";
 import { Select, TimeInput } from "@/components/controls";
 
 export default async function DayDetail({ params }: PageProps<"/attendance/[employeeId]/[date]">) {
@@ -17,7 +18,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
   const emp = await db.employee.findFirst({ where: { id: employeeId, businessId: actor.businessId } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
 
-  const [punches, overrides, run, { days }] = await Promise.all([
+  const [punches, overrides, run, { days, business }] = await Promise.all([
     db.attendancePunch.findMany({ where: { employeeId, workDate: dateKeyToDb(date) }, orderBy: { at: "asc" } }),
     db.dayOverride.findMany({ where: { employeeId, workDate: dateKeyToDb(date) }, orderBy: { createdAt: "desc" } }),
     db.payrollRun.findUnique({ where: { businessId_month: { businessId: actor.businessId, month: date.slice(0, 7) } } }),
@@ -28,6 +29,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
   const day = days.get(emp.id)!.find((d) => d.date === date)!;
   const locked = run?.status === "LOCKED";
   const editable = can(actor, "attendance.edit") && !locked && date <= istDateKey(new Date());
+  const hours = parseDayRules(business.dayRules)[weekday(date)]; // default "full day" for marking by hand
   const statuses = [
     ["PRESENT", "Present"],
     ["HALF_DAY", "Half day"],
@@ -86,16 +88,25 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
       {editable && (
         <div className="grid gap-4 @2xl:grid-cols-2">
           <section className="card">
-            <h2 className="mb-3 font-semibold">Add missed punch</h2>
-            <ActionForm action={addManualPunch} className="flex flex-col gap-3" submitLabel={"Add punch"} resetOnSuccess>
+            <h2 className="font-semibold">Mark attendance</h2>
+            <p className="muted mb-3">Full day is filled in ({hours.open} to {hours.close}). Change a time, or tick “no in / out time” for a missed punch.</p>
+            <ActionForm action={markAttendance} className="flex flex-col gap-3" submitLabel="Save attendance">
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
-              <div className="flex gap-2">
-                <Select name="type" className="w-28" options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} ariaLabel="Punch type" />
-                <TimeInput name="time" className="flex-1" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <span className="label !mb-0">In time</span>
+                  <TimeInput name="inTime" defaultValue={hours.open} />
+                  <label className="flex items-center gap-2 text-sm text-[var(--muted)]"><input type="checkbox" name="skipIn" /> No in time</label>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="label !mb-0">Out time</span>
+                  <TimeInput name="outTime" defaultValue={hours.close} />
+                  <label className="flex items-center gap-2 text-sm text-[var(--muted)]"><input type="checkbox" name="skipOut" /> No out time</label>
+                </div>
               </div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="nextDay" /> {"Time is after midnight (night shift)"}</label>
-              <input name="reason" className="input" placeholder={"Reason (e.g. tablet not working)"} required />
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="nextDay" /> {"Out time is after midnight (night shift)"}</label>
+              <input name="reason" className="input" placeholder={"Reason (optional), e.g. forgot to scan…"} />
             </ActionForm>
           </section>
           <section className="card">

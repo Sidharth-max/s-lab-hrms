@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 import { ConfirmHost } from "@/components/controls";
+import { LeaveGuard } from "@/components/LeaveGuard";
 
 export const metadata: Metadata = {
   title: "S-Lab HRMS",
@@ -13,7 +14,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#171717",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <Toaster />
         <ConfirmHost />
+        <LeaveGuard />
       </body>
     </html>
   );

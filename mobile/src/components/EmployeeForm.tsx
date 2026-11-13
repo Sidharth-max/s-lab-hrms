@@ -4,6 +4,7 @@ import { Text } from "@/components/Text";
 import { Button, Field, Muted, Notice, Segmented, Toggle } from "./ui";
 import { C } from "@/lib/theme";
 import { DateField } from "./pickers";
+import { useUnsavedGuard } from "@/lib/unsaved";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -21,6 +22,7 @@ export interface EmployeeValues {
   uanNumber?: string;
   esicNumber?: string;
   customWeeklyOff: boolean;
+  inHouse?: boolean;
   weeklyOffDays: number[];
 }
 
@@ -42,6 +44,8 @@ export function EmployeeForm({
   const [v, setV] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Warn on back while there are unsaved changes (not while saving: the screen closes after a save).
+  useUnsavedGuard(!busy && JSON.stringify(v) !== JSON.stringify(initial));
   const set = <K extends keyof EmployeeValues>(k: K, val: EmployeeValues[K]) => setV((o) => ({ ...o, [k]: val }));
 
   return (
@@ -103,6 +107,13 @@ export function EmployeeForm({
       ) : null}
 
       <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: "row", gap: 12, alignItems: "center", borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12, marginBottom: 6 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>In-house employee</Text>
+            <Text style={{ fontSize: 13, color: C.muted, lineHeight: 18 }}>Present automatically on every working day, no scan needed. Scanning still works and always counts as a full day.</Text>
+          </View>
+          <Toggle value={!!v.inHouse} onValueChange={(b) => set("inHouse", b)} label="In-house employee" />
+        </View>
         <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Weekly off</Text>
         <Segmented options={[{ value: "business", label: "Same as business" }, { value: "custom", label: "Own days" }]} value={v.customWeeklyOff ? "custom" : "business"} onChange={(m) => set("customWeeklyOff", m === "custom")} />
         {v.customWeeklyOff ? (
@@ -145,6 +156,7 @@ export function employeeBody(v: EmployeeValues, canSalary: boolean, isNew: boole
       ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "" }
       : {}),
     weeklyOffMode: v.customWeeklyOff ? "custom" : "business",
+    inHouse: !!v.inHouse,
     empWeeklyOff: v.customWeeklyOff ? v.weeklyOffDays : [],
   };
 }

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui";
 import { api, type ScanConfig } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCameraSession } from "@/lib/camera";
+import { haptic } from "@/lib/haptics";
 import { capture } from "@/lib/photo";
 import { startUpdate, useAppUpdate } from "@/lib/update";
 import { C } from "@/lib/theme";
@@ -87,6 +88,8 @@ export default function Scanner() {
 
   const show = useCallback((r: Result, speech?: string) => {
     setResult(r);
+    if (r.ok) haptic.success();
+    else haptic.error();
     Speech.stop().catch(() => {});
     Speech.speak(speech ?? r.title, { language: "en-IN", rate: 0.95 });
     if (timer.current) clearTimeout(timer.current);

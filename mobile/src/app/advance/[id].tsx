@@ -8,6 +8,7 @@ import { dateLabel, monthLabel, rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
+import { useUnsavedGuard } from "@/lib/unsaved";
 
 interface Adv {
   id: string; employeeId: string; employee: string; code: string; amount: number; givenOn: string; recoveryMonths: number;
@@ -31,6 +32,8 @@ function EditForm({ a, onSaved }: { a: Adv; onSaved: (msg: string) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const started = a.recovered > 0;
+  const changed = amount !== String(a.amount / 100) || givenOn !== a.givenOn || months !== String(a.recoveryMonths) || startMonth !== a.startMonth || note !== (a.note ?? "");
+  useUnsavedGuard(changed && !busy);
 
   async function send(body: Record<string, unknown>, key: string) {
     setBusy(key);
@@ -53,7 +56,7 @@ function EditForm({ a, onSaved }: { a: Adv; onSaved: (msg: string) => void }) {
       <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Recover over (months)</Text>
       <Segmented options={(PLANS.includes(months) ? PLANS : [...PLANS, months]).map((m) => ({ value: m, label: m === "1" ? "Full" : `${m} m` }))} value={months} onChange={setMonths} />
       {started ? <Muted>Recovery started in {monthLabel(a.startMonth)}, so the start month stays.</Muted> : <MonthField label="First recovery month" value={startMonth} onChange={setStartMonth} />}
-      <Field label="Note" value={note} onChangeText={setNote} placeholder="Optional" />
+      <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. medical…" />
       {error ? <Notice tone="red" text={error} /> : null}
       <Button title="Save changes" loading={busy === "save"} disabled={!amount} onPress={() => send({ amount, givenOn, recoveryMonths: months, ...(started ? {} : { startMonth }), note }, "save")} />
       {!started ? (

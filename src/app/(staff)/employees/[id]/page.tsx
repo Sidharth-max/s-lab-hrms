@@ -122,6 +122,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     ["Basic for PF", `${emp.basicPercent}%`],
     ["PF", emp.pfEnabled ? `On${emp.uanNumber ? ` · UAN ${emp.uanNumber}` : " · UAN not added"}` : "Off"],
     ["ESIC", emp.esiEnabled ? `On${emp.esicNumber ? ` · IP ${emp.esicNumber}` : " · IP number not added"}` : "Off"],
+    ["Attendance", emp.inHouse ? "In-house: present automatically on working days" : "Face scan"],
     ["Weekly off", emp.customWeeklyOff ? (emp.weeklyOffDays.map((d) => DAYS[d]).join(", ") || "None") : "Same as business"],
   ];
   const details = (
@@ -220,6 +221,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="h1 truncate">{emp.name}</h1>
                 {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
+                {emp.inHouse && <span className="badge badge-neutral">In-house</span>}
                 {today && (
                   <span className={statusBadgeClass(today.status)}>
                     <span className="h-1.5 w-1.5 rounded-[2px] bg-current" />Today: {today.label}
@@ -230,13 +232,18 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {manage && <Link className="btn-primary" href={`/employees/${emp.id}/edit`}><Pencil size={15} aria-hidden />Edit</Link>}
+            {manage && !emp.active && (
+              <ActionForm action={setEmployeeLeft} submitLabel="Restore employee" submitClass="btn-primary" confirm={`Restore ${emp.name}? They become active again; enroll the face again so they can scan.`}>
+                <input type="hidden" name="id" value={emp.id} />
+              </ActionForm>
+            )}
+            {manage && <Link className={emp.active ? "btn-primary" : "btn-secondary"} href={`/employees/${emp.id}/edit`}><Pencil size={15} aria-hidden />Edit</Link>}
             <Link className="btn-secondary" href={`/attendance/register?month=${thisMonth}&employee=${emp.id}`}><CalendarRange size={15} aria-hidden />Attendance</Link>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
           {[
-            ["Face", emp.faceId ? "Enrolled" : "Not enrolled", emp.faceId ? "" : "text-[var(--red)]"],
+            ["Face", emp.faceId ? "Enrolled" : emp.inHouse ? "Not needed (in-house)" : "Not enrolled", emp.faceId || emp.inHouse ? "" : "text-[var(--red)]"],
             ["Earned this month", formatRs(balance.earned), ""],
             ["Advance to recover", formatRs(balance.outstanding), ""],
             ["Balance", formatRs(balance.balance), balance.balance < 0 ? "text-[var(--red)]" : ""],

@@ -1,5 +1,5 @@
 import { decideApproval, editAdvance, giveAdvance, sendApprovalOtp, verifyApprovalOtp } from "@/app/actions/advances";
-import { addManualPunch, clearDayStatus, setDayStatus, voidPunch } from "@/app/actions/attendance";
+import { addManualPunch, clearDayStatus, markAttendance, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { enrollFace, removeFace, setEmployeeLeft, setEmployeeLogin, updateEmployee } from "@/app/actions/employees";
 import { addAdjustment, lockPayrollAction, recalcPayroll, recordPayment, reopenPayrollAction } from "@/app/actions/payroll";
 import { addHoliday, addSite, removeHoliday, renameDevice, revokeDevice, saveManager, toggleManager, toggleSite, updateSettings } from "@/app/actions/admin";
@@ -21,6 +21,7 @@ const ACTIONS: Record<string, (prev: ActionResult, form: FormData) => Promise<Ac
   setDayStatus,
   clearDayStatus,
   addManualPunch,
+  markAttendance,
   voidPunch,
   recalcPayroll,
   lockPayroll: lockPayrollAction,

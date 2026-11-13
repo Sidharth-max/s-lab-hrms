@@ -24,7 +24,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
   const inside = present.filter((r) => r.d.missingOut);
   const notIn = rows.filter((r) => r.d.status === "ABSENT");
   // Faces enrolled in test mode must be enrolled again once real AWS face recognition is switched on.
-  const noFace = employees.filter((e) => !e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-")));
+  const noFace = employees.filter((e) => !e.inHouse && (!e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-"))));
   const [pending, business] = await Promise.all([
     db.approvalRequest.count({ where: { businessId: actor.businessId, status: "PENDING" } }),
     db.business.findUniqueOrThrow({ where: { id: actor.businessId } }),
@@ -74,7 +74,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
               <tr key={e.id}>
                 <td className="card-title"><Link className="font-medium text-[var(--text)] hover:underline" href={`/attendance/${e.id}/${today}`}>{e.name}</Link> <span className="muted">{e.code}</span></td>
                 <td data-label={"Site"}>{e.site.name}</td>
-                <td data-label={"Status"}>{d.status === "ABSENT" ? <span className="badge badge-neutral">Not in yet</span> : STATUS_LABEL[d.status] ? <span className={statusBadgeClass(d.status)}>{STATUS_LABEL[d.status]}</span> : "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
+                <td data-label={"Status"}>{d.status === "ABSENT" ? <span className="badge badge-neutral">Not in yet</span> : STATUS_LABEL[d.status] ? <span className={statusBadgeClass(d.status)}>{d.auto ? "Present (auto)" : STATUS_LABEL[d.status]}</span> : "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
                 <td data-label={"In"}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
                 <td data-label={"Out"}>{d.outAt ? formatIstTime(d.outAt) : d.missingOut ? <span className="text-[var(--red)]">inside</span> : "—"}</td>
               </tr>

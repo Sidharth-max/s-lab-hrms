@@ -15,6 +15,7 @@ export interface EmployeeRow {
   wage: string;
   active: boolean;
   face: boolean;
+  inHouse?: boolean;
 }
 
 export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: boolean }) {
@@ -38,7 +39,7 @@ export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: bo
       </div>
       <div className="relative">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" aria-hidden />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={"Search name, code or mobile"} className="input !pl-9" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={"Search name, code or mobile…"} className="input !pl-9" />
       </div>
       <div className="segmented" role="tablist">
         {[false, true].map((archived) => (
@@ -59,6 +60,7 @@ export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: bo
                   <div className="truncate text-sm font-medium">{r.name} <span className="font-normal text-[var(--muted)]">{r.code}</span></div>
                   <div className="truncate text-xs text-[var(--muted)]">{r.site} · {r.wage}</div>
                 </div>
+                {r.inHouse && r.active && <span className="badge badge-neutral shrink-0">In-house</span>}
                 {!r.face && r.active && <span className="badge badge-red shrink-0">No face</span>}
                 <ChevronRight size={16} className="shrink-0 text-[var(--muted)]" aria-hidden />
               </Link>

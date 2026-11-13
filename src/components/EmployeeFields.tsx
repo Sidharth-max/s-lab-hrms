@@ -17,6 +17,7 @@ interface Values {
   uanNumber?: string | null;
   esicNumber?: string | null;
   customWeeklyOff?: boolean;
+  inHouse?: boolean;
   weeklyOffDays?: number[];
 }
 
@@ -61,6 +62,13 @@ export function EmployeeFields({
         <label className="label">Joining date</label>
         <DateInput name="joinedOn" defaultValue={values.joinedOn} />
       </div>
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] p-3 @lg:col-span-2">
+        <input type="checkbox" name="inHouse" defaultChecked={values.inHouse ?? false} className="mt-0.5 h-5 w-5" />
+        <span>
+          <span className="block font-medium">In-house employee</span>
+          <span className="muted block">Marked present automatically on every working day, without scanning. They can still scan if they want; it always counts as a full day.</span>
+        </span>
+      </label>
       <div className="@lg:col-span-2">
         <label className="label">Weekly off</label>
         <div className="flex flex-wrap items-center gap-2">

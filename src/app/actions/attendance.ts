@@ -82,3 +82,38 @@ export const voidPunch = safe(async (_p: ActionResult, form: FormData): Promise<
   revalidatePath("/attendance", "layout");
   return { ok: true, message: "Punch removed (kept in history)" };
 });
+
+/**
+ * Mark a day by hand with an IN and / or OUT time (default: the store's opening and closing time
+ * for that weekday, i.e. a full day). Each given time becomes a manual punch, like a scan.
+ */
+export const markAttendance = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+  const actor = await assertStaff("attendance.edit");
+  const date = str(form, "date");
+  // The website form has "no in / out time" boxes; the app simply sends an empty time.
+  const inTime = form.get("skipIn") === "on" ? "" : str(form, "inTime");
+  const outTime = form.get("skipOut") === "on" ? "" : str(form, "outTime");
+  const reason = str(form, "reason") || "Marked by hand";
+  if (!inTime && !outTime) return { error: "Choose an in time or an out time" };
+  for (const t of [inTime, outTime]) if (t && !/^\d{2}:\d{2}$/.test(t)) return { error: "Choose a valid time" };
+  const emp = await checkEditable(actor.businessId, str(form, "employeeId"), date, actor);
+  const outNextDay = form.get("nextDay") === "on";
+  const inAt = inTime ? istDateTime(date, inTime) : null;
+  const outAt = outTime ? istDateTime(outNextDay ? istDateKey(new Date(dateKeyToDb(date).getTime() + 86400000)) : date, outTime) : null;
+  if (inAt && outAt && outAt <= inAt) return { error: "Out time must be after the in time (or turn on 'after midnight')" };
+  // Today's closing time may still be ahead: allowed, it is the manager's decision. Later days are not.
+  const endOfToday = istDateTime(istDateKey(new Date()), "23:59");
+  if ((inAt && inAt > endOfToday) || (outAt && outAt > new Date(endOfToday.getTime() + 86400000))) return { error: "That time is in the future" };
+  const rows = [
+    ...(inAt ? [{ type: "IN" as const, at: inAt }] : []),
+    ...(outAt ? [{ type: "OUT" as const, at: outAt }] : []),
+  ];
+  await db.attendancePunch.createMany({
+    data: rows.map((r) => ({ businessId: actor.businessId, employeeId: emp.id, type: r.type, at: r.at, workDate: dateKeyToDb(date), source: "MANUAL" as const, reason, createdBy: actor.id })),
+  });
+  for (const r of rows) {
+    await audit(actor.businessId, actor.id, "attendance.punch.add", "AttendancePunch", null, { employeeId: emp.id, date, type: r.type, time: r.type === "IN" ? inTime : outTime, reason });
+  }
+  revalidatePath("/attendance", "layout");
+  return { ok: true, message: inAt && outAt ? `Marked present ${inTime} to ${outTime}` : inAt ? `In time ${inTime} added` : `Out time ${outTime} added` };
+});

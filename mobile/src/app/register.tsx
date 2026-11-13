@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Text, TextInput } from "@/components/Text";
 import { ChevronRight, Search } from "@/components/icons";
-import { Avatar, Badge, ErrorView, Loading, Muted } from "@/components/ui";
+import { Avatar, Badge, ErrorView, Loading, Muted, Tabs } from "@/components/ui";
 import { MonthField } from "@/components/pickers";
 import { MonthGrid, type GridDay } from "@/components/MonthGrid";
 import { api } from "@/lib/api";
@@ -21,7 +21,8 @@ interface Reg {
 export default function Register() {
   const [month, setMonth] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Reg>(`/api/m/register${month ? `?month=${month}` : ""}`), [month], ["attendance", "employee"]);
+  const [show, setShow] = useState<"active" | "all" | "archived">("active");
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Reg>(`/api/m/register?show=${show}${month ? `&month=${month}` : ""}`), [month, show], ["attendance", "employee"]);
   const rows = useMemo(() => {
     const s = q.trim().toLowerCase();
     return (data?.rows ?? []).filter((r) => !s || r.name.toLowerCase().includes(s));
@@ -39,10 +40,11 @@ export default function Register() {
         ListHeaderComponent={
           <View style={{ gap: 10 }}>
             <MonthField value={data.month} onChange={setMonth} max={data.current} />
+            <Tabs options={[{ value: "active", label: "Active" }, { value: "all", label: "All" }, { value: "archived", label: "Archived" }]} value={show} onChange={setShow} />
             {data.rows.length > 4 ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 10, backgroundColor: C.white, paddingHorizontal: 12 }}>
                 <Search size={18} color={C.muted} />
-                <TextInput value={q} onChangeText={setQ} placeholder="Search employee" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
+                <TextInput value={q} onChangeText={setQ} placeholder="Search employee…" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
               </View>
             ) : null}
             <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch. Tap a day to open it.</Muted>

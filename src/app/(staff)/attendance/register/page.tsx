@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
 import { addMonths, formatMonth, isMonthKey, istMonthKey, monthDates } from "@/lib/time";
+import { parseShow, showWhere } from "@/lib/show-filter";
+import { ShowTabs } from "@/components/ShowTabs";
 
 const COLOR: Partial<Record<DerivedStatus, string>> = {
   PRESENT: "bg-green-50 text-[var(--green)]",
@@ -24,8 +26,9 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
   const current = istMonthKey(new Date());
   const month = typeof sp.month === "string" && isMonthKey(sp.month) && sp.month <= current ? sp.month : current;
   const only = typeof sp.employee === "string" ? sp.employee : undefined;
+  const show = parseShow(sp.show);
   const employees = await db.employee.findMany({
-    where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, month), ...(only ? { id: only } : {}) },
+    where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, month), ...(only ? { id: only } : showWhere(show)) },
     orderBy: { name: "asc" },
   });
   const { days } = await monthAttendance(actor.businessId, month, employees);
@@ -36,12 +39,13 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="h1">{"Register"} · {formatMonth(month)}</h1>
         <div className="flex gap-2">
-          <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : ""}`}><ChevronLeft size={16} aria-hidden />Prev</Link>
-          {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : ""}`}>Next<ChevronRight size={16} aria-hidden /></Link>}
+          <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : show !== "active" ? `&show=${show}` : ""}`}><ChevronLeft size={16} aria-hidden />Prev</Link>
+          {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : show !== "active" ? `&show=${show}` : ""}`}>Next<ChevronRight size={16} aria-hidden /></Link>}
           {only && <Link className="btn-secondary" href={`?month=${month}`}>All employees</Link>}
         </div>
       </div>
       <p className="muted">P present · H half day · A absent · PL paid leave · UL unpaid leave · WO weekly off · HO holiday · * edited · ! no out punch. Tap a day to edit.</p>
+      {!only && <ShowTabs show={show} params={{ month: month === current ? undefined : month }} />}
       {/* Phones: one card per employee with a month calendar. Wider screens: the full table. */}
       <div className="flex flex-col gap-3 md:hidden">
         {employees.map((e) => {

@@ -38,8 +38,9 @@ body {
   .segmented > [data-active="true"] {
     @apply border-[var(--text)] text-[var(--text)];
   }
+  /* 16px text on phones so the browser does not zoom in on focus; 14px on larger screens. */
   .input {
-    @apply h-10 w-full rounded-md border border-[var(--line)] bg-white px-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-[var(--text)] focus:ring-2 focus:ring-neutral-200;
+    @apply h-11 w-full rounded-md border border-[var(--line)] bg-white px-3 text-base outline-none transition-[border-color,box-shadow] placeholder:text-neutral-400 focus:border-[var(--text)] focus:ring-2 focus:ring-neutral-200 sm:h-10 sm:text-sm;
   }
   select.input {
     @apply pr-8;
@@ -48,16 +49,16 @@ body {
     @apply mb-1.5 block text-[13px] font-medium text-[var(--muted)];
   }
   .btn {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50;
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9;
   }
   .btn-primary {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50 bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)];
   }
   .btn-secondary {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50 border border-[var(--line)] bg-white text-[var(--text)] shadow-[0_1px_1px_rgba(0,0,0,0.04)] hover:bg-[var(--soft)];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 border border-[var(--line)] bg-white text-[var(--text)] shadow-[0_1px_1px_rgba(0,0,0,0.04)] hover:bg-[var(--soft)];
   }
   .btn-danger {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:opacity-50 bg-[var(--red)] text-white hover:bg-red-700;
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 bg-[var(--red)] text-white hover:bg-red-700;
   }
   .table {
     @apply w-full text-left text-sm;
@@ -253,4 +254,25 @@ textarea,
 }
 ::selection {
   background: rgba(23, 23, 23, 0.14);
+}
+
+/* Vercel guidelines: no double-tap zoom on controls, our own tap highlight, visible keyboard focus,
+   tabular figures for amounts and counts. */
+button,
+a,
+summary,
+label,
+[role="tab"],
+[role="option"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(23, 23, 23, 0.06);
+}
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.table,
+.card,
+.badge {
+  font-variant-numeric: tabular-nums;
 }

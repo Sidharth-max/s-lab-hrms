@@ -10,6 +10,7 @@ import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { DateField, TimeField } from "@/components/pickers";
 import { useDialog } from "@/components/dialog";
+import { useUnsavedGuard } from "@/lib/unsaved";
 
 interface DayRule { open: string; close: string; halfDayBelowMins: number; anyScanFullDay: boolean }
 interface Settings {
@@ -64,6 +65,9 @@ function SettingsForm({
   const [hDate, setHDate] = useState("");
   const [hName, setHName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  // The form is rebuilt after each save, so this snapshot is always the saved state.
+  const [saved] = useState(() => JSON.stringify({ name, days, nums }));
+  useUnsavedGuard(!busy && (JSON.stringify({ name, days, nums }) !== saved || !!newSite.trim() || !!hName.trim()));
 
   async function run(key: string, action: string, body: Record<string, unknown>, after?: () => void) {
     setBusy(key);

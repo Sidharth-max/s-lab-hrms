@@ -5,6 +5,8 @@ import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
+import { parseShow, showWhere } from "@/lib/show-filter";
+import { ShowTabs } from "@/components/ShowTabs";
 import { formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
 import { DateInput } from "@/components/controls";
 
@@ -17,16 +19,16 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
   const sp = await searchParams;
   const today = istDateKey(new Date());
   const date = typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) && sp.date <= today ? sp.date : today;
+  const show = parseShow(sp.show);
   const employees = await db.employee.findMany({
-    where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, date.slice(0, 7)) },
+    where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, date.slice(0, 7)), ...showWhere(show) },
     include: { site: true },
     orderBy: { name: "asc" },
   });
   const { days } = await monthAttendance(actor.businessId, date.slice(0, 7), employees);
   const rows = employees
     .map((e) => ({ e, d: days.get(e.id)!.find((x) => x.date === date)! }))
-    // Archived people are hidden from today; past days they worked still show (salary uses them).
-    .filter((r) => r.d.status !== "NOT_EMPLOYED" && (r.e.active || date < today));
+    .filter((r) => r.d.status !== "NOT_EMPLOYED");
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,12 +37,14 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
         <h1 className="h1">{"Attendance"} · {formatDateKey(date)}</h1>
         <div className="flex flex-wrap gap-2">
           <form className="flex gap-2">
+            {show !== "active" && <input type="hidden" name="show" value={show} />}
             <DateInput name="date" defaultValue={date} max={today} className="w-44" />
             <button className="btn-secondary">Go</button>
           </form>
           <Link href={`/attendance/register?month=${date.slice(0, 7)}`} className="btn-secondary">Monthly register</Link>
         </div>
       </div>
+      <ShowTabs show={show} params={{ date: date === today ? undefined : date }} />
       <div className="card overflow-x-auto !p-0">
         <table className="table table-cards">
           <thead>
@@ -56,7 +60,7 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
                 <td data-label={"Site"}>{e.site.name}</td>
                 <td data-label={"Status"}>
                   <span>
-                    <span className={statusBadgeClass(d.status)}>{STATUS_LABEL[d.status]}</span>
+                    <span className={statusBadgeClass(d.status)}>{d.auto ? "Present (auto)" : STATUS_LABEL[d.status]}</span>
                     {d.overridden && <span className="badge badge-neutral ml-1">manual</span>}
                     {d.missingOut && !d.overridden && <span className="badge badge-red ml-1">no out punch</span>}
                   </span>

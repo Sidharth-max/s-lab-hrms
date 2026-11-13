@@ -2,13 +2,14 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Segmented, Toggle } from "@/components/ui";
+import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { TimeField } from "@/components/pickers";
 import { useDialog } from "@/components/dialog";
+import { useUnsavedGuard } from "@/lib/unsaved";
 
 interface DayDetail {
   employee: { id: string; name: string; code: string };
@@ -18,8 +19,59 @@ interface DayDetail {
   manual: boolean;
   locked: boolean;
   editable: boolean;
+  hours?: { open: string; close: string };
   punches: { id: string; type: "IN" | "OUT"; time: string; source: "FACE" | "MANUAL"; score: number | null; reason: string | null; by: string | null; voided: boolean; voidReason: string | null }[];
   history: { at: string; by: string | null; status: string; reason: string }[];
+}
+
+/**
+ * Mark the day by hand: separate In and Out times (each with its own picker), set to the store's
+ * hours by default so one tap marks a full day. Either time can be switched off.
+ */
+function MarkAttendance({ hours, busy, onSave }: { hours: { open: string; close: string }; busy: boolean; onSave: (body: Record<string, unknown>) => void }) {
+  const [useIn, setUseIn] = useState(true);
+  const [useOut, setUseOut] = useState(true);
+  const [inTime, setInTime] = useState(hours.open);
+  const [outTime, setOutTime] = useState(hours.close);
+  const [nextDay, setNextDay] = useState(false);
+  const [reason, setReason] = useState("");
+  const full = useIn && useOut && inTime === hours.open && outTime === hours.close;
+  useUnsavedGuard(!busy && (!!reason || !full || nextDay));
+  return (
+    <Card>
+      <H2>Mark attendance</H2>
+      <Muted>Full day is filled in ({hours.open} to {hours.close}). Change the times or switch one off for a missed punch.</Muted>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flex: 1, gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: C.text }}>In time</Text>
+            <Toggle value={useIn} onValueChange={setUseIn} label="Add in time" />
+          </View>
+          {useIn ? <TimeField value={inTime} onChange={setInTime} compact /> : <Muted>No in time</Muted>}
+        </View>
+        <View style={{ flex: 1, gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: C.text }}>Out time</Text>
+            <Toggle value={useOut} onValueChange={setUseOut} label="Add out time" />
+          </View>
+          {useOut ? <TimeField value={outTime} onChange={setOutTime} compact /> : <Muted>No out time</Muted>}
+        </View>
+      </View>
+      {useOut ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Toggle value={nextDay} onValueChange={setNextDay} label="Out time is after midnight" />
+          <Text style={{ color: C.text, flex: 1 }}>Out time is after midnight (night shift)</Text>
+        </View>
+      ) : null}
+      <Field label="Reason (optional)" value={reason} onChangeText={setReason} placeholder="e.g. forgot to scan…" />
+      <Button
+        title={full ? "Mark present (full day)" : "Save times"}
+        loading={busy}
+        disabled={!useIn && !useOut}
+        onPress={() => onSave({ inTime: useIn ? inTime : "", outTime: useOut ? outTime : "", nextDay: useOut && nextDay, reason })}
+      />
+    </Card>
+  );
 }
 
 const STATUSES = [
@@ -34,10 +86,6 @@ export default function DayScreen() {
   const dialog = useDialog();
   const { employeeId, date } = useLocalSearchParams<{ employeeId: string; date: string }>();
   const { data, error, refreshing, reload } = useLoad(() => api.get<DayDetail>(`/api/m/attendance/${employeeId}/${date}`), [employeeId, date], ["attendance"]);
-  const [type, setType] = useState<"IN" | "OUT">("IN");
-  const [time, setTime] = useState("");
-  const [nextDay, setNextDay] = useState(false);
-  const [reason, setReason] = useState("");
   const [status, setStatus] = useState("PRESENT");
   const [statusReason, setStatusReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -97,22 +145,7 @@ export default function DayScreen() {
 
       {data.editable ? (
         <>
-          <Card>
-            <H2>Add missed punch</H2>
-            <Segmented options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} value={type} onChange={setType} />
-            <TimeField label="Time" value={time} onChange={setTime} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Toggle value={nextDay} onValueChange={setNextDay} />
-              <Text style={{ color: C.text }}>Time is after midnight (night shift)</Text>
-            </View>
-            <Field label="Reason" value={reason} onChangeText={setReason} placeholder="e.g. tablet not working" />
-            <Button
-              title="Add punch"
-              loading={busy === "addManualPunch"}
-              disabled={!/^\d{2}:\d{2}$/.test(time) || reason.trim().length < 3}
-              onPress={() => run("addManualPunch", { employeeId, date, type, time, nextDay, reason }, () => { setTime(""); setReason(""); })}
-            />
-          </Card>
+          <MarkAttendance key={`${data.hours?.open}-${data.hours?.close}`} hours={data.hours ?? { open: "09:00", close: "18:00" }} busy={busy === "markAttendance"} onSave={(body) => run("markAttendance", { employeeId, date, ...body })} />
           <Card>
             <H2>Set day status</H2>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

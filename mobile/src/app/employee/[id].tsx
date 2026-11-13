@@ -2,10 +2,11 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "@/components/icons";
-import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented, Tabs } from "@/components/ui";
+import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil, RotateCcw } from "@/components/icons";
+import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row, Screen, Tabs } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
+import { GiveAdvanceForm } from "@/components/GiveAdvanceForm";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
@@ -17,7 +18,7 @@ interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
     wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
-    face: boolean; faceEnrolledAt: string | null; webLogin: boolean;
+    face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean;
   };
   balance: { earned: number; outstanding: number; balance: number };
   today: { status: string; label: string } | null;
@@ -65,45 +66,6 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
         </>
       )}
       {error ? <Button title="Retry" variant="secondary" onPress={reload} /> : null}
-    </Card>
-  );
-}
-
-function GiveAdvance({ employeeId, onDone }: { employeeId: string; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
-  const [amount, setAmount] = useState("");
-  const [months, setMonths] = useState("1");
-  const [givenOn, setGivenOn] = useState(istToday());
-  const [startMonth, setStartMonth] = useState(istToday().slice(0, 7));
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  return (
-    <Card>
-      <H2>Give advance</H2>
-      <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-      <DateField label="Given on" value={givenOn} onChange={setGivenOn} max={istToday()} />
-      <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Recover over</Text>
-      <Segmented options={[{ value: "1", label: "Full" }, { value: "2", label: "2 m" }, { value: "3", label: "3 m" }, { value: "6", label: "6 m" }, { value: "12", label: "12 m" }]} value={months} onChange={setMonths} />
-      <MonthField label="First recovery month" value={startMonth} onChange={setStartMonth} />
-      <Field label="Note" value={note} onChangeText={setNote} placeholder="Optional" />
-      <Button
-        title="Save advance"
-        icon={<HandCoins size={18} color={C.white} />}
-        loading={busy}
-        disabled={!amount}
-        onPress={async () => {
-          setBusy(true);
-          try {
-            const r = await api.action("giveAdvance", { employeeId, amount, recoveryMonths: months, givenOn, startMonth, note });
-            setAmount("");
-            setNote("");
-            await onDone({ text: r.message ?? "Saved", ok: true });
-          } catch (e) {
-            await onDone({ text: (e as Error).message, ok: false });
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
     </Card>
   );
 }
@@ -174,11 +136,22 @@ export default function EmployeeDetail() {
           </View>
         </View>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <Badge label={e.face ? "Face enrolled" : "No face"} tone={e.face ? "green" : "red"} dot />
+          {e.inHouse ? <Badge label="In-house" /> : null}
+          {e.face ? <Badge label="Face enrolled" tone="green" dot /> : e.inHouse ? null : <Badge label="No face" tone="red" dot />}
           <Badge label={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
           {e.pfEnabled ? <Badge label="PF" /> : null}
           {e.esiEnabled ? <Badge label="ESIC" /> : null}
         </View>
+        {!e.active && manage ? (
+          <Button
+            title="Restore employee"
+            icon={<RotateCcw size={18} color={C.white} />}
+            loading={busy === "setEmployeeLeft"}
+            onPress={async () => {
+              if (await dialog.confirm({ title: `Restore ${e.name}?`, message: "They become active again and appear in attendance. Take the face photos again so they can scan.", confirmText: "Restore" })) void run("setEmployeeLeft", { id: e.id, leftOn: "" });
+            }}
+          />
+        ) : null}
         <Row label="Balance this month" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
       </Card>
 
@@ -226,6 +199,7 @@ export default function EmployeeDetail() {
             <Row label="Basic for PF" value={`${e.basicPercent}%`} />
             <Row label="PF" value={e.pfEnabled ? (e.uanNumber ? `UAN ${e.uanNumber}` : "On · UAN not added") : "Off"} />
             <Row label="ESIC" value={e.esiEnabled ? (e.esicNumber ? `IP ${e.esicNumber}` : "On · IP number not added") : "Off"} />
+            <Row label="Attendance" value={e.inHouse ? "In-house (automatic)" : "Face scan"} />
             <Row label="Weekly off" value={weeklyOff} />
             {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} /> : null}
           </Card>
@@ -259,7 +233,7 @@ export default function EmployeeDetail() {
               ))}
             </Card>
           ) : null}
-          {can("advances.manage") && e.active ? <GiveAdvance employeeId={e.id} onDone={async (m) => { setMsg(m); await reload(); }} /> : null}
+          {can("advances.manage") && e.active ? <GiveAdvanceForm employeeId={e.id} onDone={async (m) => { setMsg(m); await reload(); }} /> : null}
         </>
       ) : null}
 

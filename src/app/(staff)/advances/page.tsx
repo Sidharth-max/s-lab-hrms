@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { editAdvance } from "@/app/actions/advances";
+import { editAdvance, giveAdvance } from "@/app/actions/advances";
+import { DateInput, MonthInput, Select } from "@/components/controls";
+import { can } from "@/lib/permissions";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { employeeScope } from "@/lib/scope";
 import { recoveredByAdvance } from "@/lib/services";
-import { dbToDateKey, formatDateKey, formatMonth } from "@/lib/time";
-import { DateInput, MonthInput } from "@/components/controls";
+import { dbToDateKey, formatDateKey, formatMonth, istDateKey, istMonthKey } from "@/lib/time";
 
 export default async function AdvancesPage({ searchParams }: PageProps<"/advances">) {
   const actor = await requireStaff();
@@ -20,6 +21,8 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
     take: 500,
   });
   const rec = await recoveredByAdvance(advances.map((a) => a.id));
+  const canGive = can(actor, "advances.manage");
+  const people = canGive ? await db.employee.findMany({ where: employeeScope(actor, { active: true }), orderBy: { name: "asc" }, select: { id: true, name: true, code: true } }) : [];
   const total = advances.filter((a) => a.status === "ACTIVE").reduce((s, a) => s + a.amount - (rec.get(a.id) ?? 0), 0);
   const STATUS: Record<string, string> = {
     PENDING_APPROVAL: "Waiting approval",
@@ -36,13 +39,32 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
         <div>
           <h1 className="h1">Advances</h1>
           <p className="muted">
-            {"Total still to recover:"} <b>{formatRs(total)}</b>. {"To give an advance, open the employee."}
+            {"Total still to recover:"} <b>{formatRs(total)}</b>.
           </p>
         </div>
         <Link href={all ? "/advances" : "/advances?all=1"} className="btn-secondary">
           {all ? "Show open only" : "Show all (incl. cleared)"}
         </Link>
       </div>
+      {canGive && (
+        <details className="card">
+          <summary className="flex cursor-pointer items-center justify-between font-semibold">Give advance<span className="btn-primary !h-8">New advance</span></summary>
+          <ActionForm action={giveAdvance} className="mt-4 grid gap-3 @container @md:grid-cols-2" submitLabel="Save advance" resetOnSuccess>
+            <div className="@md:col-span-2">
+              <label className="label">Employee</label>
+              <Select name="employeeId" defaultValue="" ariaLabel="Employee" options={[{ value: "", label: "Choose employee…" }, ...people.map((e) => ({ value: e.id, label: `${e.name} (${e.code})` }))]} />
+            </div>
+            <div><label className="label">Amount (₹)</label><input name="amount" className="input" inputMode="decimal" placeholder="e.g. 2000" required /></div>
+            <div><label className="label">Given on</label><DateInput name="givenOn" defaultValue={istDateKey(new Date())} max={istDateKey(new Date())} /></div>
+            <div>
+              <label className="label">Recover over</label>
+              <Select name="recoveryMonths" defaultValue="1" ariaLabel="Recover over" options={[{ value: "1", label: "Full, this month end" }, ...[2, 3, 4, 6].map((n) => ({ value: String(n), label: `${n} months` })), { value: "12", label: "12 months (1 year)" }]} />
+            </div>
+            <div><label className="label">First recovery month</label><MonthInput name="startMonth" defaultValue={istMonthKey(new Date())} /></div>
+            <div className="@md:col-span-2"><label className="label">Note (optional)</label><input name="note" className="input" placeholder="e.g. medical…" /></div>
+          </ActionForm>
+        </details>
+      )}
       <div className="card overflow-x-auto !p-0">
         <table className="table table-cards">
           <thead>

@@ -43,6 +43,8 @@ export interface DayResult {
   missingOut: boolean;
   overridden: boolean;
   offDay: boolean; // weekly off or holiday (worked or not)
+  /** In-house employee marked present automatically (no scan needed). */
+  auto: boolean;
 }
 
 export function deriveDay(
@@ -50,7 +52,7 @@ export function deriveDay(
   punches: PunchInput[],
   override: OverrideInput | undefined,
   rules: DayRules,
-  ctx: { today: string; joinedOn: string; leftOn: string | null },
+  ctx: { today: string; joinedOn: string; leftOn: string | null; inHouse?: boolean },
 ): DayResult {
   const offDay = rules.holidays.has(date) || rules.weeklyOffDays.includes(weekday(date));
   const sorted = punches.filter((p) => p.workDate === date).sort((a, b) => a.at.getTime() - b.at.getTime());
@@ -70,13 +72,23 @@ export function deriveDay(
     }
   }
   const workedMins = Math.round(workedMs / 60000);
-  const missingOut = openIn !== null;
-  const base = { date, inAt: firstIn, outAt: lastOut, workedMins, missingOut, offDay };
+  // In-house staff are not expected to scan out, so a missing OUT is not flagged for them.
+  const missingOut = openIn !== null && !ctx.inHouse;
+  const base = { date, inAt: firstIn, outAt: lastOut, workedMins, missingOut, offDay, auto: false };
 
   if (date < ctx.joinedOn || (ctx.leftOn && date > ctx.leftOn)) {
     return { ...base, status: "NOT_EMPLOYED", overridden: false };
   }
   if (override && override.status !== "AUTO") return { ...base, status: override.status, overridden: true };
+
+  if (ctx.inHouse) {
+    // In-house: always a full day on working days, scanned or not. Scans are kept only to show times.
+    if (firstIn) return { ...base, status: "PRESENT", overridden: false };
+    if (date > ctx.today) return { ...base, status: "FUTURE", overridden: false };
+    if (rules.holidays.has(date)) return { ...base, status: "HOLIDAY", overridden: false };
+    if (rules.weeklyOffDays.includes(weekday(date))) return { ...base, status: "WEEKLY_OFF", overridden: false };
+    return { ...base, status: "PRESENT", overridden: false, auto: true };
+  }
 
   if (firstIn) {
     // A missing OUT punch still counts as present; it is flagged for the manager to fix.
@@ -107,7 +119,7 @@ export function deriveMonth(
   punches: PunchInput[],
   overrides: OverrideInput[],
   rules: DayRules,
-  ctx: { today: string; joinedOn: string; leftOn: string | null },
+  ctx: { today: string; joinedOn: string; leftOn: string | null; inHouse?: boolean },
 ): DayResult[] {
   const latest = latestOverrides(overrides);
   return monthDates(month).map((d) => deriveDay(d, punches, latest.get(d), rules, ctx));

@@ -3,6 +3,7 @@ import { Modal, Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
 import { CircleAlert, CircleCheck } from "@/components/icons";
 import { C } from "@/lib/theme";
+import { haptic } from "@/lib/haptics";
 import { Button } from "./ui";
 
 // Our own confirm / message dialogs (instead of Android's system alert boxes).
@@ -52,7 +53,10 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
 
   const api = useMemo<DialogApi>(
     () => ({
-      confirm: (o) => new Promise<boolean>((resolve) => setState({ kind: "confirm", o, resolve })),
+      confirm: (o) => {
+        if (o.danger) haptic.warning();
+        return new Promise<boolean>((resolve) => setState({ kind: "confirm", o, resolve }));
+      },
       notify: (o) => new Promise<void>((resolve) => setState({ kind: "notify", o, resolve })),
     }),
     [],

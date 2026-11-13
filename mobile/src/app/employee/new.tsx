@@ -19,7 +19,7 @@ export default function NewEmployee() {
   return (
     <Screen>
       <Stack.Screen options={{ title: "Add employee" }} />
-      {sites.length === 0 ? <Notice tone="red" text="Add a site first (on the website: Settings)." /> : null}
+      {sites.length === 0 ? <Notice tone="red" text="Add a site first in More > Settings." /> : null}
       <Card>
         <EmployeeForm
           isNew
@@ -28,7 +28,7 @@ export default function NewEmployee() {
           submitTitle="Add employee"
           initial={{
             name: "", code: data?.nextCode ?? "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", basicPercent: "100",
-            pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [],
+            pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [], inHouse: false,
           }}
           onSubmit={async (v) => {
             try {

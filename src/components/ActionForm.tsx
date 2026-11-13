@@ -28,6 +28,7 @@ export function ActionForm({
   // Toast as soon as the server answers, before the page refreshes and maybe removes this form.
   const [state, formAction, pending] = useActionState(async (prev: ActionResult, form: FormData) => {
     const r = await action(prev, form);
+    if (r?.ok) ref.current?.removeAttribute("data-dirty");
     if (r?.ok && r.message) toast(r.message, true);
     if (r?.error) toast(r.error, false);
     return r;
@@ -43,6 +44,10 @@ export function ActionForm({
       ref={ref}
       action={formAction}
       className={className}
+      // Typing in the form marks it as having unsaved changes (LeaveGuard warns before leaving).
+      onInput={(e) => {
+        if ((e.target as HTMLElement).closest("input,textarea,select,[role=listbox],[role=dialog]")) e.currentTarget.setAttribute("data-dirty", "true");
+      }}
       onSubmit={(e) => {
         // Ask with our own dialog; when confirmed, submit again with the same button.
         if (!confirm || confirmed.current) {

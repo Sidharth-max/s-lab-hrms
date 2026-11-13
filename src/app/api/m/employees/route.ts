@@ -18,7 +18,8 @@ export async function GET() {
         active: e.active,
         wageType: e.wageType,
         wage: e.wageType === "MONTHLY" ? e.monthlyWage : e.dailyWage,
-        face: !!e.faceId,
+        face: !!e.faceId || e.inHouse, // in-house staff do not need a face
+        inHouse: e.inHouse,
       })),
     });
   });

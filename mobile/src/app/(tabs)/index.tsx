@@ -19,7 +19,7 @@ function Stat({ label, value, of, tone }: { label: string; value: number; of?: n
   return (
     <Card style={{ gap: 4, ...(tone === "red" ? { backgroundColor: C.redSoft, borderColor: "#fecaca" } : {}) }}>
       <Muted>{label}</Muted>
-      <Text style={{ fontSize: 24, fontWeight: "700", color: C.text }}>
+      <Text style={{ fontSize: 26, fontWeight: "700", color: C.text, letterSpacing: -0.5, fontVariant: ["tabular-nums"] }}>
         {value}
         {of != null ? <Text style={{ fontSize: 15, fontWeight: "400", color: C.muted }}> / {of}</Text> : null}
       </Text>

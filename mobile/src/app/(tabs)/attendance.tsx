@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
 import { CalendarDays, ChevronLeft, ChevronRight } from "@/components/icons";
 import { DatePickerSheet } from "@/components/pickers";
-import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
+import { Badge, Card, ErrorView, Loading, Muted, Screen, Tabs } from "@/components/ui";
 import { api } from "@/lib/api";
 import { addDays, dateLabel, hours } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
@@ -19,7 +19,8 @@ interface Day {
 export default function Attendance() {
   const [date, setDate] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Day>(`/api/m/attendance${date ? `?date=${date}` : ""}`), [date], ["attendance", "employee"]);
+  const [show, setShow] = useState<"active" | "all" | "archived">("active");
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Day>(`/api/m/attendance?show=${show}${date ? `&date=${date}` : ""}`), [date, show], ["attendance", "employee"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
 
@@ -43,6 +44,7 @@ export default function Attendance() {
           <ChevronRight color={C.text} size={24} />
         </Pressable>
       </View>
+      <Tabs options={[{ value: "active", label: "Active" }, { value: "all", label: "All" }, { value: "archived", label: "Archived" }]} value={show} onChange={setShow} />
       <Card style={{ padding: 0, gap: 0 }}>
         {data.rows.length === 0 ? <View style={{ padding: 16 }}><Muted>No employees for this date.</Muted></View> : null}
         {data.rows.map((r, i) => (

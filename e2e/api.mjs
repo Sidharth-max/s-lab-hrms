@@ -120,6 +120,28 @@ check(r.data.ok, "set status failed: " + JSON.stringify(r.data));
 r = await call("GET", `/api/m/attendance/${empId}/${today}`);
 check(r.data.status === "PAID_LEAVE" && r.data.punches.length === 1 && r.data.history.length === 1, "day detail wrong: " + JSON.stringify(r.data));
 
+step("in-house employee is present automatically; manual attendance with in and out");
+r = await call("POST", "/api/m/employees", { name: "House Staff", siteId, joinedOn: "2026-10-01", wageType: "MONTHLY", wage: "8000", inHouse: true });
+check(r.data.ok, "in-house create failed: " + JSON.stringify(r.data));
+const houseId = r.data.data.id;
+r = await call("GET", `/api/m/attendance?date=${today}`);
+const houseRow = r.data.rows.find((x) => x.employeeId === houseId);
+const todayRule = (await call("GET", `/api/m/attendance/${houseId}/${today}`)).data;
+if (houseRow && houseRow.status !== "WEEKLY_OFF" && houseRow.status !== "HOLIDAY") {
+  check(houseRow.status === "PRESENT" && /auto/.test(houseRow.statusLabel), "in-house should be auto present: " + JSON.stringify(houseRow));
+}
+check(todayRule.hours?.open && todayRule.hours?.close, "day detail should give store hours: " + JSON.stringify(todayRule.hours));
+r = await call("GET", "/api/m/dashboard");
+check(!r.data.rows.find((x) => x.id === houseId)?.needsFace, "in-house must not need a face");
+r = await call("POST", "/api/m/action/markAttendance", { employeeId: houseId, date: today, inTime: "00:05", outTime: "00:10", reason: "api test" });
+check(r.data.ok, "mark attendance failed: " + JSON.stringify(r.data));
+r = await call("POST", "/api/m/action/markAttendance", { employeeId: houseId, date: today, inTime: "00:20", outTime: "00:15" });
+check(r.status === 400 && /after the in time/.test(r.data.error), "out before in must be refused: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/attendance/${houseId}/${today}`);
+check(r.data.punches.filter((p) => p.source === "MANUAL").map((p) => p.type).join() === "IN,OUT", "two manual punches expected: " + JSON.stringify(r.data.punches));
+r = await call("GET", "/api/m/attendance?show=archived");
+check(r.data.show === "archived" && !r.data.rows.some((x) => x.employeeId === houseId), "archived filter should not list active staff");
+
 step("advance and salary");
 r = await call("POST", "/api/m/action/giveAdvance", { employeeId: empId, amount: "100", recoveryMonths: "1" });
 check(r.data.ok, "advance failed: " + JSON.stringify(r.data));

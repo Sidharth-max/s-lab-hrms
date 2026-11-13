@@ -26,12 +26,13 @@ export async function GET() {
         site: e.site.name,
         status: d.status,
         // On the Today screen "absent" just means not scanned in yet.
-        statusLabel: d.status === "ABSENT" ? "Not in yet" : STATUS_LABEL[d.status],
+        statusLabel: d.auto ? "Present (auto)" : d.status === "ABSENT" ? "Not in yet" : STATUS_LABEL[d.status],
         inAt: d.inAt ? formatIstTime(d.inAt) : null,
         outAt: d.outAt ? formatIstTime(d.outAt) : null,
         inside: d.missingOut,
         manual: d.overridden,
-        needsFace: !e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-")),
+        // In-house staff are marked present automatically, so they do not need a face.
+        needsFace: !e.inHouse && (!e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-"))),
       };
     });
     const rule = parseDayRules(business.dayRules)[weekday(today)];

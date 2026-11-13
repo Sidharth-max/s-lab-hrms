@@ -37,7 +37,7 @@ export async function businessRules(businessId: string, month: string, tx: Tx = 
 export async function monthAttendance(
   businessId: string,
   month: string,
-  employees: Pick<Employee, "id" | "joinedOn" | "leftOn" | "customWeeklyOff" | "weeklyOffDays">[],
+  employees: Pick<Employee, "id" | "joinedOn" | "leftOn" | "customWeeklyOff" | "weeklyOffDays" | "inHouse">[],
   tx: Tx = db,
 ): Promise<{ business: Business; days: Map<string, DayResult[]> }> {
   const { business, rules } = await businessRules(businessId, month, tx);
@@ -57,7 +57,7 @@ export async function monthAttendance(
         punches.filter((p) => p.employeeId === e.id).map((p) => ({ type: p.type, at: p.at, workDate: dbToDateKey(p.workDate) })),
         overrides.filter((o) => o.employeeId === e.id).map((o) => ({ workDate: dbToDateKey(o.workDate), status: o.status, createdAt: o.createdAt })),
         { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e) },
-        { today, joinedOn: dbToDateKey(e.joinedOn), leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null },
+        { today, joinedOn: dbToDateKey(e.joinedOn), leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null, inHouse: e.inHouse },
       ),
     );
   }

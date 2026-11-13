@@ -1,3 +1,4 @@
+import { haptic } from "./haptics";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
@@ -81,8 +82,16 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown = {}) => request<T>("POST", path, body),
   /** Runs a shared server action (same rules as the website). */
-  action: (name: string, body: Record<string, unknown>) =>
-    request<{ ok?: boolean; message?: string; error?: string; data?: Record<string, unknown> }>("POST", `/api/m/action/${name}`, body),
+  action: async (name: string, body: Record<string, unknown>) => {
+    try {
+      const r = await request<{ ok?: boolean; message?: string; error?: string; data?: Record<string, unknown> }>("POST", `/api/m/action/${name}`, body);
+      haptic.success();
+      return r;
+    } catch (e) {
+      haptic.error();
+      throw e;
+    }
+  },
   scanner: {
     config: () => request<ScanConfig>("GET", "/api/scan", undefined, { device: true }),
     scan: (body: Record<string, unknown>) => request<ScanResult>("POST", "/api/scan", body, { device: true }),

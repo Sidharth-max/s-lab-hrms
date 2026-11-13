@@ -53,6 +53,7 @@ export default async function EditEmployeePage({ params }: PageProps<"/employees
             uanNumber: emp.uanNumber,
             esicNumber: emp.esicNumber,
             customWeeklyOff: emp.customWeeklyOff,
+            inHouse: emp.inHouse,
             weeklyOffDays: emp.weeklyOffDays,
           }}
         />

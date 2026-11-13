@@ -4,6 +4,7 @@ import { json, staff } from "@/lib/api";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
 import { isMonthKey, istMonthKey, monthDates } from "@/lib/time";
+import { parseShow, showWhere } from "@/lib/show-filter";
 
 // Monthly attendance register (?month=YYYY-MM, optional &employeeId= for one person's calendar).
 export async function GET(req: Request) {
@@ -12,8 +13,9 @@ export async function GET(req: Request) {
     const params = new URL(req.url).searchParams;
     const q = params.get("month") ?? "";
     const only = params.get("employeeId");
+    const show = parseShow(params.get("show"));
     const month = isMonthKey(q) && q <= current ? q : current;
-    const employees = await db.employee.findMany({ where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, month), ...(only ? { id: only } : {}) }, orderBy: { name: "asc" } });
+    const employees = await db.employee.findMany({ where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, month), ...(only ? { id: only } : showWhere(show)) }, orderBy: { name: "asc" } });
     const { days } = await monthAttendance(actor.businessId, month, employees);
     return json({
       month,

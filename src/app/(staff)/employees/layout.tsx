@@ -17,7 +17,8 @@ export default async function EmployeesLayout({ children }: LayoutProps<"/employ
     site: e.site.name,
     wage: e.wageType === "MONTHLY" ? `${formatRs(e.monthlyWage)} ${"/ month"}` : `${formatRs(e.dailyWage)} ${"/ day"}`,
     active: e.active,
-    face: !!e.faceId,
+    face: !!e.faceId || e.inHouse, // in-house staff do not need a face
+    inHouse: e.inHouse,
   }));
   return (
     <SplitView base="/employees" list={<EmployeeList rows={rows} canAdd={can(actor, "employees.manage")} />}>
