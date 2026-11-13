@@ -81,7 +81,7 @@ export function PaySheet({ visible, employeeId, name, balance, onClose, onDone }
       footer={
         <Button
           title={paise > 0 ? `Pay ${rs(paise)} to ${who}` : "Enter an amount"}
-          icon={<Cash size={19} color={C.headText} />}
+          icon={<Cash size={19} color="#ffffff" />}
           loading={busy}
           disabled={!(paise > 0)}
           onPress={async () => {
@@ -164,7 +164,7 @@ export function LedgerActions({ h, can, active, name, onOpen }: { h: Hisaab; can
     <View style={{ flexDirection: "row", gap: 8 }}>
       {can.pay && h.balance > 0 ? (
         <View style={{ flex: 1.4 }}>
-          <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color={C.headText} />} onPress={() => onOpen("pay")} />
+          <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color="#ffffff" />} onPress={() => onOpen("pay")} />
         </View>
       ) : null}
       {can.advance && active ? (

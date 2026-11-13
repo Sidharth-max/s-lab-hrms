@@ -2,8 +2,8 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { ChevronDown, ChevronUp, Pencil, ScanFace } from "@/components/icons";
-import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { ChevronDown, ChevronUp, Pencil, ScanFace, Smartphone } from "@/components/icons";
+import { Badge, Button, Card, ChoiceChip, ErrorView, Field, Hero, IconChip, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
@@ -16,9 +16,7 @@ function SitePicker({ sites, value, onChange }: { sites: { id: string; name: str
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {sites.map((s) => (
-        <Pressable key={s.id} onPress={() => onChange(s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: value === s.id ? C.text : C.line, backgroundColor: value === s.id ? C.text : C.white }}>
-          <Text style={{ color: value === s.id ? C.white : C.text }}>{s.name}</Text>
-        </Pressable>
+        <ChoiceChip key={s.id} label={s.name} selected={value === s.id} onPress={() => onChange(s.id)} />
       ))}
     </View>
   );
@@ -46,8 +44,9 @@ function DeviceCard({ d, sites, onDone }: { d: Device; sites: { id: string; name
 
   return (
     <Card style={d.revoked ? { opacity: 0.6 } : undefined}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <Text style={{ fontWeight: "600", color: C.text, fontSize: 15, flexShrink: 1 }}>{d.name}</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <IconChip ink={d.revoked ? "red" : "blue"} size={40}><Smartphone size={20} color={d.revoked ? C.ink.red : C.ink.blue} /></IconChip>
+        <Text style={{ flex: 1, fontWeight: "700", color: C.text, fontSize: 15 }}>{d.name}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {d.revoked ? <Badge label="Removed" /> : <Badge label="Active" tone="green" />}
           {!d.revoked ? (
@@ -95,7 +94,14 @@ export default function DevicesScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen options={{ title: "Scanner devices" }} />
-      <Button title={scannerMode ? "This device is a scanner" : "Use this device as face scanner"} icon={<ScanFace size={18} color={C.white} />} onPress={() => router.push("/scanner-setup")} />
+      <Hero
+        icon={<Smartphone size={24} color="#ffffff" />}
+        eyebrow="Scanner devices"
+        title={`${active.length} active scanner${active.length === 1 ? "" : "s"}`}
+        subtitle="Phones and tablets that take face attendance."
+        stats={[{ label: "Active", value: String(active.length) }, { label: "Removed", value: String(removed.length) }]}
+      />
+      <Button title={scannerMode ? "This device is a scanner" : "Use this device as face scanner"} icon={<ScanFace size={18} color="#ffffff" />} onPress={() => router.push("/scanner-setup")} />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       {active.length === 0 ? <Card><Muted>No active scanners.</Muted></Card> : null}
       {active.map((d) => <DeviceCard key={d.id} d={d} sites={me?.sites ?? []} onDone={done} />)}

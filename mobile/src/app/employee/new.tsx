@@ -30,10 +30,13 @@ export default function NewEmployee() {
             name: "", code: data?.nextCode ?? "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", basicPercent: "100",
             pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [], inHouse: false,
           }}
-          onSubmit={async (v) => {
+          onSubmit={async (v, allowLeave) => {
             try {
               const r = await api.post<{ data?: { id?: string } }>("/api/m/employees", employeeBody(v, can("salary.edit"), true));
-              if (r.data?.id) router.replace({ pathname: "/employee/[id]", params: { id: r.data.id, created: "1" } });
+              if (r.data?.id) {
+                allowLeave();
+                router.replace({ pathname: "/employee/[id]", params: { id: r.data.id, created: "1" } });
+              }
               return null;
             } catch (e) {
               return (e as Error).message;

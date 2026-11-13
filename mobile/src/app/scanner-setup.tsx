@@ -1,8 +1,9 @@
 import { router, Stack } from "expo-router";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Text } from "@/components/Text";
-import { Button, Card, Field, H2, Muted, Notice, Screen } from "@/components/ui";
+import { Button, Card, ChoiceChip, Field, Hero, Muted, Notice, Screen } from "@/components/ui";
+import { ScanFace } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { deviceInfo } from "@/lib/device-info";
@@ -21,10 +22,14 @@ export default function ScannerSetup() {
   return (
     <Screen>
       <Stack.Screen options={{ title: "Face scanner" }} />
+      <Hero
+        icon={<ScanFace size={24} color="#ffffff" />}
+        eyebrow="Face scanner"
+        title={scannerMode ? "This device is a scanner" : "Use this device as the face scanner"}
+        subtitle={scannerMode ? "Log out to show only the face scan screen to workers." : "Workers then only see the face scan screen. If this device was a scanner before, its old entry is reused."}
+      />
       {scannerMode ? (
         <Card>
-          <H2>This device is a scanner</H2>
-          <Muted>Log out to show only the face scan screen to workers.</Muted>
           <Button title="Log out and open scanner" onPress={async () => { await signOut(); router.replace("/scanner"); }} />
           <Button
             title="Stop using as scanner"
@@ -34,14 +39,11 @@ export default function ScannerSetup() {
         </Card>
       ) : (
         <Card>
-          <H2>Use this device as the face scanner</H2>
-          <Muted>Workers will then only see the face scan screen. You log out after setting it up. If this device was a scanner before, its old entry is reused, not duplicated.</Muted>
+          <Muted>You log out after setting it up.</Muted>
           <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {sites.map((s) => (
-              <Pressable key={s.id} onPress={() => setSiteId(s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: siteId === s.id ? C.text : C.line, backgroundColor: siteId === s.id ? C.text : C.white }}>
-                <Text style={{ color: siteId === s.id ? C.white : C.text }}>{s.name}</Text>
-              </Pressable>
+              <ChoiceChip key={s.id} label={s.name} selected={siteId === s.id} onPress={() => setSiteId(s.id)} />
             ))}
           </View>
           <Field label="Device name" value={name} onChangeText={setName} placeholder="e.g. Gate tablet" />

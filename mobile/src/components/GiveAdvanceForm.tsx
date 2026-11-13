@@ -6,7 +6,6 @@ import { DateField } from "./pickers";
 import { EmployeePicker, type PickEmployee } from "./EmployeePicker";
 import { api } from "@/lib/api";
 import { rs } from "@/lib/format";
-import { C } from "@/lib/theme";
 import { useUnsavedGuard } from "@/lib/unsaved";
 
 function istToday() {
@@ -53,7 +52,7 @@ export function GiveAdvanceForm({
       <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. medical…" />
       <Button
         title={n > 0 ? `Give ${rs(Math.round(n * 100))} advance` : "Give advance"}
-        icon={<HandCoins size={18} color={C.headText} />}
+        icon={<HandCoins size={18} color="#ffffff" />}
         loading={busy}
         disabled={!amount || !employeeId}
         onPress={async () => {

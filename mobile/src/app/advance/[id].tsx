@@ -1,6 +1,8 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen } from "@/components/ui";
+import { Button, Card, ErrorView, Field, Hero, Loading, Muted, Notice, Screen, SectionHead } from "@/components/ui";
+import { Pencil } from "@/components/icons";
+import { C } from "@/lib/theme";
 import { DateField } from "@/components/pickers";
 import { api } from "@/lib/api";
 import { dateLabel, rs } from "@/lib/format";
@@ -41,7 +43,7 @@ function EditForm({ a, onSaved }: { a: Adv; onSaved: (msg: string) => void }) {
 
   return (
     <Card>
-      <H2>Change advance</H2>
+      <SectionHead icon={<Pencil size={18} color={C.ink.orange} />} ink="orange" title="Change advance" />
       <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
       <DateField label="Given on" value={givenOn} onChange={setGivenOn} max={today()} />
       <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. medical…" />
@@ -68,14 +70,17 @@ export default function AdvanceScreen() {
     <Screen>
       <Stack.Screen options={{ title: `Advance · ${a.employee}` }} />
       {msg ? <Notice tone="green" text={msg} /> : null}
-      <Card>
-        <Row label="Employee" value={`${a.employee} (${a.code})`} />
-        <Row label="Given on" value={dateLabel(a.givenOn)} />
-        <Row label="Amount" value={rs(a.amount)} />
-        <Row label="Status" value={<Badge label={STATUS[a.status] ?? a.status} tone={a.status === "ACTIVE" ? "neutral" : a.status === "PENDING_APPROVAL" ? "amber" : "red"} />} />
-        <Muted>An advance comes off the salary balance straight away.</Muted>
-        {a.note ? <Muted>{a.note}</Muted> : null}
-      </Card>
+      <Hero
+        avatar={a.employee}
+        eyebrow={`Advance · ${a.code}`}
+        title={a.employee}
+        subtitle={a.note ?? undefined}
+        pills={[{ label: STATUS[a.status] ?? a.status, tone: a.status === "ACTIVE" || a.status === "CLEARED" ? "ok" : "alert" }]}
+        valueLabel="Amount"
+        value={rs(a.amount)}
+        stats={[{ label: "Given on", value: dateLabel(a.givenOn) }]}
+      />
+      <Muted>An advance comes off the salary balance straight away.</Muted>
       {data.canEdit ? <EditForm key={`${a.amount}-${a.givenOn}-${a.note}`} a={a} onSaved={(m) => { setMsg(m); void reload(); }} /> : <Muted>Only the owner can change an advance.</Muted>}
       <Button title="Open employee" variant="secondary" onPress={() => router.push({ pathname: "/employee/[id]", params: { id: a.employeeId } })} />
     </Screen>

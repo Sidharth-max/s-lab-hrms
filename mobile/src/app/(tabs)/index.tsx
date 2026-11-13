@@ -1,4 +1,7 @@
 import { router } from "expo-router";
+import { useRef, useState, type ComponentRef } from "react";
+import { BlurTargetView } from "expo-blur";
+import { BlurStrip } from "@/components/BlurFrame";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/components/Text";
@@ -82,7 +85,7 @@ function PeopleCard({ data }: { data: Dashboard }) {
       {data.rows.length === 0 ? (
         <View style={{ padding: 16, gap: 12, alignItems: "flex-start" }}>
           <Muted>No employees yet. Add your staff to see today&apos;s attendance here.</Muted>
-          <Button title="Add employee" icon={<UserPlus size={18} color={C.headText} />} onPress={() => router.push("/employee/new")} />
+          <Button title="Add employee" icon={<UserPlus size={18} color="#ffffff" />} onPress={() => router.push("/employee/new")} />
         </View>
       ) : null}
       {data.rows.map((r, i) => <PersonRow key={r.id} r={r} date={data.date} i={i} />)}
@@ -161,6 +164,13 @@ export default function Today() {
     [],
     ["attendance", "employee", "approval", "salary", "advance"],
   );
+  // Frosted status bar: appears once the page scrolls under it (at rest the hero reaches the top).
+  const blurTarget = useRef<ComponentRef<typeof View>>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const onScroll = (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const s = e.nativeEvent.contentOffset.y > 8;
+    if (s !== scrolled) setScrolled(s);
+  };
   if (!data && error) return <View style={{ flex: 1, paddingTop: insets.top }}><ErrorView message={error} onRetry={reload} /></View>;
   if (!data) return <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: C.bg }}><Loading /></View>;
   const rate = data.counts.total ? data.counts.present / data.counts.total : 0;
@@ -171,7 +181,8 @@ export default function Today() {
     return (
       <View style={{ flex: 1 }}>
         <GradientFill />
-        <ScrollView refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 16 }}>
+        <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
+        <ScrollView onScroll={onScroll} scrollEventThrottle={32} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>{(me?.user.name ?? "?").slice(0, 1).toUpperCase()}</Text>
@@ -225,13 +236,17 @@ export default function Today() {
             </View>
           </View>
         </ScrollView>
+        </BlurTargetView>
+        <BlurStrip height={insets.top} target={blurTarget} visible={scrolled} />
       </View>
     );
   }
 
   // ── Phone: gradient hero with the numbers, then money, sites and people.
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} progressViewOffset={insets.top} />} contentContainerStyle={{ paddingBottom: FLOATING_NAV_SPACE + insets.bottom + 16 }}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} onScroll={onScroll} scrollEventThrottle={32} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} progressViewOffset={insets.top} />} contentContainerStyle={{ paddingBottom: FLOATING_NAV_SPACE + insets.bottom + 16 }}>
       <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 18, paddingBottom: 22, gap: 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: "hidden" }}>
         <GradientFill />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -274,5 +289,8 @@ export default function Today() {
         <PeopleCard data={data} />
       </View>
     </ScrollView>
+    </BlurTargetView>
+    <BlurStrip height={insets.top} target={blurTarget} visible={scrolled} />
+    </View>
   );
 }

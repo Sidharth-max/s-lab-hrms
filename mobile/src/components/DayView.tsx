@@ -2,7 +2,8 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
+import { Button, Card, ChoiceChip, ErrorView, Field, Hero, Loading, Muted, Notice, Screen, SectionHead, Toggle } from "@/components/ui";
+import { CalendarCheck, Clock, History, Pencil } from "@/components/icons";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
@@ -39,7 +40,7 @@ function MarkAttendance({ hours, busy, onSave }: { hours: { open: string; close:
   useUnsavedGuard(!busy && (!!reason || !full || nextDay));
   return (
     <Card>
-      <H2>Mark attendance</H2>
+      <SectionHead icon={<Pencil size={18} color={C.ink.violet} />} ink="violet" title="Mark attendance" />
       <Muted>Full day is filled in ({hours.open} to {hours.close}). Change the times or switch one off for a missed punch.</Muted>
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={{ flex: 1, gap: 8 }}>
@@ -114,15 +115,22 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       {embedded ? <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>{data.employee.name}</Text> : <Stack.Screen options={{ title: data.employee.name }} />}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ fontSize: 17, fontWeight: "600", color: C.text }}>{dateLabel(data.date)}</Text>
-        <Badge label={data.statusLabel || "—"} tone={statusTone(data.status)} />
-      </View>
+      <Hero
+        avatar={data.employee.name}
+        eyebrow={dateLabel(data.date)}
+        title={data.employee.name}
+        pills={[{ label: data.statusLabel || "—", tone: statusTone(data.status) === "green" ? "ok" : statusTone(data.status) === "neutral" ? undefined : "alert" }, ...(data.manual ? [{ label: "Edited" }] : [])]}
+        stats={[
+          { label: "In", value: data.punches.find((p) => p.type === "IN" && !p.voided)?.time ?? "—" },
+          { label: "Out", value: [...data.punches].reverse().find((p) => p.type === "OUT" && !p.voided)?.time ?? "—" },
+          { label: "Punches", value: String(data.punches.filter((p) => !p.voided).length) },
+        ]}
+      />
       {data.locked ? <Notice text="Salary for this month is locked, so this day cannot be edited. Add an adjustment in next month's salary." /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
 
       <Card style={{ gap: 0 }}>
-        <H2>Punches</H2>
+        <SectionHead icon={<Clock size={18} color={C.ink.teal} />} ink="teal" title="Punches" />
         {data.punches.length === 0 ? <Muted style={{ paddingTop: 8 }}>No punches.</Muted> : null}
         {data.punches.map((p) => (
           <View key={p.id} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.line, opacity: p.voided ? 0.5 : 1, gap: 2 }}>
@@ -149,13 +157,11 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
         <>
           <MarkAttendance key={`${data.hours?.open}-${data.hours?.close}-${markRound}`} hours={data.hours ?? { open: "09:00", close: "18:00" }} busy={busy === "markAttendance"} onSave={(body) => run("markAttendance", { employeeId, date, ...body }, () => setMarkRound((n) => n + 1))} />
           <Card>
-            <H2>Set day status</H2>
+            <SectionHead icon={<CalendarCheck size={18} color={C.ink.blue} />} ink="blue" title="Set day status" />
             <Muted>For leave, absent or half day. This overrides scans and scheduled leave for this day. To record working times, use Mark attendance above.</Muted>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {STATUSES.map((s) => (
-                <Pressable key={s.value} onPress={() => setStatus(s.value)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: status === s.value ? C.text : C.line, backgroundColor: status === s.value ? C.text : C.white }}>
-                  <Text style={{ color: status === s.value ? C.white : C.text }}>{s.label}</Text>
-                </Pressable>
+                <ChoiceChip key={s.value} label={s.label} selected={status === s.value} onPress={() => setStatus(s.value)} />
               ))}
             </View>
             <Field label="Reason" value={statusReason} onChangeText={setStatusReason} />
@@ -167,7 +173,7 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
 
       {data.history.length ? (
         <Card>
-          <H2>Edit history</H2>
+          <SectionHead icon={<History size={18} color={C.ink.violet} />} ink="violet" title="Edit history" />
           {data.history.map((h, i) => (
             <Muted key={i}>
               {new Date(h.at).toLocaleString()} · {h.by ?? "?"} set {h.status === "AUTO" ? "automatic" : h.status.replace("_", " ").toLowerCase()}: {h.reason}

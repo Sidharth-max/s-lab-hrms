@@ -213,7 +213,7 @@ export default function FaceEnroll() {
           {phase === "idle" ? (
             <>
               <Muted style={{ textAlign: "center" }}>Hold the phone at face height in good light. Keep the face inside the oval and follow the voice: each photo is taken by itself once the head is in position and still.</Muted>
-              <Button title="Start face scan" icon={<Camera size={18} color={C.headText} />} disabled={!camera.ready} onPress={() => void scan()} />
+              <Button title="Start face scan" icon={<Camera size={18} color="#ffffff" />} disabled={!camera.ready} onPress={() => void scan()} />
             </>
           ) : (
             <Button title="Stop" variant="secondary" onPress={() => { run.current += 1; Speech.stop().catch(() => {}); setPhase("idle"); setPhotos([]); }} />

@@ -80,7 +80,7 @@ export default function Employees() {
         </Animated.View>
       )}
     />
-    {can("employees.manage") ? <Fab extended icon={<Plus size={22} color={C.headText} />} label="Add" lift={wide ? 0 : FLOATING_NAV_SPACE - 8} onPress={() => router.push("/employee/new")} /> : null}
+    {can("employees.manage") ? <Fab extended icon={<Plus size={22} color="#ffffff" />} label="Add" lift={wide ? 0 : FLOATING_NAV_SPACE - 8} onPress={() => router.push("/employee/new")} /> : null}
     </View>
   );
   if (!wide) return list_;

@@ -2,12 +2,13 @@ import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Text, TextInput } from "@/components/Text";
-import { ChevronRight, Search } from "@/components/icons";
-import { Avatar, Badge, ErrorView, Loading, Muted, Tabs } from "@/components/ui";
+import { CalendarRange, ChevronRight, Search } from "@/components/icons";
+import { Avatar, Badge, ErrorView, Hero, Loading, Muted, Tabs } from "@/components/ui";
 import { MonthField } from "@/components/pickers";
 import { MonthGrid, type GridDay } from "@/components/MonthGrid";
+import { BlurFrame } from "@/components/BlurFrame";
 import { api } from "@/lib/api";
-import { C } from "@/lib/theme";
+import { C, shadow } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 
 interface Reg {
@@ -32,17 +33,28 @@ export default function Register() {
   return (
     <>
       <Stack.Screen options={{ title: "Attendance register" }} />
+      <BlurFrame>{(pad) => (
       <FlatList
         data={rows}
         keyExtractor={(r) => r.employeeId}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
-        contentContainerStyle={{ padding: 16, gap: 12 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 16 + pad, gap: 12 }}
         ListHeaderComponent={
           <View style={{ gap: 10 }}>
+            <Hero
+              icon={<CalendarRange size={24} color="#ffffff" />}
+              eyebrow="Monthly register"
+              title={new Date(`${data.month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })}
+              stats={[
+                { label: "People", value: String(data.rows.length) },
+                { label: "Present days", value: String(data.rows.reduce((s, r) => s + r.present, 0)) },
+                { label: "Absent days", value: String(data.rows.reduce((s, r) => s + r.absent, 0)), alert: data.rows.some((r) => r.absent > 0) },
+              ]}
+            />
             <MonthField value={data.month} onChange={setMonth} max={data.current} />
             <Tabs options={[{ value: "active", label: "Active" }, { value: "all", label: "All" }, { value: "archived", label: "Archived" }]} value={show} onChange={setShow} />
             {data.rows.length > 4 ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 999, backgroundColor: C.white, paddingHorizontal: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.hairline, borderRadius: 999, backgroundColor: C.card, paddingHorizontal: 14 }}>
                 <Search size={18} color={C.muted} />
                 <TextInput value={q} onChangeText={setQ} placeholder="Search employee…" placeholderTextColor={C.placeholder} style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
               </View>
@@ -52,7 +64,7 @@ export default function Register() {
         }
         ListEmptyComponent={<Muted>No employees in this month.</Muted>}
         renderItem={({ item: r }) => (
-          <View style={{ backgroundColor: C.white, borderWidth: 1, borderColor: C.hairline, borderRadius: 14, padding: 14, gap: 12 }}>
+          <View style={{ backgroundColor: C.card, borderWidth: 1, borderColor: C.hairline, borderRadius: 20, padding: 14, gap: 12, ...shadow(1) }}>
             <Pressable onPress={() => router.push({ pathname: "/employee/[id]", params: { id: r.employeeId } })} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Avatar name={r.name} size={36} />
               <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: C.text }} numberOfLines={1}>{r.name}</Text>
@@ -67,6 +79,7 @@ export default function Register() {
           </View>
         )}
       />
+      )}</BlurFrame>
     </>
   );
 }

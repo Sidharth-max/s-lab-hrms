@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "./Text";
-import { CalendarCheck } from "./icons";
-import { Badge, Button, Card, Field, Muted, Notice, Segmented } from "./ui";
+import { Beach, CalendarCheck } from "./icons";
+import { Avatar, Badge, Button, Card, Field, Hero, IconChip, Muted, Notice, Segmented } from "./ui";
 import { DateField } from "./pickers";
 import { Sheet } from "./Sheet";
 import { EmployeePicker, type PickEmployee } from "./EmployeePicker";
@@ -47,7 +47,7 @@ function LeaveSheet({ visible, employeeId: fixedId, employees, onClose, onDone }
   const button = (
     <Button
       title={days ? `Schedule ${days} day${days === 1 ? "" : "s"}` : "Schedule leave"}
-      icon={<CalendarCheck size={18} color={C.headText} />}
+      icon={<CalendarCheck size={18} color="#ffffff" />}
       loading={busy}
       disabled={!employeeId || !days}
       onPress={async () => {
@@ -102,14 +102,15 @@ function LeaveCard({ l, showName, canEdit, onDone }: { l: Leave; showName: boole
   const active = l.status === "ACTIVE" && l.state !== "done";
   return (
     <Card style={l.state === "cancelled" ? { opacity: 0.55 } : undefined}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        {showName ? <Avatar name={l.employee} size={40} muted={l.state === "cancelled"} /> : <IconChip ink="teal" size={40}><Beach size={20} color={C.ink.teal} /></IconChip>}
         <View style={{ flex: 1, gap: 2 }}>
           {showName ? <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>{l.employee} <Text style={{ color: C.muted, fontWeight: "400" }}>{l.code}</Text></Text> : null}
           <Text style={{ fontSize: 15, fontWeight: showName ? "400" : "600", color: C.text }}>{dateLabel(l.from)} – {dateLabel(l.to)}</Text>
           <Muted>{l.days} day{l.days === 1 ? "" : "s"} · {l.paid ? "Paid" : "Unpaid"}{l.reason ? ` · ${l.reason}` : ""}</Muted>
           {l.plannedTo && l.status === "ACTIVE" ? <Muted>Came back early (was until {dateLabel(l.plannedTo)})</Muted> : null}
         </View>
-        <Badge label={st.label} tone={st.tone} />
+        <Badge label={st.label} tone={st.tone} dot={l.state === "on_leave"} />
       </View>
       {canEdit && active ? (
         ending ? (
@@ -155,9 +156,21 @@ export function LeaveSection({ employeeId, employees, active = true }: { employe
   const leaves = data?.leaves ?? [];
   return (
     <View style={{ gap: 12 }}>
+      {employeeId ? null : (
+        <Hero
+          icon={<Beach size={24} color="#ffffff" />}
+          eyebrow="Leave"
+          title={leaves.some((l) => l.state === "on_leave") ? `${leaves.filter((l) => l.state === "on_leave").length} on leave now` : "Nobody on leave"}
+          stats={[
+            { label: "On leave", value: String(leaves.filter((l) => l.state === "on_leave").length) },
+            { label: "Upcoming", value: String(leaves.filter((l) => l.state === "upcoming").length) },
+            { label: "Finished", value: String(leaves.filter((l) => l.state === "done").length) },
+          ]}
+        />
+      )}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       {canEdit && active ? (
-        <Button title="Schedule leave" icon={<CalendarCheck size={18} color={C.headText} />} onPress={() => { setMsg(null); setAdding(true); }} />
+        <Button title="Schedule leave" icon={<CalendarCheck size={18} color="#ffffff" />} onPress={() => { setMsg(null); setAdding(true); }} />
       ) : null}
       {adding ? <LeaveSheet visible employeeId={employeeId} employees={employees} onClose={() => setAdding(false)} onDone={done} /> : null}
       {data && leaves.length === 0 ? <Card><Muted>No leave scheduled.</Muted></Card> : null}

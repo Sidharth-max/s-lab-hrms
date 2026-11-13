@@ -120,7 +120,7 @@ function TimePickerSheet({ visible, value, onChange, onClose, title = "Choose ti
     const total = (o.h * 60 + o.m + by + 1440) % 1440;
     return { h: Math.floor(total / 60), m: total % 60 };
   });
-  const chip = (on: boolean) => [styles.chip, on && { backgroundColor: C.head, borderColor: C.head }];
+  const chip = (on: boolean) => [styles.chip, on && { backgroundColor: C.gradient[1], borderColor: C.gradient[1] }];
   return (
     <Sheet visible={visible} title={title} onClose={onClose}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16 }}>
@@ -133,7 +133,7 @@ function TimePickerSheet({ visible, value, onChange, onClose, title = "Choose ti
       <View style={styles.grid}>
         {HOURS.map((h) => (
           <Pressable key={h} onPress={() => setHour12(h)} style={chip(h12 === h)}>
-            <Text style={[styles.chipText, h12 === h && { color: C.white }]}>{h}</Text>
+            <Text style={[styles.chipText, h12 === h && { color: "#ffffff" }]}>{h}</Text>
           </Pressable>
         ))}
       </View>
@@ -141,7 +141,7 @@ function TimePickerSheet({ visible, value, onChange, onClose, title = "Choose ti
       <View style={styles.grid}>
         {MINUTES.map((mm) => (
           <Pressable key={mm} onPress={() => setT((o) => ({ ...o, m: mm }))} style={chip(t.m === mm)}>
-            <Text style={[styles.chipText, t.m === mm && { color: C.white }]}>{pad(mm)}</Text>
+            <Text style={[styles.chipText, t.m === mm && { color: "#ffffff" }]}>{pad(mm)}</Text>
           </Pressable>
         ))}
       </View>

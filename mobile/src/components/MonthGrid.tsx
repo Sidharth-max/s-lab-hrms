@@ -1,10 +1,13 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 
 export interface GridDay { date: string; status: string; short: string; manual: boolean; missingOut: boolean }
+
+const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -21,7 +24,8 @@ export function MonthGrid({ employeeId, month, days, compact }: { employeeId: st
   const first = new Date(`${month}-01T00:00:00Z`).getUTCDay();
   const cells: (GridDay | null)[] = [...Array(first).fill(null), ...days];
   while (cells.length % 7) cells.push(null);
-  const gap = compact ? 3 : 4;
+  const gap = compact ? 3 : 5;
+  const [today] = useState(istToday);
   return (
     <View style={{ gap }}>
       <View style={{ flexDirection: "row", gap }}>
@@ -40,11 +44,11 @@ export function MonthGrid({ employeeId, month, days, compact }: { employeeId: st
                 onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId, date: d.date } })}
                 accessibilityLabel={`${dateLabel(d.date)}: ${d.short || d.status}`}
                 style={({ pressed }) => [
-                  { flex: 1, aspectRatio: compact ? 1.15 : 1, borderRadius: compact ? 6 : 8, borderWidth: 1, borderColor: col.border, backgroundColor: col.bg, alignItems: "center", justifyContent: "center" },
+                  { flex: 1, aspectRatio: compact ? 1.15 : 1, borderRadius: compact ? 8 : 12, borderWidth: d.date === today ? 2 : 1, borderColor: d.date === today ? C.brand : col.border, backgroundColor: col.bg, alignItems: "center", justifyContent: "center" },
                   pressed && { opacity: 0.7 },
                 ]}
               >
-                <Text style={{ fontSize: compact ? 10 : 12, color: C.muted }}>{Number(d.date.slice(8))}</Text>
+                <Text style={{ fontSize: compact ? 10 : 12, color: d.date === today ? C.brandInk : C.muted, fontWeight: d.date === today ? "700" : "400" }}>{Number(d.date.slice(8))}</Text>
                 {d.short ? <Text style={{ fontSize: compact ? 10 : 11, fontWeight: "700", color: col.fg }}>{d.short}{d.manual ? "*" : ""}{d.missingOut ? "!" : ""}</Text> : null}
               </Pressable>
             );

@@ -2,8 +2,8 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarCheck, Camera, HandCoins, Pencil, RotateCcw } from "@/components/icons";
-import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, refreshProps, Row, Screen, Tabs } from "@/components/ui";
+import { Beach, CalendarCheck, CalendarDays, Camera, HandCoins, LogIn, Pencil, RotateCcw, ScanFace, Trash2, UserCog } from "@/components/icons";
+import { Badge, Button, Card, ErrorView, Hero, Loading, Muted, Notice, refreshProps, Row, Screen, SectionHead, Tabs } from "@/components/ui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
@@ -54,6 +54,7 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
   const row = data.rows[0];
   return (
     <Card>
+      <SectionHead icon={<CalendarDays size={18} color={C.ink.teal} />} ink="teal" title="Attendance" />
       <MonthField value={data.month} onChange={setMonth} max={data.current} />
       {!row ? <Muted>Not employed in this month.</Muted> : (
         <>
@@ -124,45 +125,38 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
         }}
       />}
 
-      <Card>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Avatar name={e.name} size={52} muted={!e.active} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ fontSize: 19, fontWeight: "700", color: C.text, letterSpacing: -0.3 }}>{e.name}</Text>
-            <Muted>{e.code} · {e.site}{e.phone ? ` · ${e.phone}` : ""}</Muted>
-            <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-              {e.active ? <Badge label="Active" tone="neutral" /> : <Badge label={`Archived${e.leftOn ? ` · ${dateLabel(e.leftOn)}` : ""}`} />}
-              {data.today ? (
-                <Badge
-                  label={`Today: ${data.today.label}`}
-                  tone={statusTone(data.today.status)}
-                  dot
-                />
-              ) : null}
-            </View>
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          {e.inHouse ? <Badge label="In-house" /> : null}
-          {e.face ? <Badge label="Face enrolled" tone="green" dot /> : e.inHouse ? null : <Badge label="No face" tone="red" dot />}
-          <Badge label={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
-          {e.pfEnabled ? <Badge label="PF" /> : null}
-          {e.esiEnabled ? <Badge label="ESIC" /> : null}
-        </View>
-        {!e.active && manage ? (
-          <Button
-            title="Restore employee"
-            icon={<RotateCcw size={18} color={C.white} />}
-            loading={busy === "setEmployeeLeft"}
-            onPress={async () => {
-              if (await dialog.confirm({ title: `Restore ${e.name}?`, message: "They become active again and appear in attendance. Take the face photos again so they can scan.", confirmText: "Restore" })) void run("setEmployeeLeft", { id: e.id, leftOn: "" });
-            }}
-          />
-        ) : null}
-        <Pressable onPress={() => setTab("ledger")} accessibilityRole="button">
-          <Row label={data.hisaab.balance < 0 ? "Employee owes" : "Salary to pay"} value={<Text style={{ fontSize: 16, fontWeight: "700", color: data.hisaab.balance < 0 ? C.ink.red : data.hisaab.balance === 0 ? C.muted : C.ink.green, fontVariant: ["tabular-nums"] }}>{data.hisaab.balance === 0 ? "Settled" : rs(Math.abs(data.hisaab.balance))}</Text>} />
-        </Pressable>
-      </Card>
+      <Pressable onPress={() => setTab("ledger")} accessibilityRole="button" accessibilityLabel="Open ledger">
+        <Hero
+          avatar={e.name}
+          eyebrow={`${e.code} · ${e.site}`}
+          title={e.name}
+          subtitle={e.phone ?? undefined}
+          pills={[
+            e.active ? { label: "Active", tone: "ok" as const } : { label: `Archived${e.leftOn ? ` · ${dateLabel(e.leftOn)}` : ""}` },
+            ...(data.today ? [{ label: `Today: ${data.today.label}`, tone: statusTone(data.today.status) === "green" ? "ok" as const : statusTone(data.today.status) === "neutral" ? undefined : "alert" as const }] : []),
+            ...(e.inHouse ? [{ label: "In-house" }] : []),
+            ...(e.face ? [{ label: "Face enrolled", tone: "ok" as const }] : e.inHouse ? [] : [{ label: "No face", tone: "alert" as const }]),
+            ...(e.pfEnabled ? [{ label: "PF" }] : []),
+            ...(e.esiEnabled ? [{ label: "ESIC" }] : []),
+          ]}
+          valueLabel={data.hisaab.balance < 0 ? "Employee owes" : "Salary to pay"}
+          value={data.hisaab.balance === 0 ? "Settled" : rs(Math.abs(data.hisaab.balance))}
+          stats={[
+            { label: e.wageType === "MONTHLY" ? "Per month" : "Per day", value: rs(e.wage) },
+            { label: "Joined", value: dateLabel(e.joinedOn) },
+          ]}
+        />
+      </Pressable>
+      {!e.active && manage ? (
+        <Button
+          title="Restore employee"
+          icon={<RotateCcw size={18} color="#ffffff" />}
+          loading={busy === "setEmployeeLeft"}
+          onPress={async () => {
+            if (await dialog.confirm({ title: `Restore ${e.name}?`, message: "They become active again and appear in attendance. Take the face photos again so they can scan.", confirmText: "Restore" })) void run("setEmployeeLeft", { id: e.id, leftOn: "" });
+          }}
+        />
+      ) : null}
 
       {created ? <Notice tone="green" text="Employee added. Now take the face photos." /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
@@ -181,10 +175,10 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
       {tab === "overview" ? (
         <>
           <Card>
-            <H2>Face for attendance</H2>
+            <SectionHead icon={<ScanFace size={18} color={C.ink.blue} />} ink="blue" title="Face for attendance" />
             <Muted>{e.face ? `Enrolled ${e.faceEnrolledAt ? dateLabel(e.faceEnrolledAt.slice(0, 10)) : ""}` : e.inHouse ? "Not needed: in-house staff are marked present automatically. Enrol a face only if they should also scan." : "Not enrolled. This person cannot use the scanner yet."}</Muted>
             {manage && e.active ? (
-              <Button title={e.face ? "Re-take face photos" : "Take face photos"} icon={<Camera size={18} color={C.white} />} onPress={() => router.push({ pathname: "/face-enroll", params: { id: e.id, name: e.name } })} />
+              <Button title={e.face ? "Re-take face photos" : "Take face photos"} icon={<Camera size={18} color="#ffffff" />} onPress={() => router.push({ pathname: "/face-enroll", params: { id: e.id, name: e.name } })} />
             ) : null}
             {manage && e.face ? (
               <Button
@@ -196,11 +190,12 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
             ) : null}
           </Card>
           <Card>
+            <SectionHead icon={<CalendarCheck size={18} color={C.ink.teal} />} ink="teal" title="Quick actions" />
             <Button title="Attendance today" variant="secondary" icon={<CalendarCheck size={18} color={C.ink.teal} />} onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: e.id, date: istToday(), name: e.name } })} />
             {can("advances.manage") && e.active ? <Button title={`Give advance to ${e.name.split(" ")[0]}`} variant="secondary" icon={<HandCoins size={18} color={C.ink.orange} />} onPress={() => setForm("advance")} /> : null}
           </Card>
           <Card>
-            <H2>Details</H2>
+            <SectionHead icon={<UserCog size={18} color={C.ink.violet} />} ink="violet" title="Details" />
             <Row label="Mobile" value={e.phone ?? "—"} />
             <Row label="Joined" value={dateLabel(e.joinedOn)} />
             <Row label="Pay" value={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "per month" : "per day"}`} />
@@ -217,7 +212,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
       {tab === "attendance" ? (
         <>
           <MonthCalendar employeeId={e.id} />
-          <H2>Leave</H2>
+          <SectionHead icon={<Beach size={18} color={C.ink.teal} />} ink="teal" title="Leave" />
           <LeaveSection employeeId={e.id} active={e.active} />
         </>
       ) : null}
@@ -235,12 +230,12 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
       {tab === "account" && manage ? (
         <>
           <Card>
-            <H2>Web login (view only)</H2>
+            <SectionHead icon={<LogIn size={18} color={C.ink.blue} />} ink="blue" title="Web login (view only)" />
             <Muted>{e.webLogin ? `On. ${e.name} can see salary and attendance on the website with ${e.phone}.` : "Off. Turn on so the employee can view their own salary on the website."}</Muted>
             <Button title={e.webLogin ? "Turn off web login" : "Turn on web login"} variant="secondary" loading={busy === "setEmployeeLogin"} onPress={() => run("setEmployeeLogin", { id: e.id, enable: e.webLogin ? "0" : "1" })} />
           </Card>
           <Card>
-            <H2>{e.active ? "Archive employee" : "Archived"}</H2>
+            <SectionHead icon={<Trash2 size={18} color={C.ink.red} />} ink="red" title={e.active ? "Archive employee" : "Archived"} />
             <Muted>{e.active ? "When someone stops working here, archive them. Their face is deleted so they cannot scan; attendance, salary and advance history stay." : `Archived${e.leftOn ? ` on ${dateLabel(e.leftOn)}` : ""}. Restore to make them active again, then take the face photos again.`}</Muted>
             {e.active ? <DateField label="Last working day" value={leftOn} onChange={setLeftOn} min={e.joinedOn} /> : null}
             <Button

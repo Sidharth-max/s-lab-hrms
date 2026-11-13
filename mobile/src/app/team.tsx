@@ -2,8 +2,8 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { ChevronDown, ChevronUp, UserPlus } from "@/components/icons";
-import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
+import { ChevronDown, ChevronUp, UserCog, UserPlus } from "@/components/icons";
+import { Avatar, Badge, Button, Card, ChoiceChip, ErrorView, Field, Hero, IconChip, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
@@ -47,9 +47,7 @@ function ManagerForm({ team, m, onSave, busy }: { team: Team; m?: Manager; onSav
         {team.sites.map((s) => {
           const on = sites.includes(s.id);
           return (
-            <Pressable key={s.id} onPress={() => setSites((x) => toggle(x, s.id))} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
-              <Text style={{ color: on ? C.white : C.text }}>{s.name}</Text>
-            </Pressable>
+            <ChoiceChip key={s.id} label={s.name} selected={on} onPress={() => setSites((x) => toggle(x, s.id))} />
           );
         })}
       </View>
@@ -84,19 +82,25 @@ export default function TeamScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen options={{ title: "Managers" }} />
-      <Muted>Owner (full control, approves by OTP): {data.owners.map((o) => `${o.name} (${o.phone})`).join(", ")}</Muted>
+      <Hero
+        icon={<UserCog size={24} color="#ffffff" />}
+        eyebrow="Managers"
+        title={`${data.managers.filter((m) => m.active).length} active manager${data.managers.filter((m) => m.active).length === 1 ? "" : "s"}`}
+        subtitle={`Owner (full control, approves by OTP): ${data.owners.map((o) => `${o.name} (${o.phone})`).join(", ")}`}
+      />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       <Card>
         <Pressable onPress={() => setOpen(open === "new" ? null : "new")} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <UserPlus size={18} color={C.text} />
-          <Text style={{ flex: 1, fontWeight: "600", color: C.text, fontSize: 15 }}>Add manager</Text>
+          <IconChip ink="violet" size={34}><UserPlus size={18} color={C.ink.violet} /></IconChip>
+          <Text style={{ flex: 1, fontWeight: "700", color: C.text, fontSize: 16 }}>Add manager</Text>
           {open === "new" ? <ChevronUp size={18} color={C.muted} /> : <ChevronDown size={18} color={C.muted} />}
         </Pressable>
         {open === "new" ? <ManagerForm team={data} busy={busy === "new"} onSave={(b) => run("new", "saveManager", b)} /> : null}
       </Card>
       {data.managers.map((m) => (
         <Card key={m.id}>
-          <Pressable onPress={() => setOpen(open === m.id ? null : m.id)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Pressable onPress={() => setOpen(open === m.id ? null : m.id)} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Avatar name={m.name} size={40} muted={!m.active} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: "600", color: C.text, fontSize: 15 }}>{m.name}</Text>
               <Muted>{m.phone} · {m.permissions.length === data.permissions.length ? "Full access" : `${m.permissions.length} permissions`}</Muted>

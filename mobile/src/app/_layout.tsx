@@ -29,15 +29,19 @@ function personTitle(params: object | undefined, idKey: string, fallback: string
  * screen stayed underneath the tabs, so Back from Today showed it, and a second Back closed the app.
  */
 function RootStack() {
-  const { ready, me } = useAuth();
+  const { ready, me, scannerMode } = useAuth();
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   const signedIn = !!me;
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: C.bg },
+        // Transparent header: pages scroll underneath and BlurFrame (components/BlurFrame.tsx) frosts
+        // the status bar + header area.
+        headerTransparent: true,
+        headerStyle: { backgroundColor: "transparent" },
         headerTintColor: C.text,
-        headerTitleStyle: { fontFamily: FONT.semibold, fontSize: 17 },
+        // Bold title on the page background, like the tab screens (no separate white bar).
+        headerTitleStyle: { fontFamily: FONT.bold, fontSize: 20, color: C.text },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: C.bg },
         // Platform default transition: on Android 14+ with predictive back enabled (app.config.ts)
@@ -47,11 +51,14 @@ function RootStack() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Protected guard={!signedIn}>
+      {/* redirectTo: where a screen goes once its group is no longer allowed. Without it the router fell
+          back to "/" (index), whose own Redirect ran while the change was still in progress, so Log out
+          looped ("Maximum update depth exceeded") and the scanner only appeared after restarting the app. */}
+      <Stack.Protected guard={!signedIn} redirectTo="/(tabs)">
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="scanner" options={{ headerShown: false, orientation: "default" }} />
       </Stack.Protected>
-      <Stack.Protected guard={signedIn}>
+      <Stack.Protected guard={signedIn} redirectTo={scannerMode ? "/scanner" : "/login"}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="employee/[id]" options={({ route }) => ({ title: personTitle(route.params, "id", "Employee") })} />
         <Stack.Screen name="employee/edit/[id]" options={{ title: "Edit employee" }} />

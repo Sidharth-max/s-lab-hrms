@@ -34,9 +34,10 @@ export default function EditEmployee() {
           sites={me?.sites ?? []}
           submitTitle="Save changes"
           initial={initial}
-          onSubmit={async (v) => {
+          onSubmit={async (v, allowLeave) => {
             try {
               await api.action("updateEmployee", { id: e.id, ...employeeBody(v, can("salary.edit"), false) });
+              allowLeave();
               router.back();
               return null;
             } catch (err) {

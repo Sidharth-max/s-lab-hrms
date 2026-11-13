@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { Text } from "@/components/Text";
-import { Button, Field, Muted, Notice, Segmented, Toggle } from "./ui";
+import { Button, ChoiceChip, Field, Muted, Notice, Segmented, Toggle } from "./ui";
 import { C } from "@/lib/theme";
 import { DateField } from "./pickers";
 import { useUnsavedGuard } from "@/lib/unsaved";
@@ -40,13 +40,17 @@ export function EmployeeForm({
   isNew: boolean;
   canSalary: boolean;
   submitTitle: string;
-  onSubmit: (v: EmployeeValues) => Promise<string | null>;
+  /** Call `allowLeave()` right before navigating away after a successful save. */
+  onSubmit: (v: EmployeeValues, allowLeave: () => void) => Promise<string | null>;
 }) {
   const [v, setV] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Warn on back while there are unsaved changes (not while saving: the screen closes after a save).
-  useUnsavedGuard(!busy && JSON.stringify(v) !== JSON.stringify(initial));
+  // Saving and then leaving must call allowLeave(): `!busy` alone did not reach the guard in time, so
+  // after "Add employee" the app showed "Discard changes?" and stayed on the form (tapping again added
+  // the same person twice).
+  const { allowLeave } = useUnsavedGuard(!busy && JSON.stringify(v) !== JSON.stringify(initial));
   const [wageFrom, setWageFrom] = useState(() => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10));
   const wageChanged = !isNew && (Number(v.wage) !== Number(initial.wage) || v.wageType !== initial.wageType);
   const set = <K extends keyof EmployeeValues>(k: K, val: EmployeeValues[K]) => setV((o) => ({ ...o, [k]: val }));
@@ -70,9 +74,7 @@ export function EmployeeForm({
         <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {sites.map((s) => (
-            <Pressable key={s.id} onPress={() => set("siteId", s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: v.siteId === s.id ? C.text : C.line, backgroundColor: v.siteId === s.id ? C.text : C.white }}>
-              <Text style={{ color: v.siteId === s.id ? C.white : C.text, fontWeight: "500" }}>{s.name}</Text>
-            </Pressable>
+            <ChoiceChip key={s.id} label={s.name} selected={v.siteId === s.id} onPress={() => set("siteId", s.id)} />
           ))}
         </View>
       </View>
@@ -130,9 +132,7 @@ export function EmployeeForm({
             {DAYS.map((d, i) => {
               const on = v.weeklyOffDays.includes(i);
               return (
-                <Pressable key={d} onPress={() => set("weeklyOffDays", on ? v.weeklyOffDays.filter((x) => x !== i) : [...v.weeklyOffDays, i])} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
-                  <Text style={{ color: on ? C.white : C.text }}>{d}</Text>
-                </Pressable>
+                <ChoiceChip key={d} label={d} selected={on} onPress={() => set("weeklyOffDays", on ? v.weeklyOffDays.filter((x) => x !== i) : [...v.weeklyOffDays, i])} />
               );
             })}
           </View>
@@ -145,7 +145,7 @@ export function EmployeeForm({
         loading={busy}
         onPress={async () => {
           setBusy(true);
-          setError(await onSubmit(wageChanged ? { ...v, wageFrom } : v));
+          setError(await onSubmit(wageChanged ? { ...v, wageFrom } : v, allowLeave));
           setBusy(false);
         }}
       />

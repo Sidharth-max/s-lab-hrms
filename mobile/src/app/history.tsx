@@ -2,8 +2,9 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { RefreshControl, SectionList, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type IconType } from "@/components/icons";
-import { ErrorView, Loading, Muted, Tabs } from "@/components/ui";
+import { CalendarCheck, HandCoins, History, IndianRupee, Settings, Smartphone, UserCog, Users, type IconType } from "@/components/icons";
+import { ErrorView, Hero, Loading, Muted, Tabs } from "@/components/ui";
+import { BlurFrame } from "@/components/BlurFrame";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
@@ -48,15 +49,16 @@ export default function HistoryScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "History" }} />
+      <BlurFrame>{(pad) => (
       <SectionList
         sections={sections}
         keyExtractor={(i) => i.id}
         stickySectionHeadersEnabled={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
-        contentContainerStyle={{ padding: 16, gap: 8 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 16 + pad, gap: 8 }}
         ListHeaderComponent={
           <View style={{ gap: 10, marginBottom: 4 }}>
-            <Muted>Every change by the owner and managers (latest 200).</Muted>
+            <Hero icon={<History size={24} color="#ffffff" />} eyebrow="History" title="Every change" subtitle="By the owner and managers (latest 200)." />
             <Tabs options={AREAS.map((a) => ({ value: a.key, label: a.label }))} value={area} onChange={setArea} />
           </View>
         }
@@ -80,6 +82,7 @@ export default function HistoryScreen() {
           );
         }}
       />
+      )}</BlurFrame>
     </>
   );
 }

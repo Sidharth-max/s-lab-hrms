@@ -144,7 +144,7 @@ export default function Attendance() {
   }
   return (
     <TwoPane
-      left={<View style={{ flex: 1 }}>{list}{can("attendance.edit") ? <Fab extended icon={<Pencil size={20} color={C.headText} />} label="Fix a day" onPress={() => setEditing(true)} /> : null}</View>}
+      left={<View style={{ flex: 1 }}>{list}{can("attendance.edit") ? <Fab extended icon={<Pencil size={20} color="#ffffff" />} label="Fix a day" onPress={() => setEditing(true)} /> : null}</View>}
       right={selected ? <DayView key={`${selected.employeeId}-${selected.date}`} employeeId={selected.employeeId} date={selected.date} embedded /> : <PanePlaceholder icon={<CalendarDays size={40} color={C.faint} />} text="Choose a person to see or fix their day" />}
     />
   );

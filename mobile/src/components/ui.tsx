@@ -7,6 +7,8 @@ import { C, isDark, R, shadow, type Ink } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 import { FLOATING_NAV_SPACE } from "@/lib/layout";
 import { PressScale, SkeletonList } from "@/lib/motion";
+import { GradientFill } from "./Viz";
+import { BlurFrame, useHeaderPad } from "./BlurFrame";
 
 export function Screen({
   children,
@@ -25,16 +27,21 @@ export function Screen({
   /** Extra room at the bottom (e.g. for a sticky action bar). */
   bottomSpace?: number;
 }) {
-  const inner = <View style={[styles.inner, padded && styles.padded, { paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace }]}>{children}</View>;
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
-      {scroll ? (
-        <KeyboardAwareScrollView bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }}>
-          {inner}
-        </KeyboardAwareScrollView>
-      ) : (
-        inner
-      )}
+      {/* The page starts below the transparent, blurred header and scrolls underneath it. */}
+      <BlurFrame>
+        {(pad) => {
+          const inner = <View style={[styles.inner, padded && styles.padded, { paddingTop: (padded ? 16 : 0) + pad, paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace }]}>{children}</View>;
+          return scroll ? (
+            <KeyboardAwareScrollView bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }} scrollIndicatorInsets={{ top: pad }}>
+              {inner}
+            </KeyboardAwareScrollView>
+          ) : (
+            inner
+          );
+        }}
+      </BlurFrame>
     </SafeAreaView>
   );
 }
@@ -89,6 +96,79 @@ export function IconChip({ ink, children, size = 36 }: { ink: Ink; children: Rea
   return <View style={{ width: size, height: size, borderRadius: size / 2.6, backgroundColor: C.tint[ink], alignItems: "center", justifyContent: "center" }}>{children}</View>;
 }
 
+/** Title row of a card: tinted icon badge + bold title (Today screen style), optional right side. */
+export function SectionHead({ icon, ink, title, right }: { icon?: React.ReactNode; ink?: Ink; title: string; right?: React.ReactNode }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      {icon ? <IconChip ink={ink ?? "violet"} size={34}>{icon}</IconChip> : null}
+      <Text style={{ flex: 1, fontSize: 16, fontWeight: "700", color: C.text, letterSpacing: -0.2 }} numberOfLines={1}>{title}</Text>
+      {right}
+    </View>
+  );
+}
+
+/** Frosted pill / stat on a gradient hero. */
+export function HeroPill({ label, tone }: { label: string; tone?: "alert" | "ok" }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: tone === "alert" ? "rgba(239,68,68,0.34)" : tone === "ok" ? "rgba(74,222,128,0.28)" : "rgba(255,255,255,0.18)" }}>
+      {tone ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tone === "alert" ? "#fecaca" : "#bbf7d0" }} /> : null}
+      <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+}
+
+export function HeroStat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
+  return (
+    <View style={{ flex: 1, minWidth: 0, backgroundColor: alert ? "rgba(239,68,68,0.32)" : "rgba(255,255,255,0.16)", borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, gap: 2 }}>
+      <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "500" }} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+}
+
+/**
+ * Brand-gradient header card for inner pages (same look as the Today hero): optional avatar or
+ * icon, eyebrow, big title, subtitle, frosted pills, a big value and frosted stat tiles.
+ */
+export function Hero({
+  eyebrow, title, subtitle, avatar, icon, pills, value, valueLabel, stats, right, children,
+}: {
+  eyebrow?: string; title: string; subtitle?: string; avatar?: string; icon?: React.ReactNode;
+  pills?: { label: string; tone?: "alert" | "ok" }[]; value?: string; valueLabel?: string;
+  stats?: { label: string; value: string; alert?: boolean }[]; right?: React.ReactNode; children?: React.ReactNode;
+}) {
+  const initials = avatar ? avatar.trim().split(/\s+/).filter(Boolean).map((p, i, a) => (i === 0 || i === a.length - 1 ? p[0] : "")).join("").toUpperCase().slice(0, 2) : "";
+  return (
+    <View style={{ borderRadius: 28, padding: 18, gap: 14, overflow: "hidden", ...shadow(2), shadowColor: C.gradient[1] }}>
+      <GradientFill />
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+        {avatar ? (
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "700" }}>{initials || "?"}</Text>
+          </View>
+        ) : icon ? (
+          <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>{icon}</View>
+        ) : null}
+        <View style={{ flex: 1, gap: 2 }}>
+          {eyebrow ? <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "500" }} numberOfLines={1}>{eyebrow}</Text> : null}
+          <Text style={{ color: "#fff", fontSize: 24, fontWeight: "700", letterSpacing: -0.6 }} numberOfLines={2}>{title}</Text>
+          {subtitle ? <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14 }} numberOfLines={2}>{subtitle}</Text> : null}
+        </View>
+        {right}
+      </View>
+      {pills?.length ? <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>{pills.map((p) => <HeroPill key={p.label} {...p} />)}</View> : null}
+      {value ? (
+        <View style={{ gap: 2 }}>
+          {valueLabel ? <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "500" }}>{valueLabel}</Text> : null}
+          <Text style={{ color: "#fff", fontSize: 34, fontWeight: "700", letterSpacing: -1, fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+        </View>
+      ) : null}
+      {stats?.length ? <View style={{ flexDirection: "row", gap: 8 }}>{stats.map((s) => <HeroStat key={s.label} {...s} />)}</View> : null}
+      {children}
+    </View>
+  );
+}
+
 type Variant = "primary" | "secondary" | "danger" | "brand" | "ghost";
 
 export function Button({
@@ -101,8 +181,10 @@ export function Button({
   style,
   ...rest
 }: { title: string; variant?: Variant; loading?: boolean; icon?: React.ReactNode; style?: ViewStyle } & Omit<PressableProps, "style">) {
-  const bg = { primary: C.head, danger: C.red, secondary: C.card, brand: C.brand, ghost: "transparent" }[variant];
-  const fg = variant === "secondary" || variant === "ghost" ? C.text : variant === "primary" ? C.headText : "#ffffff";
+  // Main actions use the brand gradient of the Today screen; secondary is a plain card button.
+  const gradient = variant === "primary" || variant === "brand";
+  const bg = { primary: C.gradient[1], danger: C.red, secondary: C.card, brand: C.gradient[1], ghost: "transparent" }[variant];
+  const fg = variant === "secondary" || variant === "ghost" ? C.text : "#ffffff";
   const off = disabled || loading;
   return (
     <PressScale
@@ -113,12 +195,14 @@ export function Button({
       style={[
         styles.button,
         { backgroundColor: bg, borderColor: variant === "secondary" ? C.line : bg, opacity: off ? 0.5 : 1 },
-        variant === "primary" || variant === "brand" ? shadow(1) : null,
+        gradient ? [shadow(2), { shadowColor: C.gradient[1], overflow: "hidden" as const }] : null,
         style,
       ]}
       {...rest}
     >
-      {loading ? <ActivityIndicator color={fg} /> : icon}
+      {gradient ? <GradientFill /> : null}
+      {/* Wrapped so the icon always sits above the gradient layer. */}
+      {loading ? <ActivityIndicator color={fg} /> : icon ? <View>{icon}</View> : null}
       <Text style={[styles.buttonText, { color: fg }]} numberOfLines={1}>{title}</Text>
     </PressScale>
   );
@@ -149,11 +233,26 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
         const active = o.value === value;
         return (
           <Pressable key={o.value} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.text }]}>{o.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.brandInk }]}>{o.label}</Text>
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+/** One choice in a row of options (status, filter): the chosen one in brand colours, like the open tab. */
+export function ChoiceChip({ label, selected, onPress, tone }: { label: string; selected: boolean; onPress: () => void; tone?: "red" }) {
+  const red = tone === "red" && selected;
+  return (
+    <Pressable
+      onPress={() => { if (!selected) haptic.select(); onPress(); }}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      style={({ pressed }) => ({ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: red ? C.ink.red : selected ? C.brand : C.hairline, backgroundColor: red ? C.tint.red : selected ? C.brandSoft : pressed ? C.trackPressed : C.card })}
+    >
+      <Text style={{ fontSize: 14, fontWeight: "600", color: red ? C.ink.red : selected ? C.brandInk : C.muted }}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -169,9 +268,9 @@ export function Tabs<T extends string>({ options, value, onChange }: { options: 
             onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: active ? C.head : C.hairline, backgroundColor: active ? C.head : pressed ? C.trackPressed : C.card })}
+            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: active ? C.brand : C.hairline, backgroundColor: active ? C.brandSoft : pressed ? C.trackPressed : C.card })}
           >
-            <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.headText : C.muted }}>{o.label}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.brandInk : C.muted }}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -236,8 +335,9 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
 export function Fab({ icon, label, onPress, lift = 0, extended }: { icon: React.ReactNode; label: string; onPress: () => void; lift?: number; extended?: boolean }) {
   return (
     <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.94} style={[styles.fab, extended && { width: "auto", minWidth: 58, paddingHorizontal: 20, flexDirection: "row", gap: 8 }, lift ? { bottom: 20 + lift } : null]}>
-      {icon}
-      {extended ? <Text style={{ color: C.headText, fontWeight: "600", fontSize: 15 }}>{label}</Text> : null}
+      <GradientFill />
+      <View>{icon}</View>
+      {extended ? <Text style={{ color: "#ffffff", fontWeight: "600", fontSize: 15 }}>{label}</Text> : null}
     </PressScale>
   );
 }
@@ -283,12 +383,14 @@ export function Notice({ text, tone = "neutral" }: { text: string; tone?: "neutr
 
 /** Loading state: card-shaped placeholders instead of a bare spinner. */
 export function Loading({ header = true }: { header?: boolean }) {
-  return <SkeletonList header={header} />;
+  const pad = useHeaderPad();
+  return <View style={{ paddingTop: pad }}><SkeletonList header={header} /></View>;
 }
 
 export function ErrorView({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const pad = useHeaderPad();
   return (
-    <View style={{ gap: 12, padding: 16 }}>
+    <View style={{ gap: 12, padding: 16, paddingTop: 16 + pad }}>
       <Notice text={message} tone="red" />
       {onRetry ? <Button title="Try again" variant="secondary" onPress={onRetry} /> : null}
     </View>
@@ -303,10 +405,12 @@ export const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: C.head,
+    backgroundColor: C.gradient[1],
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
     ...shadow(3),
+    shadowColor: C.gradient[1],
   },
   screen: { flex: 1, backgroundColor: C.bg },
   inner: { flex: 1, gap: 14 },

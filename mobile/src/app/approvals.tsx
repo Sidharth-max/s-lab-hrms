@@ -2,7 +2,8 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import { RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { Button, Card, ErrorView, Field, Hero, IconChip, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { BadgeCheck, CircleCheck, HandCoins } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
@@ -36,13 +37,30 @@ export default function ApprovalsScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen options={{ title: "Approvals" }} />
-      <Muted>{"An advance that makes a balance negative needs approval by the owner or a manager allowed to approve: here, or by an OTP sent to the owner's mobile."}</Muted>
+      <Hero
+        icon={<BadgeCheck size={24} color="#ffffff" />}
+        eyebrow="Approvals"
+        title={data.pending.length ? `${data.pending.length} waiting` : "All clear"}
+        subtitle="An advance that makes a balance negative needs approval: here, or by an OTP sent to the owner's mobile."
+        pills={[{ label: data.canDecide ? "You can approve" : "Needs the owner's OTP", tone: data.canDecide ? "ok" : undefined }]}
+      />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
-      {data.pending.length === 0 ? <Card><Muted>Nothing waiting.</Muted></Card> : null}
+      {data.pending.length === 0 ? (
+        <Card style={{ alignItems: "center", paddingVertical: 28 }}>
+          <IconChip ink="green" size={52}><CircleCheck size={26} color={C.ink.green} /></IconChip>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>Nothing waiting</Text>
+          <Muted>New requests show up here.</Muted>
+        </Card>
+      ) : null}
       {data.pending.map((p) => (
         <Card key={p.id}>
-          <Text style={{ fontWeight: "600", fontSize: 15, color: C.text }}>{p.summary}</Text>
-          <Muted>Asked by {p.requestedBy ?? "?"}</Muted>
+          <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+            <IconChip ink="orange" size={40}><HandCoins size={20} color={C.ink.orange} /></IconChip>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontWeight: "700", fontSize: 15, color: C.text }}>{p.summary}</Text>
+              <Muted>Asked by {p.requestedBy ?? "?"}</Muted>
+            </View>
+          </View>
           {data.canDecide ? (
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Button style={{ flex: 1 }} title="Approve" loading={busy === p.id + "a"} onPress={() => run(p.id + "a", "decideApproval", { approvalId: p.id, decision: "approve" })} />

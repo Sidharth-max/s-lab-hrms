@@ -2,9 +2,9 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Badge, Button, Card, ErrorView, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { Avatar, Badge, Button, Card, ErrorView, Hero, Loading, Muted, Notice, Screen, SectionHead } from "@/components/ui";
 import { GiveAdvanceForm } from "@/components/GiveAdvanceForm";
-import { HandCoins } from "@/components/icons";
+import { Coins, HandCoins } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { dateLabel, rs } from "@/lib/format";
@@ -27,7 +27,17 @@ export default function AdvancesScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen options={{ title: "Advances" }} />
-      <Muted>Advances given: {rs(total)}. Each one comes off that person&apos;s salary balance straight away (see Salary).</Muted>
+      <Hero
+        icon={<Coins size={24} color="#ffffff" />}
+        eyebrow="Advances"
+        title={rs(total)}
+        subtitle="Given and not yet recovered. Each one comes off that person's salary balance straight away."
+        stats={[
+          { label: "Given", value: String(data.advances.filter((a) => a.status === "ACTIVE").length) },
+          { label: "Waiting approval", value: String(data.advances.filter((a) => a.status === "PENDING_APPROVAL").length), alert: data.advances.some((a) => a.status === "PENDING_APPROVAL") },
+          { label: "Cleared", value: String(data.advances.filter((a) => a.status === "CLEARED").length) },
+        ]}
+      />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       {can("advances.manage") ? (
         giving ? (
@@ -43,19 +53,23 @@ export default function AdvancesScreen() {
             <Button title="Cancel" variant="secondary" onPress={() => setGiving(false)} />
           </>
         ) : (
-          <Button title="Give advance" icon={<HandCoins size={18} color={C.white} />} onPress={() => { setMsg(null); setGiving(true); }} />
+          <Button title="Give advance" icon={<HandCoins size={18} color="#ffffff" />} onPress={() => { setMsg(null); setGiving(true); }} />
         )
       ) : null}
       <Card style={{ padding: 0, gap: 0 }}>
+        <View style={{ padding: 14, paddingBottom: 6 }}><SectionHead icon={<HandCoins size={18} color={C.ink.orange} />} ink="orange" title="All advances" /></View>
         {data.advances.length === 0 ? <View style={{ padding: 16 }}><Muted>No advances.</Muted></View> : null}
         {data.advances.map((a, i) => (
-          <Pressable key={a.id} onPress={() => router.push({ pathname: "/advance/[id]", params: { id: a.id } })} style={{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontWeight: "600", color: C.text }}>{a.employee}</Text>
-              <Text style={{ fontWeight: "700", color: C.text }}>{rs(a.amount)}</Text>
+          <Pressable key={a.id} onPress={() => router.push({ pathname: "/advance/[id]", params: { id: a.id } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderTopWidth: 1, borderTopColor: C.hairline, opacity: a.status === "CANCELLED" || a.status === "REJECTED" ? 0.55 : 1, backgroundColor: pressed ? C.soft : "transparent" })}>
+            <Avatar name={a.employee} size={40} muted={a.status === "CANCELLED" || a.status === "REJECTED"} />
+            <View style={{ flex: 1, gap: 3 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: C.text }} numberOfLines={1}>{a.employee}</Text>
+                <Text style={{ fontSize: 15, fontWeight: "700", color: C.ink.orange, fontVariant: ["tabular-nums"], textDecorationLine: a.status === "CANCELLED" || a.status === "REJECTED" ? "line-through" : "none" }}>{rs(a.amount)}</Text>
+              </View>
+              <Muted>{dateLabel(a.givenOn)}{a.note ? ` · ${a.note}` : ""}</Muted>
+              {a.status === "PENDING_APPROVAL" ? <Badge label="Waiting approval" tone="amber" dot /> : a.status === "CANCELLED" ? <Badge label="Cancelled" /> : a.status === "REJECTED" ? <Badge label="Rejected" /> : null}
             </View>
-            <Muted>{dateLabel(a.givenOn)}{a.note ? ` · ${a.note}` : ""}</Muted>
-            {a.status === "PENDING_APPROVAL" ? <Badge label="Waiting approval" tone="red" /> : null}
           </Pressable>
         ))}
       </Card>
