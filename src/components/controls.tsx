@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Clock } from "@/components/icons";
 import { useEffect, useId, useRef, useState } from "react";
 
 // Our own form controls, used instead of the browser's built-in pop-ups (confirm boxes, dropdown
@@ -50,7 +50,7 @@ export function ConfirmHost() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onMouseDown={() => close(false)}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex gap-3">
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${req.danger ? "bg-red-50 text-[var(--red)]" : "bg-[var(--soft)]"}`}>
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${req.danger ? "bg-red-50 text-[var(--red)]" : "bg-[var(--soft)]"}`}>
             <CircleAlert size={18} />
           </span>
           <div className="pt-1">

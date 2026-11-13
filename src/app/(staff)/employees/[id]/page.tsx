@@ -5,7 +5,7 @@ import { removeFace, setEmployeeLeft, setEmployeeLogin } from "@/app/actions/emp
 import { giveAdvance } from "@/app/actions/advances";
 import { ActionForm } from "@/components/ActionForm";
 import { Avatar } from "@/components/Avatar";
-import { CalendarRange, Pencil } from "lucide-react";
+import { CalendarRange, Pencil } from "@/components/icons";
 import { FaceEnroll } from "@/components/FaceEnroll";
 import { Tabs } from "@/components/Tabs";
 import { requireStaff } from "@/lib/auth";
@@ -83,7 +83,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
       )}
       {pendingAdvances.length > 0 && (
         <p className="text-sm text-[var(--red)]">
-          {`${pendingAdvances.length} advance(s) waiting for owner approval.`}{" "}
+          {`${pendingAdvances.length} advance(s) waiting for approval.`}{" "}
           <Link className="underline" href="/approvals">Open approvals</Link>
         </p>
       )}
@@ -222,7 +222,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
                 {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
                 {today && (
                   <span className={statusBadgeClass(today.status)}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-current" />Today: {today.label}
+                    <span className="h-1.5 w-1.5 rounded-[2px] bg-current" />Today: {today.label}
                   </span>
                 )}
               </div>

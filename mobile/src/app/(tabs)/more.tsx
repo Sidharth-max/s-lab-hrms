@@ -2,20 +2,20 @@ import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
-import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type LucideIcon } from "lucide-react-native";
+import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type IconType } from "@/components/icons";
 import { Card, Muted, Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { checkForUpdate, installedVersion, startUpdate, useAppUpdate } from "@/lib/update";
 import { useDialog } from "@/components/dialog";
 
-function Item({ icon: Icon, label, onPress, badge, danger }: { icon: LucideIcon; label: string; onPress: () => void; badge?: number; danger?: boolean }) {
+function Item({ icon: Icon, label, onPress, badge, danger }: { icon: IconType; label: string; onPress: () => void; badge?: number; danger?: boolean }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }, pressed && { backgroundColor: C.soft }]}>
-      <Icon size={20} color={danger ? C.red : C.text} strokeWidth={1.75} />
+      <Icon size={20} color={danger ? C.red : C.text} />
       <Text style={{ flex: 1, fontSize: 15, color: danger ? C.red : C.text }}>{label}</Text>
       {badge ? (
-        <View style={{ backgroundColor: C.red, borderRadius: 999, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 }}>
+        <View style={{ backgroundColor: C.red, borderRadius: 6, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 }}>
           <Text style={{ color: C.white, fontSize: 12, fontWeight: "600" }}>{badge}</Text>
         </View>
       ) : null}

@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { CalendarDays, ChevronLeft, ChevronRight } from "@/components/icons";
 import { DatePickerSheet } from "@/components/pickers";
 import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -31,7 +31,7 @@ export default function Attendance() {
           <ChevronLeft color={C.text} size={24} />
         </Pressable>
         <Pressable onPress={() => setPicking(true)} hitSlop={8} accessibilityLabel="Choose date" style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.line, backgroundColor: C.white }}>
-          <CalendarDays size={18} color={C.text} strokeWidth={1.75} />
+          <CalendarDays size={18} color={C.text} />
           <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{data.date === data.today ? `Today · ${dateLabel(data.date)}` : dateLabel(data.date)}</Text>
         </Pressable>
         <Pressable

@@ -4,7 +4,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/Text";
-import { Share2 } from "lucide-react-native";
+import { Share2 } from "@/components/icons";
 import { Badge, Button, Card, ErrorView, Loading, Muted, Notice, Row, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { monthLabel, rs } from "@/lib/format";

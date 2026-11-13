@@ -2,8 +2,8 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "lucide-react-native";
-import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
+import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "@/components/icons";
+import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented, Tabs } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
 import { api } from "@/lib/api";
@@ -147,7 +147,7 @@ export default function EmployeeDetail() {
           headerRight: manage
             ? () => (
                 <Pressable onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} hitSlop={10} accessibilityLabel="Edit employee" style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8 }}>
-                  <Pencil size={18} color={C.text} strokeWidth={1.75} />
+                  <Pencil size={18} color={C.text} />
                   <Text style={{ color: C.text, fontWeight: "600" }}>Edit</Text>
                 </Pressable>
               )
@@ -185,7 +185,7 @@ export default function EmployeeDetail() {
       {created ? <Notice tone="green" text="Employee added. Now take the face photos." /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
 
-      <Segmented
+      <Tabs
         options={[
           { value: "overview", label: "Info" },
           { value: "attendance", label: "Attendance" },
@@ -241,7 +241,7 @@ export default function EmployeeDetail() {
             <Row label="Earned this month" value={rs(data.balance.earned)} />
             <Row label="Advance to recover" value={rs(data.balance.outstanding)} />
             <Row label="Balance" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
-            {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for owner approval.`} /> : null}
+            {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for approval.`} /> : null}
           </Card>
           {data.advances.length ? (
             <Card style={{ padding: 0, gap: 0 }}>

@@ -2,8 +2,8 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Text, TextInput } from "@/components/Text";
-import { ChevronRight, Plus, Search } from "lucide-react-native";
-import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Segmented } from "@/components/ui";
+import { ChevronRight, Plus, Search } from "@/components/icons";
+import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Tabs } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { rs } from "@/lib/format";
@@ -41,7 +41,7 @@ export default function Employees() {
             <Search size={18} color={C.muted} />
             <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or mobile" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
           </View>
-          <Segmented
+          <Tabs
             options={[
               { value: "working", label: `Active · ${data.employees.filter((e) => e.active).length}` },
               { value: "left", label: `Archived · ${data.employees.filter((e) => !e.active).length}` },

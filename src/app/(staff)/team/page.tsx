@@ -1,9 +1,9 @@
-import { UserPlus } from "lucide-react";
+import { UserPlus } from "@/components/icons";
 import { saveManager, toggleManager } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
 import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ALL_PERMISSIONS, PERMISSIONS } from "@/lib/permissions";
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSIONS } from "@/lib/permissions";
 
 function ManagerFields({
   sites,
@@ -21,12 +21,19 @@ function ManagerFields({
       </div>
       <div>
         <div className="label">Can do</div>
-        <div className="grid gap-1 @xl:grid-cols-2">
-          {ALL_PERMISSIONS.map((p) => (
-            <label key={p} className="flex items-start gap-2 text-sm">
-              <input type="checkbox" name="permissions" value={p} defaultChecked={m?.permissions.includes(p)} className="mt-0.5 h-4 w-4" />
-              {PERMISSIONS[p]}
-            </label>
+        <div className="grid gap-3 @xl:grid-cols-2">
+          {PERMISSION_GROUPS.map((g) => (
+            <fieldset key={g.title} className="rounded-lg border border-[var(--line)] p-3">
+              <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">{g.title}</legend>
+              <div className="flex flex-col gap-2">
+                {g.keys.map((p) => (
+                  <label key={p} className="flex items-start gap-2 text-sm">
+                    <input type="checkbox" name="permissions" value={p} defaultChecked={m?.permissions.includes(p)} className="mt-0.5 h-4 w-4" />
+                    {PERMISSIONS[p]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           ))}
         </div>
         <p className="muted mt-1">
@@ -62,7 +69,7 @@ export default async function TeamPage() {
         {"Owner (full control, approves by OTP):"} {owners.map((o) => `${o.name} (${o.phone})`).join(", ")}
       </p>
       <section className="card">
-        <h2 className="flex items-center gap-2 font-semibold"><UserPlus size={18} strokeWidth={1.75} aria-hidden />Add manager</h2>
+        <h2 className="flex items-center gap-2 font-semibold"><UserPlus size={18} aria-hidden />Add manager</h2>
         <ActionForm action={saveManager} className="mt-3 flex flex-col gap-3" submitLabel={"Add manager"} resetOnSuccess>
           <ManagerFields sites={sites} />
         </ActionForm>

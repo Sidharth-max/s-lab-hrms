@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { ChevronDown, ChevronUp, UserPlus } from "lucide-react-native";
+import { ChevronDown, ChevronUp, UserPlus } from "@/components/icons";
 import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { C } from "@/lib/theme";
@@ -13,6 +13,7 @@ interface Team {
   owners: { name: string; phone: string }[];
   managers: Manager[];
   permissions: { key: string; label: string }[];
+  groups?: { title: string; items: { key: string; label: string }[] }[];
   sites: { id: string; name: string }[];
 }
 
@@ -27,10 +28,15 @@ function ManagerForm({ team, m, onSave, busy }: { team: Team; m?: Manager; onSav
       <Field label="Name" value={name} onChangeText={setName} />
       <Field label="Mobile (used to log in)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Can do</Text>
-      {team.permissions.map((p) => (
-        <View key={p.key} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Toggle value={perms.includes(p.key)} onValueChange={() => setPerms((x) => toggle(x, p.key))} />
-          <Text style={{ flex: 1, color: C.text }}>{p.label}</Text>
+      {(team.groups ?? [{ title: "", items: team.permissions }]).map((g) => (
+        <View key={g.title} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 10, padding: 12, gap: 10 }}>
+          {g.title ? <Text style={{ fontSize: 12, fontWeight: "600", color: C.muted, letterSpacing: 0.4 }}>{g.title.toUpperCase()}</Text> : null}
+          {g.items.map((p) => (
+            <View key={p.key} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text style={{ flex: 1, color: C.text, fontSize: 14 }}>{p.label}</Text>
+              <Toggle value={perms.includes(p.key)} onValueChange={() => setPerms((x) => toggle(x, p.key))} label={p.label} />
+            </View>
+          ))}
         </View>
       ))}
       <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Sites (none selected = all sites)</Text>

@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScanFace } from "lucide-react-native";
+import { ScanFace } from "@/components/icons";
 import { Button, Field, Muted, Notice } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

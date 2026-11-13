@@ -5,7 +5,7 @@ export const PERMISSIONS = {
   "salary.edit": "Change wages and PF / ESIC switches",
   "attendance.edit": "Edit past attendance",
   "advances.manage": "Give advances",
-  "approvals.decide": "Approve advances that make a balance negative",
+  "approvals.decide": "Approve advances (when the balance goes negative), same as the owner",
   "payroll.run": "Prepare monthly salary and add adjustments",
   "payroll.lock": "Lock salary and record payments",
   "devices.register": "Register and remove scanner devices",
@@ -13,6 +13,15 @@ export const PERMISSIONS = {
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
+
+/** Permissions shown in sections on the manager form. */
+export const PERMISSION_GROUPS: { title: string; keys: Permission[] }[] = [
+  { title: "Employees", keys: ["employees.manage", "salary.edit"] },
+  { title: "Attendance", keys: ["attendance.edit"] },
+  { title: "Advances", keys: ["advances.manage", "approvals.decide"] },
+  { title: "Salary", keys: ["payroll.run", "payroll.lock"] },
+  { title: "Business", keys: ["devices.register", "settings.manage"] },
+];
 
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 

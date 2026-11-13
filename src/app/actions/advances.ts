@@ -64,7 +64,7 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
   revalidatePath("/employees", "layout");
   revalidatePath("/advances");
   if (needsApproval) {
-    return { ok: true, message: "Balance will go negative. Sent for owner approval (see Approvals).", data: { pending: advance.id } };
+    return { ok: true, message: "Balance will go negative. Sent for approval (owner or an approving manager, see Approvals).", data: { pending: advance.id } };
   }
   return { ok: true, message: goesNegative ? "Advance saved (approved by you, balance negative)" : "Advance saved" };
 });

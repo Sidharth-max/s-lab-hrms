@@ -36,7 +36,7 @@ export default function ApprovalsScreen() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <Stack.Screen options={{ title: "Approvals" }} />
-      <Muted>{"An advance that makes a balance negative needs the owner's approval: here, or by an OTP sent to the owner's mobile."}</Muted>
+      <Muted>{"An advance that makes a balance negative needs approval by the owner or a manager allowed to approve: here, or by an OTP sent to the owner's mobile."}</Muted>
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       {data.pending.length === 0 ? <Card><Muted>Nothing waiting.</Muted></Card> : null}
       {data.pending.map((p) => (

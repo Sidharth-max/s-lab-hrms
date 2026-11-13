@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut } from "@/components/icons";
 import { logout } from "@/app/actions/auth";
 import { requireStaff, getDevice } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -46,7 +46,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
             <a href="/download" className="hidden link lg:inline">Android app</a>
             <form action={logout}>
               <button className="btn-secondary !h-8 !px-3" aria-label={logoutLabel}>
-                <LogOut size={15} strokeWidth={1.75} aria-hidden />
+                <LogOut size={15} aria-hidden />
                 <span className="hidden sm:inline">{logoutLabel}</span>
               </button>
             </form>

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "lucide-react-native";
+import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "@/components/icons";
 import { Button } from "@/components/ui";
 import { api, type ScanConfig } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -158,7 +158,7 @@ export default function Scanner() {
           </View>
           <View style={styles.oval} pointerEvents="none" />
           <View style={styles.footer}>
-            {busy ? <ActivityIndicator color={C.white} size="large" /> : <ScanFace color={C.white} size={40} strokeWidth={1.5} />}
+            {busy ? <ActivityIndicator color={C.white} size="large" /> : <ScanFace color={C.white} size={40} />}
             <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
             {!ready && camera.show ? (
               <Pressable onPress={camera.restart} style={{ padding: 8 }}>
@@ -173,12 +173,12 @@ export default function Scanner() {
             ) : null}
             <View style={styles.actions}>
               <Pressable onPress={() => router.push("/login")} hitSlop={8} style={styles.action} accessibilityRole="button">
-                <LogIn color={C.white} size={18} strokeWidth={1.75} />
+                <LogIn color={C.white} size={18} />
                 <Text style={styles.actionText}>Manager / owner login</Text>
               </Pressable>
               {update ? (
                 <Pressable onPress={() => startUpdate(update)} hitSlop={8} style={[styles.action, { backgroundColor: C.green, borderColor: C.green }]} accessibilityRole="button">
-                  <Download color={C.white} size={18} strokeWidth={1.75} />
+                  <Download color={C.white} size={18} />
                   <Text style={styles.actionText}>Update app ({update.name})</Text>
                 </Pressable>
               ) : null}
@@ -214,7 +214,7 @@ export default function Scanner() {
 
       {result ? (
         <Pressable onPress={() => setResult(null)} style={[StyleSheet.absoluteFill, styles.result, { backgroundColor: result.ok ? C.green : C.red }]}>
-          {result.ok ? <CircleCheck color={C.white} size={96} strokeWidth={1.5} /> : <CircleX color={C.white} size={96} strokeWidth={1.5} />}
+          {result.ok ? <CircleCheck color={C.white} size={96} /> : <CircleX color={C.white} size={96} />}
           <Text style={[styles.big, { fontSize: 32, marginTop: 20 }]}>{result.title}</Text>
           {result.detail ? <Text style={[styles.big, { fontSize: 20, fontWeight: "400", marginTop: 8 }]}>{result.detail}</Text> : null}
         </Pressable>
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   oval: { alignSelf: "center", width: "60%", aspectRatio: 3 / 4, borderRadius: 1000, borderWidth: 3, borderColor: "rgba(255,255,255,0.7)" },
   footer: { alignItems: "center", gap: 8, padding: 20, backgroundColor: "rgba(0,0,0,0.6)" },
   big: { color: C.white, fontSize: 22, fontWeight: "600", textAlign: "center" },
-  pill: { color: C.white, borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
+  pill: { color: C.white, borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
   result: { alignItems: "center", justifyContent: "center", padding: 24 },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 },
   action: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },

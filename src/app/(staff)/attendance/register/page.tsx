@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { requireStaff } from "@/lib/auth";
 import { countDays, STATUS_SHORT, type DerivedStatus } from "@/lib/attendance";
@@ -36,8 +36,8 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="h1">{"Register"} · {formatMonth(month)}</h1>
         <div className="flex gap-2">
-          <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : ""}`}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden />Prev</Link>
-          {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : ""}`}>Next<ChevronRight size={16} strokeWidth={1.75} aria-hidden /></Link>}
+          <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : ""}`}><ChevronLeft size={16} aria-hidden />Prev</Link>
+          {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : ""}`}>Next<ChevronRight size={16} aria-hidden /></Link>}
           {only && <Link className="btn-secondary" href={`?month=${month}`}>All employees</Link>}
         </div>
       </div>

@@ -2,7 +2,7 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { ChevronDown, ChevronUp, Pencil, ScanFace } from "lucide-react-native";
+import { ChevronDown, ChevronUp, Pencil, ScanFace } from "@/components/icons";
 import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -52,7 +52,7 @@ function DeviceCard({ d, sites, onDone }: { d: Device; sites: { id: string; name
           {d.revoked ? <Badge label="Removed" /> : <Badge label="Active" tone="green" />}
           {!d.revoked ? (
             <Pressable onPress={() => setEditing((x) => !x)} hitSlop={10} accessibilityLabel="Rename scanner">
-              <Pencil size={18} color={C.text} strokeWidth={1.75} />
+              <Pencil size={18} color={C.text} />
             </Pressable>
           ) : null}
         </View>

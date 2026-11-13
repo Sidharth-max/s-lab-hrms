@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Plus, Trash2 } from "lucide-react-native";
+import { Plus, Trash2 } from "@/components/icons";
 import { Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";

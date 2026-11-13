@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronRight, Plus, Search } from "@/components/icons";
 import { Avatar } from "./Avatar";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -34,13 +34,13 @@ export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: bo
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h1 className="h1">Employees</h1>
-        {canAdd && <Link href="/employees/new" className="btn-primary"><Plus size={16} strokeWidth={2} aria-hidden />Add</Link>}
+        {canAdd && <Link href="/employees/new" className="btn-primary"><Plus size={16} aria-hidden />Add</Link>}
       </div>
       <div className="relative">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" aria-hidden />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={"Search name, code or mobile"} className="input !pl-9" />
       </div>
-      <div className="segmented self-start" role="tablist">
+      <div className="segmented" role="tablist">
         {[false, true].map((archived) => (
           <button key={String(archived)} type="button" role="tab" aria-selected={showLeft === archived} onClick={() => setShowLeft(archived)} data-active={showLeft === archived}>
             {archived ? "Archived" : "Active"}

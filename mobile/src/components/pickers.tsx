@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Minus, Plus } from "lucide-react-native";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Minus, Plus } from "@/components/icons";
 import { dateLabel, monthLabel } from "@/lib/format";
 import { C, R } from "@/lib/theme";
 import { Button, Segmented } from "./ui";
@@ -176,7 +176,7 @@ export function DateField({ label, value, onChange, min, max, placeholder = "Cho
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Box label={label} text={value ? dateLabel(value) : placeholder} placeholder={!value} icon={<CalendarDays size={18} color={C.muted} strokeWidth={1.75} />} onPress={() => setOpen(true)} />
+      <Box label={label} text={value ? dateLabel(value) : placeholder} placeholder={!value} icon={<CalendarDays size={18} color={C.muted} />} onPress={() => setOpen(true)} />
       {open ? <DatePickerSheet visible value={value} onChange={onChange} onClose={() => setOpen(false)} min={min} max={max} title={label} /> : null}
     </>
   );
@@ -186,7 +186,7 @@ export function TimeField({ label, value, onChange, compact }: { label?: string;
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Box label={label} compact={compact} text={time12(value)} placeholder={!value} icon={<Clock size={16} color={C.muted} strokeWidth={1.75} />} onPress={() => setOpen(true)} />
+      <Box label={label} compact={compact} text={time12(value)} placeholder={!value} icon={<Clock size={16} color={C.muted} />} onPress={() => setOpen(true)} />
       {open ? <TimePickerSheet visible value={value} onChange={onChange} onClose={() => setOpen(false)} title={label} /> : null}
     </>
   );
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   boxText: { flex: 1, fontSize: 15, color: C.text },
-  nav: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
+  nav: { width: 36, height: 36, borderRadius: 8, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { width: "22%", flexGrow: 1, height: 40, borderRadius: R.md, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center", backgroundColor: C.white },
   chipText: { fontSize: 15, fontWeight: "600", color: C.text },
