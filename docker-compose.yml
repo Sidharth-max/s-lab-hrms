@@ -49,6 +49,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      # Newest Android APK, stored here so /download is served by this site itself.
+      - apkdata:/data/apk
     # Only reachable from this server. The public reaches it through the Cloudflare tunnel.
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
@@ -67,3 +70,4 @@ services:
 
 volumes:
   pgdata18:
+  apkdata:
