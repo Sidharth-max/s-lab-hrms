@@ -224,7 +224,8 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
         </div>
       )}
       <div className="no-print fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md items-center gap-2.5 sm:hidden">
-        <nav className="flex h-16 flex-1 items-center justify-between rounded-full border border-[var(--line)] bg-[var(--card)] px-1.5 shadow-[0_10px_30px_rgba(15,23,42,0.16)]">
+        {/* min-w-0 + shrinking items: the bar must never push the Search button off a narrow phone screen. */}
+        <nav className="flex h-16 min-w-0 flex-1 items-center justify-between rounded-full border border-[var(--line)] bg-[var(--card)] px-1.5 shadow-[0_10px_30px_rgba(15,23,42,0.16)]">
           {primary.map((l) => {
             const Icon = ICONS[l.icon];
             const active = isActive(path, l.href) && open !== "more";
@@ -235,10 +236,11 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
                 onClick={close}
                 aria-label={l.label}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex h-[52px] items-center justify-center gap-2 rounded-full transition-all duration-200 ${active ? "grow bg-[var(--accent-soft)] px-4 text-[var(--accent-ink)]" : "w-[52px] text-[var(--muted)]"}`}
+                className={`relative flex h-[52px] items-center justify-center gap-2 rounded-full transition-all duration-200 ${active ? "min-w-11 grow bg-[var(--accent-soft)] px-4 text-[var(--accent-ink)]" : "w-[52px] min-w-10 shrink text-[var(--muted)]"}`}
               >
-                <Icon size={23} aria-hidden />
-                {active && <span className="rise text-sm font-semibold">{l.label}</span>}
+                <Icon size={23} aria-hidden className="shrink-0" />
+                {/* The label only fits next to the Search button from about 480px; narrower phones show the highlighted icon. */}
+                {active && <span className="rise truncate text-sm font-semibold max-[479px]:hidden">{l.label}</span>}
                 {l.badge ? <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--red)]" /> : null}
               </Link>
             );
@@ -248,7 +250,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
             onClick={() => setOpen((o) => (o === "more" ? null : "more"))}
             aria-label={moreLabel}
             aria-expanded={open === "more"}
-            className={`relative flex h-[52px] w-[52px] items-center justify-center rounded-full ${open === "more" || restActive ? "bg-[var(--accent-soft)] text-[var(--accent-ink)]" : "text-[var(--muted)]"}`}
+            className={`relative flex h-[52px] w-[52px] min-w-10 shrink items-center justify-center rounded-full ${open === "more" || restActive ? "bg-[var(--accent-soft)] text-[var(--accent-ink)]" : "text-[var(--muted)]"}`}
           >
             {open === "more" ? <X size={23} aria-hidden /> : <Menu size={23} aria-hidden />}
             {restBadge ? <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--red)]" /> : null}
