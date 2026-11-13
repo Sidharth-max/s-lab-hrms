@@ -8,7 +8,7 @@ import { useLoad } from "@/lib/useLoad";
 interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; joinedOn: string;
-    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; customWeeklyOff: boolean; weeklyOffDays: number[];
+    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
   };
 }
 
@@ -21,7 +21,7 @@ export default function EditEmployee() {
   const e = data.employee;
   const initial: EmployeeValues = {
     name: e.name, code: e.code, phone: e.phone ?? "", siteId: e.siteId, joinedOn: e.joinedOn, wageType: e.wageType,
-    wage: String(e.wage / 100), basicPercent: String(e.basicPercent), pfEnabled: e.pfEnabled, esiEnabled: e.esiEnabled,
+    wage: String(e.wage / 100), basicPercent: String(e.basicPercent), pfEnabled: e.pfEnabled, esiEnabled: e.esiEnabled, uanNumber: e.uanNumber ?? "", esicNumber: e.esicNumber ?? "",
     customWeeklyOff: e.customWeeklyOff, weeklyOffDays: e.weeklyOffDays,
   };
   return (

@@ -3,7 +3,7 @@ import { Pressable, RefreshControl, Text, View } from "react-native";
 import { Badge, Card, ErrorView, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useLive } from "@/lib/live";
 
@@ -72,7 +72,7 @@ export default function Today() {
               <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
                 {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}</Text>
               </Text>
-              <Badge label={r.statusLabel || "—"} tone={r.status === "PRESENT" || r.status === "HALF_DAY" ? "green" : r.status === "ABSENT" ? "red" : "neutral"} />
+              <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} />
             </View>
             <Muted>
               {r.site} · In {r.inAt ?? "—"} · Out {r.outAt ?? (r.inside ? "inside" : "—")}

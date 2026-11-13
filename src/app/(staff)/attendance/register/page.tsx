@@ -10,7 +10,7 @@ import { addMonths, formatMonth, isMonthKey, istMonthKey, monthDates } from "@/l
 
 const COLOR: Partial<Record<DerivedStatus, string>> = {
   PRESENT: "bg-green-50 text-[var(--green)]",
-  HALF_DAY: "bg-green-50 text-[var(--green)] opacity-70",
+  HALF_DAY: "bg-amber-50 text-[var(--amber)]",
   ABSENT: "bg-red-50 text-[var(--red)]",
   PAID_LEAVE: "bg-[var(--soft)] text-[var(--text)]",
   UNPAID_LEAVE: "bg-red-50 text-[var(--red)] opacity-70",

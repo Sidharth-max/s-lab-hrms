@@ -4,7 +4,7 @@ import { Pressable, RefreshControl, Text, View } from "react-native";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Segmented, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { TimeField } from "@/components/pickers";
 import { useDialog } from "@/components/dialog";
@@ -65,7 +65,7 @@ export default function DayScreen() {
       <Stack.Screen options={{ title: data.employee.name }} />
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={{ fontSize: 17, fontWeight: "600", color: C.text }}>{dateLabel(data.date)}</Text>
-        <Badge label={data.statusLabel || "—"} tone={data.status === "PRESENT" || data.status === "HALF_DAY" ? "green" : data.status === "ABSENT" ? "red" : "neutral"} />
+        <Badge label={data.statusLabel || "—"} tone={statusTone(data.status)} />
       </View>
       {data.locked ? <Notice text="Salary for this month is locked, so this day cannot be edited. Add an adjustment in next month's salary." /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}

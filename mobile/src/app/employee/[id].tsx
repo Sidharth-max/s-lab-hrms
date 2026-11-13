@@ -8,14 +8,14 @@ import { MonthGrid } from "@/components/MonthGrid";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
 
 interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
-    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; customWeeklyOff: boolean; weeklyOffDays: number[];
+    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
     face: boolean; faceEnrolledAt: string | null; webLogin: boolean;
   };
   balance: { earned: number; outstanding: number; balance: number };
@@ -165,7 +165,7 @@ export default function EmployeeDetail() {
               {data.today ? (
                 <Badge
                   label={`Today: ${data.today.label}`}
-                  tone={data.today.status === "PRESENT" || data.today.status === "HALF_DAY" ? "green" : data.today.status === "ABSENT" || data.today.status === "UNPAID_LEAVE" ? "red" : "neutral"}
+                  tone={statusTone(data.today.status)}
                   dot
                 />
               ) : null}
@@ -223,7 +223,8 @@ export default function EmployeeDetail() {
             <Row label="Joined" value={dateLabel(e.joinedOn)} />
             <Row label="Pay" value={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "per month" : "per day"}`} />
             <Row label="Basic for PF" value={`${e.basicPercent}%`} />
-            <Row label="PF / ESIC" value={[e.pfEnabled ? "PF" : null, e.esiEnabled ? "ESIC" : null].filter(Boolean).join(" + ") || "Off"} />
+            <Row label="PF" value={e.pfEnabled ? (e.uanNumber ? `UAN ${e.uanNumber}` : "On · UAN not added") : "Off"} />
+            <Row label="ESIC" value={e.esiEnabled ? (e.esicNumber ? `IP ${e.esicNumber}` : "On · IP number not added") : "Off"} />
             <Row label="Weekly off" value={weeklyOff} />
             {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} /> : null}
           </Card>

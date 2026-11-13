@@ -187,11 +187,12 @@ export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: st
   );
 }
 
-export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green"; dot?: boolean }) {
+export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green" | "amber"; dot?: boolean }) {
   const map = {
     neutral: { bg: C.soft, fg: C.text, border: C.line },
     red: { bg: C.redSoft, fg: C.red, border: "#fecaca" },
     green: { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" },
+    amber: { bg: C.amberSoft, fg: C.amber, border: C.amberLine },
   }[tone];
   return (
     <View style={[styles.badge, { backgroundColor: map.bg, borderColor: map.border }]}>

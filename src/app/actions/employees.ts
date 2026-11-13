@@ -32,6 +32,13 @@ function parsePay(form: FormData) {
   const amount = parseRs(str(form, "wage"));
   if (amount == null || amount <= 0) return { error: "Enter the wage amount" } as const;
   const basicPercent = Number(str(form, "basicPercent") || "100");
+  const pfEnabled = form.get("pfEnabled") === "on";
+  const esiEnabled = form.get("esiEnabled") === "on";
+  // Numbers are optional (they can be added later), but must look right when given.
+  const uanNumber = str(form, "uanNumber").replace(/\s/g, "") || null;
+  const esicNumber = str(form, "esicNumber").replace(/\s/g, "") || null;
+  if (uanNumber && !/^\d{12}$/.test(uanNumber)) return { error: "PF UAN must be 12 digits" } as const;
+  if (esicNumber && !/^\d{10}$/.test(esicNumber)) return { error: "ESIC IP number must be 10 digits" } as const;
   if (!Number.isInteger(basicPercent) || basicPercent < 1 || basicPercent > 100) return { error: "Basic % must be 1 to 100" } as const;
   return {
     data: {
@@ -39,8 +46,10 @@ function parsePay(form: FormData) {
       monthlyWage: wageType === "MONTHLY" ? amount : 0,
       dailyWage: wageType === "DAILY" ? amount : 0,
       basicPercent,
-      pfEnabled: form.get("pfEnabled") === "on",
-      esiEnabled: form.get("esiEnabled") === "on",
+      pfEnabled,
+      esiEnabled,
+      uanNumber: pfEnabled ? uanNumber : null,
+      esicNumber: esiEnabled ? esicNumber : null,
     } as const,
   };
 }
@@ -64,7 +73,7 @@ export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData):
   const pay = parsePay(form);
   if ("error" in pay) return { error: pay.error };
   // Without salary permission a manager can add the person but PF/ESIC stay off.
-  const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false };
+  const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false, uanNumber: null, esicNumber: null };
   if (await db.employee.findFirst({ where: { businessId: actor.businessId, code } })) return { error: "This employee code is already used" };
 
   const emp = await db.employee.create({

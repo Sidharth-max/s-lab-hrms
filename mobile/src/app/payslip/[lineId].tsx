@@ -11,7 +11,7 @@ import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 
 interface Slip {
-  business: string; month: string; locked: boolean; employee: { name: string; code: string; site: string };
+  business: string; month: string; locked: boolean; employee: { name: string; code: string; site: string; uanNumber?: string | null; esicNumber?: string | null };
   wageType: "MONTHLY" | "DAILY"; rate: number; daysInMonth: number; presentDays: number; payableDays: number;
   gross: number; adjustments: number; pf: number; esi: number; pfEmployer: number; esiEmployer: number; advance: number; net: number;
   paid: number; paidOn: string | null; paymentMode: string | null; paymentRef: string | null;
@@ -50,7 +50,7 @@ function html(p: Slip) {
   </style></head><body>
     <h1>${esc(p.business)}</h1><div class="m">Payslip · ${esc(monthLabel(p.month))}${p.locked ? "" : " · DRAFT"}</div>
     <table><tr><td>Name</td><td>${esc(p.employee.name)}</td></tr><tr><td>Code</td><td>${esc(p.employee.code)}</td></tr>
-    <tr><td>Site</td><td>${esc(p.employee.site)}</td></tr><tr><td>Days present</td><td>${p.presentDays}</td></tr><tr><td>Payable days</td><td>${p.payableDays}</td></tr></table>
+    <tr><td>Site</td><td>${esc(p.employee.site)}</td></tr>${p.employee.uanNumber ? `<tr><td>PF UAN</td><td>${esc(p.employee.uanNumber)}</td></tr>` : ""}${p.employee.esicNumber ? `<tr><td>ESIC IP</td><td>${esc(p.employee.esicNumber)}</td></tr>` : ""}<tr><td>Days present</td><td>${p.presentDays}</td></tr><tr><td>Payable days</td><td>${p.payableDays}</td></tr></table>
     <table><tr><th>Earnings</th><th class="r">Amount</th></tr>${rows(earnings)}</table>
     <table><tr><th>Deductions</th><th class="r">Amount</th></tr>${rows(deductions)}</table>
     <div class="net"><span>Net pay</span><span>${esc(rs(p.net))}</span></div>
@@ -76,6 +76,8 @@ export default function PayslipScreen() {
           {!data.locked ? <Badge label="Draft" /> : null}
         </View>
         <Muted>{data.employee.code} · {data.employee.site} · {data.business}</Muted>
+        {data.employee.uanNumber ? <Row label="PF UAN" value={data.employee.uanNumber} /> : null}
+        {data.employee.esicNumber ? <Row label="ESIC IP" value={data.employee.esicNumber} /> : null}
         <Row label="Days present" value={String(data.presentDays)} />
         <Row label="Payable days" value={String(data.payableDays)} />
       </Card>

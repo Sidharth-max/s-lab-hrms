@@ -6,13 +6,13 @@ import { DatePickerSheet } from "@/components/pickers";
 import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { addDays, dateLabel, hours } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 
 interface Day {
   date: string;
   today: string;
-  rows: { employeeId: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; workedMins: number; missingOut: boolean; manual: boolean }[];
+  rows: { archived?: boolean; employeeId: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; workedMins: number; missingOut: boolean; manual: boolean }[];
 }
 
 export default function Attendance() {
@@ -52,9 +52,9 @@ export default function Attendance() {
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
-                {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}</Text>
+                {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}{r.archived ? " · archived" : ""}</Text>
               </Text>
-              <Badge label={r.statusLabel || "—"} tone={r.status === "PRESENT" || r.status === "HALF_DAY" ? "green" : r.status === "ABSENT" || r.status === "UNPAID_LEAVE" ? "red" : "neutral"} />
+              <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} />
             </View>
             <Muted>
               In {r.inAt ?? "—"} · Out {r.outAt ?? "—"} · {hours(r.workedMins)}

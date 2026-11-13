@@ -10,6 +10,9 @@ export const C = {
   redSoft: "#fef2f2",
   green: "#16a34a",
   greenSoft: "#f0fdf4",
+  amber: "#b45309", // half day
+  amberSoft: "#fffbeb",
+  amberLine: "#fde68a",
   white: "#ffffff",
   // Two-tone: charcoal header bar and status bar over light content.
   head: "#171717",
@@ -18,3 +21,11 @@ export const C = {
 };
 
 export const R = { sm: 6, md: 8, lg: 12 };
+
+/** Colour for an attendance status: present green, half day yellow, absent / unpaid leave red. */
+export function statusTone(status: string): "green" | "amber" | "red" | "neutral" {
+  if (status === "PRESENT") return "green";
+  if (status === "HALF_DAY") return "amber";
+  if (status === "ABSENT" || status === "UNPAID_LEAVE") return "red";
+  return "neutral";
+}

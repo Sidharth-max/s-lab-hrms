@@ -32,6 +32,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
         basicPercent: e.basicPercent,
         pfEnabled: e.pfEnabled,
         esiEnabled: e.esiEnabled,
+        uanNumber: e.uanNumber,
+        esicNumber: e.esicNumber,
         customWeeklyOff: e.customWeeklyOff,
         weeklyOffDays: e.weeklyOffDays,
         face: !!e.faceId,

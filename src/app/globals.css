@@ -12,6 +12,7 @@
   --brand-dark: #000000;
   --red: #dc2626;
   --green: #16a34a;
+  --amber: #b45309; /* half day */
 }
 
 body {
@@ -77,6 +78,9 @@ body {
   }
   .badge-red {
     @apply border-red-200 bg-red-50 text-[var(--red)];
+  }
+  .badge-amber {
+    @apply border-amber-200 bg-amber-50 text-[var(--amber)];
   }
   .badge-green {
     @apply border-green-200 bg-green-50 text-[var(--green)];

@@ -50,6 +50,8 @@ export default async function EditEmployeePage({ params }: PageProps<"/employees
             basicPercent: emp.basicPercent,
             pfEnabled: emp.pfEnabled,
             esiEnabled: emp.esiEnabled,
+            uanNumber: emp.uanNumber,
+            esicNumber: emp.esicNumber,
             customWeeklyOff: emp.customWeeklyOff,
             weeklyOffDays: emp.weeklyOffDays,
           }}

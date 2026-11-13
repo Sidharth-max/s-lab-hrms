@@ -47,6 +47,14 @@ const empId = r.data.data.id;
 r = await call("POST", "/api/m/employees", { name: "Dup", code: "A100", siteId, joinedOn: "2026-10-01", wageType: "DAILY", wage: "600" });
 check(r.status === 400 && /already used/.test(r.data.error), "duplicate code should be refused");
 
+step("ESIC IP number is checked and saved");
+r = await call("POST", "/api/m/employees", { name: "Esic Bad", siteId, joinedOn: "2026-10-01", wageType: "MONTHLY", wage: "9000", esiEnabled: true, esicNumber: "123" });
+check(r.status === 400 && /10 digits/.test(r.data.error), "short ESIC number should be refused: " + JSON.stringify(r.data));
+r = await call("POST", "/api/m/employees", { name: "Esic Good", siteId, joinedOn: "2026-10-01", wageType: "MONTHLY", wage: "9000", esiEnabled: true, esicNumber: "3112345678", pfEnabled: true, uanNumber: "100123456789" });
+check(r.data.ok, "valid ESIC / UAN refused: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/employees/${r.data.data.id}`);
+check(r.data.employee.esicNumber === "3112345678" && r.data.employee.uanNumber === "100123456789", "ESIC / UAN not saved: " + JSON.stringify(r.data.employee));
+
 step("employee code is filled in automatically when left empty");
 r = await call("GET", "/api/m/employees");
 check(/^E\d{3}$/.test(r.data.nextCode), "nextCode missing: " + JSON.stringify(r.data.nextCode));

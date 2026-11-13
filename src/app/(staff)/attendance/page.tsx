@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL } from "@/lib/attendance";
+import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
@@ -25,7 +25,8 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
   const { days } = await monthAttendance(actor.businessId, date.slice(0, 7), employees);
   const rows = employees
     .map((e) => ({ e, d: days.get(e.id)!.find((x) => x.date === date)! }))
-    .filter((r) => r.d.status !== "NOT_EMPLOYED");
+    // Archived people are hidden from today; past days they worked still show (salary uses them).
+    .filter((r) => r.d.status !== "NOT_EMPLOYED" && (r.e.active || date < today));
 
   return (
     <div className="flex flex-col gap-4">
@@ -51,11 +52,11 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
           <tbody>
             {rows.map(({ e, d }) => (
               <tr key={e.id}>
-                <td className="card-title font-medium">{e.name} <span className="muted">{e.code}</span></td>
+                <td className="card-title font-medium">{e.name} <span className="muted">{e.code}</span>{!e.active && <span className="badge badge-neutral ml-1">Archived</span>}</td>
                 <td data-label={"Site"}>{e.site.name}</td>
                 <td data-label={"Status"}>
                   <span>
-                    {STATUS_LABEL[d.status]}
+                    <span className={statusBadgeClass(d.status)}>{STATUS_LABEL[d.status]}</span>
                     {d.overridden && <span className="badge badge-neutral ml-1">manual</span>}
                     {d.missingOut && !d.overridden && <span className="badge badge-red ml-1">no out punch</span>}
                   </span>

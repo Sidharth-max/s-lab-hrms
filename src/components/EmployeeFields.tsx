@@ -14,6 +14,8 @@ interface Values {
   basicPercent?: number;
   pfEnabled?: boolean;
   esiEnabled?: boolean;
+  uanNumber?: string | null;
+  esicNumber?: string | null;
   customWeeklyOff?: boolean;
   weeklyOffDays?: number[];
 }
@@ -33,6 +35,8 @@ export function EmployeeFields({
 }) {
   const [wageType, setWageType] = useState(values.wageType ?? "MONTHLY");
   const [customOff, setCustomOff] = useState(values.customWeeklyOff ?? false);
+  const [pf, setPf] = useState(values.pfEnabled ?? false);
+  const [esi, setEsi] = useState(values.esiEnabled ?? false);
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const businessOffText = businessWeeklyOff.length ? businessWeeklyOff.map((d) => DAYS[d]).join(", ") : "none";
   return (
@@ -98,12 +102,28 @@ export function EmployeeFields({
             <label className="label">Basic % of wage (used for PF)</label>
             <input name="basicPercent" type="number" min={1} max={100} className="input" defaultValue={values.basicPercent ?? 100} />
           </div>
-          <div className="flex flex-col justify-end gap-2">
+          <div className="flex flex-col justify-end gap-3 @lg:col-span-2">
             {canSalary ? (
-              <>
-                <label className="flex items-center gap-2"><input type="checkbox" name="pfEnabled" defaultChecked={values.pfEnabled ?? false} className="h-5 w-5" /> {"PF deduction"}</label>
-                <label className="flex items-center gap-2"><input type="checkbox" name="esiEnabled" defaultChecked={values.esiEnabled ?? false} className="h-5 w-5" /> {"ESIC deduction"}</label>
-              </>
+              <div className="grid gap-3 @lg:grid-cols-2">
+                <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] p-3">
+                  <label className="flex items-center gap-2 font-medium"><input type="checkbox" name="pfEnabled" checked={pf} onChange={(e) => setPf(e.target.checked)} className="h-5 w-5" /> PF deduction</label>
+                  {pf && (
+                    <div>
+                      <label className="label">PF UAN (12 digits, optional)</label>
+                      <input name="uanNumber" className="input" inputMode="numeric" maxLength={14} defaultValue={values.uanNumber ?? ""} placeholder="e.g. 100123456789" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] p-3">
+                  <label className="flex items-center gap-2 font-medium"><input type="checkbox" name="esiEnabled" checked={esi} onChange={(e) => setEsi(e.target.checked)} className="h-5 w-5" /> ESIC deduction</label>
+                  {esi && (
+                    <div>
+                      <label className="label">ESIC IP number (10 digits, optional)</label>
+                      <input name="esicNumber" className="input" inputMode="numeric" maxLength={12} defaultValue={values.esicNumber ?? ""} placeholder="e.g. 3112345678" />
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
               <p className="muted">PF / ESIC stay off. A user with salary permission can turn them on.</p>
             )}

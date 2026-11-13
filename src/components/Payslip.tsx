@@ -41,6 +41,8 @@ export async function Payslip({
         <div className="grid grid-cols-1 gap-2 text-sm min-[420px]:grid-cols-2">
           <div><span className="muted">{"Name"}:</span> {e.name}</div>
           <div><span className="muted">{"Code"}:</span> {e.code}</div>
+          {e.uanNumber && <div><span className="muted">PF UAN:</span> {e.uanNumber}</div>}
+          {e.esicNumber && <div><span className="muted">ESIC IP:</span> {e.esicNumber}</div>}
           <div><span className="muted">{"Site"}:</span> {e.site.name}</div>
           <div><span className="muted">{"Pay type"}:</span> {line.wageType === "MONTHLY" ? "Monthly" : "Daily"} {formatRs(line.rate)}</div>
           <div><span className="muted">{"Days present"}:</span> {line.presentDays}</div>

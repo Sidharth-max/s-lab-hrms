@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL } from "@/lib/attendance";
+import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { employeeScope } from "@/lib/scope";
@@ -74,7 +74,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
               <tr key={e.id}>
                 <td className="card-title"><Link className="font-medium text-[var(--text)] hover:underline" href={`/attendance/${e.id}/${today}`}>{e.name}</Link> <span className="muted">{e.code}</span></td>
                 <td data-label={"Site"}>{e.site.name}</td>
-                <td data-label={"Status"}>{STATUS_LABEL[d.status] || "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
+                <td data-label={"Status"}>{STATUS_LABEL[d.status] ? <span className={statusBadgeClass(d.status)}>{STATUS_LABEL[d.status]}</span> : "—"}{d.overridden && <span className="muted"> ({"manual"})</span>}</td>
                 <td data-label={"In"}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
                 <td data-label={"Out"}>{d.outAt ? formatIstTime(d.outAt) : d.missingOut ? <span className="text-[var(--red)]">inside</span> : "—"}</td>
               </tr>

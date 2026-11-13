@@ -17,6 +17,8 @@ export interface EmployeeValues {
   basicPercent: string;
   pfEnabled: boolean;
   esiEnabled: boolean;
+  uanNumber?: string;
+  esicNumber?: string;
   customWeeklyOff: boolean;
   weeklyOffDays: number[];
 }
@@ -78,13 +80,19 @@ export function EmployeeForm({
           <Field label="Basic % of wage (used for PF)" value={v.basicPercent} onChangeText={(t) => set("basicPercent", t)} keyboardType="number-pad" maxLength={3} />
           {canSalary ? (
             <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 15, color: C.text }}>PF deduction</Text>
-                <Toggle value={v.pfEnabled} onValueChange={(b) => set("pfEnabled", b)} />
+              <View style={{ gap: 10, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>PF deduction</Text>
+                  <Toggle value={v.pfEnabled} onValueChange={(b) => set("pfEnabled", b)} label="PF deduction" />
+                </View>
+                {v.pfEnabled ? <Field label="PF UAN (12 digits, optional)" value={v.uanNumber ?? ""} onChangeText={(t) => set("uanNumber", t.replace(/\D/g, ""))} keyboardType="number-pad" maxLength={12} placeholder="e.g. 100123456789" /> : null}
               </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 15, color: C.text }}>ESIC deduction</Text>
-                <Toggle value={v.esiEnabled} onValueChange={(b) => set("esiEnabled", b)} />
+              <View style={{ gap: 10, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>ESIC deduction</Text>
+                  <Toggle value={v.esiEnabled} onValueChange={(b) => set("esiEnabled", b)} label="ESIC deduction" />
+                </View>
+                {v.esiEnabled ? <Field label="ESIC IP number (10 digits, optional)" value={v.esicNumber ?? ""} onChangeText={(t) => set("esicNumber", t.replace(/\D/g, ""))} keyboardType="number-pad" maxLength={10} placeholder="e.g. 3112345678" /> : null}
               </View>
             </View>
           ) : (
@@ -133,7 +141,7 @@ export function employeeBody(v: EmployeeValues, canSalary: boolean, isNew: boole
     siteId: v.siteId,
     joinedOn: v.joinedOn,
     ...(isNew || canSalary
-      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled }
+      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "" }
       : {}),
     weeklyOffMode: v.customWeeklyOff ? "custom" : "business",
     empWeeklyOff: v.customWeeklyOff ? v.weeklyOffDays : [],
