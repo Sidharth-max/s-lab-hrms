@@ -1,0 +1,35 @@
+import { router, Stack } from "expo-router";
+import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
+import { api } from "@/lib/api";
+import { dateLabel, monthLabel, rs } from "@/lib/format";
+import { C } from "@/lib/theme";
+import { useLoad } from "@/lib/useLoad";
+
+interface Adv { id: string; employeeId: string; employee: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string; status: string }
+
+export default function AdvancesScreen() {
+  const { data, error, refreshing, reload } = useLoad(() => api.get<{ advances: Adv[] }>("/api/m/advances"));
+  if (!data && error) return <ErrorView message={error} onRetry={reload} />;
+  if (!data) return <Loading />;
+  const total = data.advances.filter((a) => a.status === "ACTIVE").reduce((s, a) => s + a.remaining, 0);
+  return (
+    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
+      <Stack.Screen options={{ title: "Advances" }} />
+      <Muted>Still to recover: {rs(total)}. To give an advance, open the employee.</Muted>
+      <Card style={{ padding: 0, gap: 0 }}>
+        {data.advances.length === 0 ? <View style={{ padding: 16 }}><Muted>No open advances.</Muted></View> : null}
+        {data.advances.map((a, i) => (
+          <Pressable key={a.id} onPress={() => router.push({ pathname: "/employee/[id]", params: { id: a.employeeId } })} style={{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontWeight: "600", color: C.text }}>{a.employee}</Text>
+              <Text style={{ fontWeight: "700", color: C.text }}>{rs(a.remaining)}</Text>
+            </View>
+            <Muted>{dateLabel(a.givenOn)} · {rs(a.amount)} · {a.recoveryMonths === 1 ? "full" : `${a.recoveryMonths} months`} from {monthLabel(a.startMonth)}</Muted>
+            {a.status === "PENDING_APPROVAL" ? <Badge label="Waiting approval" tone="red" /> : null}
+          </Pressable>
+        ))}
+      </Card>
+    </Screen>
+  );
+}

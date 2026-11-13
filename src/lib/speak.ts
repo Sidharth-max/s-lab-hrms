@@ -1,17 +1,9 @@
 "use client";
 
-import { Capacitor } from "@capacitor/core";
-
-/** Speaks an English confirmation. Uses the phone's text-to-speech in the Android app, the browser voice on the web. */
+/** Speaks an English confirmation with the browser voice (website scanner). */
 export async function speak(text: string) {
   const locale = "en-IN";
   try {
-    if (Capacitor.isNativePlatform()) {
-      const { TextToSpeech } = await import("@capacitor-community/text-to-speech");
-      await TextToSpeech.stop().catch(() => {});
-      await TextToSpeech.speak({ text, lang: locale, rate: 0.95 });
-      return;
-    }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);

@@ -1,17 +1,13 @@
 name: Android APK
 
-# Push to main -> build the APK and publish it as the newest GitHub Release.
-#                  The website's "Download Android app" link (/download) always serves that release,
-#                  and the app shows the "new update" pop-up to everyone on an older version.
-# Other branches -> build the APK and keep it as a workflow artifact only (for testing).
+# Builds the native Android app in mobile/ (Expo / React Native).
+# Push to main -> publish the APK as the newest GitHub Release. The website's /download link serves it,
+#                 and installed apps show the "new update" prompt.
+# Other branches -> APK kept as a workflow artifact only (for testing).
 on:
   push:
     paths:
-      - "android/**"
-      - "android-web/**"
-      - "capacitor.config.ts"
-      - "package.json"
-      - "package-lock.json"
+      - "mobile/**"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
@@ -25,11 +21,14 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
     env:
       APP_URL: ${{ vars.APP_URL || 'https://hrms.s-lab.dev' }}
       VERSION_CODE: ${{ github.run_number }}
-      VERSION_NAME: 1.0.${{ github.run_number }}
+      VERSION_NAME: 2.0.${{ github.run_number }}
       IS_RELEASE: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v5
@@ -38,48 +37,53 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: mobile/package-lock.json
 
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
           cache: gradle
 
-      # GitHub's Ubuntu runners include the Android SDK (ANDROID_HOME); Gradle fetches missing platform parts.
       - run: npm ci
 
-      - name: Sync web shell into Android project
-        run: npx cap sync android
-
-      - name: Prepare signing key
-        id: signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Check types and lint
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not set. Building a debug-signed test APK. Updates will NOT install over an older copy until the release key is added (see DEPLOYMENT.md)."
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-          fi
+          npx tsc --noEmit
+          npx expo lint
+
+      # GitHub's Ubuntu runners include the Android SDK (ANDROID_HOME).
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install --clean
 
       - name: Build APK
-        working-directory: android
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: mobile/android
         run: |
           chmod +x gradlew
-          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
-            ./gradlew --no-daemon assembleRelease -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
-            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/s-lab-hrms.apk"
-          else
-            ./gradlew --no-daemon assembleDebug -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
-            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/s-lab-hrms.apk"
+          ./gradlew --no-daemon assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/s-lab-hrms.apk"
+
+      - name: Sign with release key (when configured)
+        id: signing
+        working-directory: ${{ github.workspace }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not set. The APK is signed with a debug key; each new APK must be installed after uninstalling the old one (see DEPLOYMENT.md)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS --out s-lab-hrms-signed.apk s-lab-hrms.apk
+          "$BT/apksigner" verify s-lab-hrms-signed.apk
+          mv s-lab-hrms-signed.apk s-lab-hrms.apk
+          echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -88,10 +92,11 @@ jobs:
 
       - name: Publish release (main only)
         if: env.IS_RELEASE == 'true'
+        working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTE="Android app ${VERSION_NAME} for ${APP_URL}. Built from ${GITHUB_SHA::7}."
+          NOTE="Native Android app ${VERSION_NAME} for ${APP_URL}. Built from ${GITHUB_SHA::7}."
           if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
             NOTE="$NOTE TEST BUILD (debug key): uninstall the old app before installing this one."
           fi

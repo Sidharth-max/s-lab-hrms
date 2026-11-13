@@ -41,9 +41,12 @@ yarn-error.log*
 next-env.d.ts
 
 !.env.example
-# android build outputs
-/android/app/build
-/android/.gradle
+# native app build outputs
+/mobile/node_modules
+/mobile/android
+/mobile/ios
+/mobile/.expo
+/mobile/dist
 *.keystore
 *.jks
 /backups

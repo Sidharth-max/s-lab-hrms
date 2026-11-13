@@ -3,6 +3,7 @@ node_modules
 .git
 .github
 android
+mobile
 android-web
 e2e
 backups

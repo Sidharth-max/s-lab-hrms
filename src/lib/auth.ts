@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 import { env, requireAuthSecret } from "./env";
@@ -66,10 +66,12 @@ export async function verifyOtp(phone: string, purpose: string, code: string): P
   return ok;
 }
 
-export async function createSession(userId: string) {
+/** Creates a login session. The website keeps it in a cookie; the Android app receives the token instead. */
+export async function createSession(userId: string, opts: { cookie?: boolean } = {}): Promise<string> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000);
   await db.session.create({ data: { userId, tokenHash: hashToken(token), expiresAt } });
+  if (opts.cookie === false) return token;
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -78,18 +80,26 @@ export async function createSession(userId: string) {
     path: "/",
     expires: expiresAt,
   });
+  return token;
+}
+
+/** Bearer token sent by the Android app (Authorization: Bearer ...). */
+async function bearerToken(): Promise<string | null> {
+  const h = (await headers()).get("authorization");
+  const m = h ? /^Bearer\s+([A-Za-z0-9_-]{20,})$/.exec(h.trim()) : null;
+  return m ? m[1] : null;
 }
 
 export async function destroySession() {
   const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const token = jar.get(SESSION_COOKIE)?.value ?? (await bearerToken());
   if (token) await db.session.deleteMany({ where: { tokenHash: hashToken(token) } });
-  jar.delete(SESSION_COOKIE);
+  if (jar.get(SESSION_COOKIE)) jar.delete(SESSION_COOKIE);
 }
 
 export async function getActor(): Promise<Actor | null> {
   const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const token = jar.get(SESSION_COOKIE)?.value ?? (await bearerToken());
   if (!token) return null;
   const session = await db.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date() || !session.user.active) return null;
@@ -122,7 +132,8 @@ export async function requireOwner(): Promise<Actor> {
 
 export async function getDevice() {
   const jar = await cookies();
-  const token = jar.get(DEVICE_COOKIE)?.value;
+  // The Android app sends the scanner token in a header instead of a cookie.
+  const token = jar.get(DEVICE_COOKIE)?.value ?? (await headers()).get("x-device-token") ?? undefined;
   if (!token) return null;
   const device = await db.device.findUnique({ where: { tokenHash: hashToken(token) }, include: { site: true, business: true } });
   if (!device || device.revokedAt) return null;

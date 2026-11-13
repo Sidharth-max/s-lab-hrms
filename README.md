@@ -39,8 +39,19 @@ Checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 Browser smoke test (server running in test mode, fresh seeded DB):
 `NODE_PATH=$(npm root -g) node e2e/smoke.mjs`
 
-## Android app
+## Android app (native)
 
-`android/` is a Capacitor shell that opens the website. GitHub Actions builds the APK on every push to
-`main` that changes the shell and publishes it as a GitHub Release; `/download` on the site always serves
-the newest one, and installed apps show an update pop-up.
+`mobile/` is a native React Native app (Expo SDK 58) for owners and managers: login by OTP, today, employees
+(add, edit, face photo), attendance with edits, advances, approvals, salary, and a full-screen face scanner
+mode for the gate tablet. It talks to the server through `/api/m` (the same rules as the website).
+GitHub Actions builds the APK on every push to `main` that changes `mobile/` and publishes it as a GitHub
+Release; `/download` on the website serves the newest one, and the app shows an update prompt.
+
+```bash
+cd mobile
+npm install
+npx tsc --noEmit && npx expo lint
+APP_URL=http://<your-computer-ip>:3000 npx expo run:android   # needs Android SDK
+```
+
+API test (server running in test mode): `node e2e/api.mjs`
