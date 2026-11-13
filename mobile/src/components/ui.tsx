@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, isDark, R } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
-import { FLOATING_NAV_SPACE, useWide } from "@/lib/layout";
+import { FLOATING_NAV_SPACE } from "@/lib/layout";
 
 export function Screen({
   children,
@@ -21,8 +21,8 @@ export function Screen({
   /** A tab screen: on phones leave room at the bottom for the floating navigation bar. */
   tabs?: boolean;
 }) {
-  const wide = useWide();
-  const inner = <View style={[styles.inner, padded && styles.padded, tabs && !wide && { paddingBottom: FLOATING_NAV_SPACE + 16 }]}>{children}</View>;
+  // The tab bar always floats at the bottom (phones and tablets alike).
+  const inner = <View style={[styles.inner, padded && styles.padded, tabs && { paddingBottom: FLOATING_NAV_SPACE + 16 }]}>{children}</View>;
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
       {scroll ? (

@@ -1,15 +1,34 @@
 import { Redirect, Tabs } from "expo-router";
+import { Pressable, View, type PressableProps } from "react-native";
 import { CalendarDays, House, Menu, Users } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
-import { View } from "react-native";
 import { FONT } from "@/components/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useWide } from "@/lib/layout";
 import { C } from "@/lib/theme";
+
+/**
+ * Tab buttons with no press feedback: no Android ripple hue, no opacity dip.
+ * The active tab already shows through its tint color; a flash on every tap is noise.
+ */
+function FlatTabButton({ onPress, onLongPress, accessibilityState, accessibilityLabel, testID, style, children }: PressableProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      accessibilityState={accessibilityState}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      testID={testID}
+      android_ripple={{ color: "transparent" }}
+      style={(state) => [typeof style === "function" ? style(state) : style, { opacity: 1 }]}
+    >
+      {children}
+    </Pressable>
+  );
+}
 
 export default function TabsLayout() {
   const { ready, me, scannerMode } = useAuth();
-  const wide = useWide();
   const insets = useSafeAreaInsets();
   if (ready && !me) return <Redirect href={scannerMode ? "/scanner" : "/login"} />;
   return (
@@ -17,32 +36,33 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.muted,
-        // Phone: a floating rounded bar above the content. Open foldable / tablet: a rail on the left.
-        tabBarPosition: wide ? "left" : "bottom",
-        tabBarVariant: wide ? "material" : "uikit",
-        tabBarStyle: wide
-          ? { backgroundColor: C.white, borderRightColor: C.line, borderRightWidth: 1, paddingTop: 8, minWidth: 84 }
-          : {
-              position: "absolute",
-              left: 16,
-              right: 16,
-              bottom: Math.max(insets.bottom, 10) + 6,
-              height: 64,
-              paddingTop: 8,
-              paddingBottom: 8,
-              borderRadius: 32,
-              borderTopWidth: 1,
-              borderWidth: 1,
-              borderColor: C.hairline,
-              borderTopColor: C.hairline,
-              backgroundColor: C.white,
-              elevation: 8,
-              shadowColor: "#000",
-              shadowOpacity: 0.12,
-              shadowRadius: 16,
-              shadowOffset: { width: 0, height: 6 },
-            },
-        tabBarLabelStyle: { fontSize: 11, fontFamily: FONT.medium },
+        // One floating pill bar, pinned to the bottom on every screen size.
+        // (An earlier left-rail variant fired on large phones and broke the UI.)
+        tabBarPosition: "bottom",
+        tabBarButton: FlatTabButton,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          position: "absolute",
+          left: 20,
+          right: 20,
+          bottom: Math.max(insets.bottom, 12) + 8,
+          height: 68,
+          paddingHorizontal: 8,
+          paddingTop: 8,
+          paddingBottom: 8,
+          borderRadius: 34,
+          borderWidth: 1,
+          borderColor: C.hairline,
+          backgroundColor: C.white,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOpacity: 0.12,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 6 },
+        },
+        tabBarItemStyle: { borderRadius: 26 },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: FONT.medium, marginTop: 2 },
+        tabBarIconStyle: { marginBottom: -2 },
         headerStyle: { backgroundColor: C.white },
         headerBackground: () => <View style={{ flex: 1, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.line }} />,
         headerTintColor: C.text,
