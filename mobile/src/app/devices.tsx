@@ -1,12 +1,13 @@
 import { router, Stack } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, Text, View } from "react-native";
 import { ChevronDown, ChevronUp, Pencil, ScanFace } from "lucide-react-native";
 import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useDialog } from "@/components/dialog";
 
 interface Device { id: string; name: string; site: string; siteId: string; model: string | null; registeredBy: string; createdAt: string; lastSeenAt: string | null; revoked: boolean }
 
@@ -23,6 +24,7 @@ function SitePicker({ sites, value, onChange }: { sites: { id: string; name: str
 }
 
 function DeviceCard({ d, sites, onDone }: { d: Device; sites: { id: string; name: string }[]; onDone: (msg: { text: string; ok: boolean }) => Promise<void> }) {
+  const dialog = useDialog();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(d.name);
   const [siteId, setSiteId] = useState(d.siteId);
@@ -65,12 +67,9 @@ function DeviceCard({ d, sites, onDone }: { d: Device; sites: { id: string; name
             title="Remove scanner"
             variant="danger"
             loading={busy === "revokeDevice"}
-            onPress={() =>
-              Alert.alert("Remove this scanner?", "It will stop working immediately.", [
-                { text: "Cancel" },
-                { text: "Remove", style: "destructive", onPress: () => void run("revokeDevice", { deviceId: d.id }) },
-              ])
-            }
+            onPress={async () => {
+              if (await dialog.confirm({ title: "Remove this scanner?", message: "It will stop working immediately.", confirmText: "Remove", danger: true })) void run("revokeDevice", { deviceId: d.id });
+            }}
           />
         </View>
       ) : null}

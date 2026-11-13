@@ -5,12 +5,14 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AuthProvider } from "@/lib/auth";
 import { LiveProfileRefresher, LiveProvider } from "@/lib/live";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
+import { DialogProvider } from "@/components/dialog";
 import { C } from "@/lib/theme";
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <KeyboardProvider>
+      <DialogProvider>
       <AuthProvider>
         <LiveProvider>
         <LiveProfileRefresher />
@@ -32,6 +34,7 @@ export default function RootLayout() {
         <UpdatePrompt />
         </LiveProvider>
       </AuthProvider>
+      </DialogProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
   );

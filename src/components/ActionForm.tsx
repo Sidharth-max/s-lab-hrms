@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import type { ActionResult } from "@/lib/action";
 import { toast } from "./Toaster";
+import { confirmDialog } from "./controls";
 
 /** A form bound to a server action that shows success/error messages and disables itself while saving. */
 export function ActionForm({
@@ -32,6 +33,7 @@ export function ActionForm({
     return r;
   }, null);
   const ref = useRef<HTMLFormElement>(null);
+  const confirmed = useRef(false);
   useEffect(() => {
     if (state?.ok && resetOnSuccess) ref.current?.reset();
   }, [state, resetOnSuccess]);
@@ -42,7 +44,23 @@ export function ActionForm({
       action={formAction}
       className={className}
       onSubmit={(e) => {
-        if (confirm && !window.confirm(confirm)) e.preventDefault();
+        // Ask with our own dialog; when confirmed, submit again with the same button.
+        if (!confirm || confirmed.current) {
+          confirmed.current = false;
+          return;
+        }
+        e.preventDefault();
+        const form = e.currentTarget;
+        const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+        // "Remove this scanner? It will stop working." -> title "Remove this scanner?", message after it.
+        const q = confirm.indexOf("?");
+        const title = q > 0 ? confirm.slice(0, q + 1) : confirm;
+        const message = q > 0 ? confirm.slice(q + 1).trim() || undefined : undefined;
+        void confirmDialog({ title, message, confirmText: submitLabel ?? "OK", danger: submitClass.includes("danger") }).then((ok) => {
+          if (!ok) return;
+          confirmed.current = true;
+          form.requestSubmit(submitter ?? undefined);
+        });
       }}
     >
       <fieldset disabled={pending} className="contents">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DateInput, Select } from "@/components/controls";
 
 interface Values {
   name?: string;
@@ -50,13 +51,11 @@ export function EmployeeFields({
       </div>
       <div>
         <label className="label">Site</label>
-        <select name="siteId" className="input" defaultValue={values.siteId} required>
-          {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        <Select name="siteId" defaultValue={values.siteId} options={sites.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="Site" />
       </div>
       <div>
         <label className="label">Joining date</label>
-        <input name="joinedOn" type="date" className="input" defaultValue={values.joinedOn} required />
+        <DateInput name="joinedOn" defaultValue={values.joinedOn} />
       </div>
       <div className="@lg:col-span-2">
         <label className="label">Weekly off</label>

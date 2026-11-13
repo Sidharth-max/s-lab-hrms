@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -114,6 +116,49 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
         );
       })}
     </View>
+  );
+}
+
+/** Our on / off switch (charcoal track when on, green for the "on" accent). */
+export function Toggle({ value, onValueChange, disabled, label }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean; label?: string }) {
+  const [x] = useState(() => new Animated.Value(value ? 1 : 0));
+  useEffect(() => {
+    Animated.timing(x, { toValue: value ? 1 : 0, duration: 160, useNativeDriver: false }).start();
+  }, [value, x]);
+  return (
+    <Pressable
+      onPress={() => !disabled && onValueChange(!value)}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value, disabled }}
+      accessibilityLabel={label}
+      hitSlop={8}
+      style={{ opacity: disabled ? 0.5 : 1 }}
+    >
+      <Animated.View
+        style={{
+          width: 46,
+          height: 28,
+          borderRadius: 14,
+          padding: 3,
+          backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [C.line, C.green] }),
+        }}
+      >
+        <Animated.View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: C.white,
+            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) }],
+            shadowColor: "#000",
+            shadowOpacity: 0.2,
+            shadowRadius: 2,
+            shadowOffset: { width: 0, height: 1 },
+            elevation: 2,
+          }}
+        />
+      </Animated.View>
+    </Pressable>
   );
 }
 

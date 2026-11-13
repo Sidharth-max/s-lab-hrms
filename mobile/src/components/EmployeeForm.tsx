@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Pressable, Switch, Text, View } from "react-native";
-import { Button, Field, Muted, Notice, Segmented } from "./ui";
+import { Pressable, Text, View } from "react-native";
+import { Button, Field, Muted, Notice, Segmented, Toggle } from "./ui";
 import { C } from "@/lib/theme";
 import { DateField } from "./pickers";
 
@@ -80,11 +80,11 @@ export function EmployeeForm({
             <View style={{ gap: 8 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ fontSize: 15, color: C.text }}>PF deduction</Text>
-                <Switch value={v.pfEnabled} onValueChange={(b) => set("pfEnabled", b)} trackColor={{ true: C.green, false: C.line }} />
+                <Toggle value={v.pfEnabled} onValueChange={(b) => set("pfEnabled", b)} />
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ fontSize: 15, color: C.text }}>ESIC deduction</Text>
-                <Switch value={v.esiEnabled} onValueChange={(b) => set("esiEnabled", b)} trackColor={{ true: C.green, false: C.line }} />
+                <Toggle value={v.esiEnabled} onValueChange={(b) => set("esiEnabled", b)} />
               </View>
             </View>
           ) : (

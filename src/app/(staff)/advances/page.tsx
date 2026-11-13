@@ -7,6 +7,7 @@ import { formatRs } from "@/lib/money";
 import { employeeScope } from "@/lib/scope";
 import { recoveredByAdvance } from "@/lib/services";
 import { dbToDateKey, formatDateKey, formatMonth } from "@/lib/time";
+import { DateInput, MonthInput } from "@/components/controls";
 
 export default async function AdvancesPage({ searchParams }: PageProps<"/advances">) {
   const actor = await requireStaff();
@@ -70,9 +71,9 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
                           <ActionForm action={editAdvance} className="mt-2 grid min-w-64 gap-2" submitLabel="Save changes">
                             <input type="hidden" name="advanceId" value={a.id} />
                             <label className="label">Amount (₹)<input name="amount" className="input" inputMode="decimal" defaultValue={a.amount / 100} required /></label>
-                            <label className="label">Given on<input name="givenOn" type="date" className="input" defaultValue={dbToDateKey(a.givenOn)} required /></label>
+                            <div><span className="label">Given on</span><DateInput name="givenOn" defaultValue={dbToDateKey(a.givenOn)} /></div>
                             <label className="label">Recover over (months)<input name="recoveryMonths" type="number" min={1} max={24} className="input" defaultValue={a.recoveryMonths} /></label>
-                            <label className="label">First recovery month<input name="startMonth" type="month" className="input" defaultValue={a.startMonth} disabled={r > 0} /></label>
+                            <div><span className="label">First recovery month</span><MonthInput name="startMonth" defaultValue={a.startMonth} disabled={r > 0} /></div>
                             <label className="label">Note<input name="note" className="input" defaultValue={a.note ?? ""} /></label>
                           </ActionForm>
                           {r === 0 && (

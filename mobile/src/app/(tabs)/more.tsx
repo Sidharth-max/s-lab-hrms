@@ -1,11 +1,12 @@
 import { router, type Href } from "expo-router";
 import { useState } from "react";
-import { Alert, Linking, Pressable, Text, View } from "react-native";
+import { Linking, Pressable, Text, View } from "react-native";
 import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type LucideIcon } from "lucide-react-native";
 import { Card, Muted, Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 import { checkForUpdate, installedVersion, useAppUpdate } from "@/lib/update";
+import { useDialog } from "@/components/dialog";
 
 function Item({ icon: Icon, label, onPress, badge, danger }: { icon: LucideIcon; label: string; onPress: () => void; badge?: number; danger?: boolean }) {
   return (
@@ -27,6 +28,7 @@ function Divider() {
 }
 
 export default function More() {
+  const dialog = useDialog();
   const { me, can, signOut, scannerMode } = useAuth();
   const go = (href: Href) => () => router.push(href);
   const update = useAppUpdate();
@@ -79,8 +81,9 @@ export default function More() {
             setChecking(true);
             const u = await checkForUpdate(true);
             setChecking(false);
-            if (u) Alert.alert("New version " + u.name, "Download and install it now?", [{ text: "Later" }, { text: "Download", onPress: () => void Linking.openURL(u.url) }]);
-            else Alert.alert("You have the latest version", `Version ${installedVersion.name}`);
+            if (u) {
+              if (await dialog.confirm({ title: `New version ${u.name}`, message: "Download and install it now? Your login and data stay.", cancelText: "Later", confirmText: "Download" })) void Linking.openURL(u.url);
+            } else await dialog.notify({ title: "You have the latest version", message: `Version ${installedVersion.name}`, tone: "green" });
           }}
         />
         <Divider />
@@ -88,7 +91,7 @@ export default function More() {
           icon={LogOut}
           danger
           label={scannerMode ? "Log out (back to scanner)" : "Log out"}
-          onPress={() => Alert.alert("Log out?", undefined, [{ text: "Cancel" }, { text: "Log out", style: "destructive", onPress: async () => { await signOut(); router.replace("/"); } }])}
+          onPress={async () => { if (await dialog.confirm({ title: "Log out?", confirmText: "Log out", danger: true })) { await signOut(); router.replace("/"); } }}
         />
       </Card>
       <Muted style={{ textAlign: "center" }}>

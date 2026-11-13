@@ -1,9 +1,9 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
-import { Image, Switch, Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import { Camera, RotateCcw } from "lucide-react-native";
-import { Button, Muted, Notice, Screen } from "@/components/ui";
+import { Button, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useCameraSession } from "@/lib/camera";
 import { capture } from "@/lib/photo";
@@ -83,7 +83,7 @@ export default function FaceEnroll() {
       ) : (
         <>
           <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-            <Switch value={consent} onValueChange={setConsent} trackColor={{ true: C.green, false: C.line }} />
+            <Toggle value={consent} onValueChange={setConsent} />
             <Text style={{ flex: 1, color: C.text, fontSize: 14 }}>
               The employee was told the face is used only to mark attendance, and that a manager can mark attendance for them instead.
             </Text>

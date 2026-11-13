@@ -1,16 +1,18 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, Text, View } from "react-native";
 import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
 import { monthLabel, rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useDialog } from "@/components/dialog";
 
 interface Line { id: string; employeeId: string; name: string; wageType: string; rate: number; payableDays: number; daysInMonth: number; gross: number; adjustments: number; pf: number; esi: number; advance: number; net: number; paid: number; paymentMode: string | null }
 interface Month { employees: { id: string; name: string; code: string }[]; adjustments: { id: string; employee: string; amount: number; reason: string }[]; month: string; exists: boolean; locked: boolean; updatedAt: string | null; canRun: boolean; canLock: boolean; lines: Line[] }
 
 export default function PayrollMonth() {
+  const dialog = useDialog();
   const { month } = useLocalSearchParams<{ month: string }>();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Month>(`/api/m/payroll/${month}`), [month], ["payroll", "attendance", "advance", "employee"]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export default function PayrollMonth() {
         <Button
           title="Approve and lock"
           loading={busy === "lock"}
-          onPress={() => Alert.alert(`Lock ${monthLabel(data.month)}?`, "Attendance for this month can then no longer be edited.", [{ text: "Cancel" }, { text: "Lock", onPress: () => run("lock", "lockPayroll", { month: data.month }) }])}
+          onPress={async () => { if (await dialog.confirm({ title: `Lock ${monthLabel(data.month)}?`, message: "Attendance for this month can then no longer be edited.", confirmText: "Lock" })) void run("lock", "lockPayroll", { month: data.month }); }}
         />
       ) : null}
       {data.exists ? (

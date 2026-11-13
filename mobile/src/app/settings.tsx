@@ -1,13 +1,14 @@
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, Switch, Text, View } from "react-native";
+import { Pressable, RefreshControl, Text, View } from "react-native";
 import { Plus, Trash2 } from "lucide-react-native";
-import { Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { DateField, TimeField } from "@/components/pickers";
+import { useDialog } from "@/components/dialog";
 
 interface DayRule { open: string; close: string; halfDayBelowMins: number; anyScanFullDay: boolean }
 interface Settings {
@@ -44,6 +45,7 @@ function SettingsForm({
   msg: { text: string; ok: boolean } | null;
   setMsg: (m: { text: string; ok: boolean } | null) => void;
 }) {
+  const dialog = useDialog();
   const [name, setName] = useState(data.name);
   const [days, setDays] = useState<DayForm[]>(() =>
     data.dayRules.map((r, i) => ({ off: data.weeklyOffDays.includes(i), open: r.open, close: r.close, half: String(r.halfDayBelowMins / 60), any: r.anyScanFullDay })),
@@ -116,7 +118,7 @@ function SettingsForm({
               <Text style={{ fontWeight: "600", color: C.text, fontSize: 15 }}>{DAYS[i]}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text style={{ color: C.muted }}>Weekly off</Text>
-                <Switch value={d.off} onValueChange={(b) => setDay(i, { off: b })} trackColor={{ true: C.green, false: C.line }} />
+                <Toggle value={d.off} onValueChange={(b) => setDay(i, { off: b })} />
               </View>
             </View>
             {!d.off ? (
@@ -128,7 +130,7 @@ function SettingsForm({
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ color: C.text }}>Any scan = full day</Text>
-                  <Switch value={d.any} onValueChange={(b) => setDay(i, { any: b })} trackColor={{ true: C.green, false: C.line }} />
+                  <Toggle value={d.any} onValueChange={(b) => setDay(i, { any: b })} />
                 </View>
               </>
             ) : null}
@@ -173,7 +175,7 @@ function SettingsForm({
             <Pressable
               hitSlop={10}
               accessibilityLabel={`Remove ${h.name}`}
-              onPress={() => Alert.alert(`Remove ${h.name}?`, undefined, [{ text: "Cancel" }, { text: "Remove", style: "destructive", onPress: () => run(h.id, "removeHoliday", { holidayId: h.id }) }])}
+              onPress={async () => { if (await dialog.confirm({ title: `Remove ${h.name}?`, confirmText: "Remove", danger: true })) void run(h.id, "removeHoliday", { holidayId: h.id }); }}
             >
               <Trash2 size={18} color={C.red} />
             </Pressable>

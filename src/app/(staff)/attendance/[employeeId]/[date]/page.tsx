@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
 import { dateKeyToDb, formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
+import { Select, TimeInput } from "@/components/controls";
 
 export default async function DayDetail({ params }: PageProps<"/attendance/[employeeId]/[date]">) {
   const actor = await requireStaff();
@@ -90,8 +91,8 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
               <div className="flex gap-2">
-                <select name="type" className="input"><option value="IN">IN</option><option value="OUT">OUT</option></select>
-                <input type="time" name="time" className="input" required />
+                <Select name="type" className="w-28" options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} ariaLabel="Punch type" />
+                <TimeInput name="time" className="flex-1" />
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="nextDay" /> {"Time is after midnight (night shift)"}</label>
               <input name="reason" className="input" placeholder={"Reason (e.g. tablet not working)"} required />
@@ -102,9 +103,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
             <ActionForm action={setDayStatus} className="flex flex-col gap-3" submitLabel={"Set status"} resetOnSuccess>
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
-              <select name="status" className="input" defaultValue="PRESENT">
-                {statuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+              <Select name="status" defaultValue="PRESENT" options={statuses.map(([v, l]) => ({ value: v, label: l }))} ariaLabel="Day status" />
               <input name="reason" className="input" placeholder={"Reason"} required />
             </ActionForm>
             {day.overridden && (

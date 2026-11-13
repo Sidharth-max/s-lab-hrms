@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, Text, View } from "react-native";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react-native";
-import { pickDate } from "@/components/pickers";
+import { DatePickerSheet } from "@/components/pickers";
 import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { addDays, dateLabel, hours } from "@/lib/format";
@@ -17,17 +17,19 @@ interface Day {
 
 export default function Attendance() {
   const [date, setDate] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   const { data, error, refreshing, reload } = useLoad(() => api.get<Day>(`/api/m/attendance${date ? `?date=${date}` : ""}`), [date], ["attendance", "employee"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
+      {picking ? <DatePickerSheet visible value={data.date} max={data.today} onChange={setDate} onClose={() => setPicking(false)} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Pressable onPress={() => setDate(addDays(data.date, -1))} hitSlop={12} accessibilityLabel="Previous day" style={{ padding: 6 }}>
           <ChevronLeft color={C.text} size={24} />
         </Pressable>
-        <Pressable onPress={() => pickDate(data.date, setDate, data.today)} hitSlop={8} accessibilityLabel="Choose date" style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.line, backgroundColor: C.white }}>
+        <Pressable onPress={() => setPicking(true)} hitSlop={8} accessibilityLabel="Choose date" style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.line, backgroundColor: C.white }}>
           <CalendarDays size={18} color={C.text} strokeWidth={1.75} />
           <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{data.date === data.today ? `Today · ${dateLabel(data.date)}` : dateLabel(data.date)}</Text>
         </Pressable>

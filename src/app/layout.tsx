@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Toaster } from "@/components/Toaster";
+import { ConfirmHost } from "@/components/controls";
 
 export const metadata: Metadata = {
   title: "S-Lab HRMS",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh antialiased">
         {children}
         <Toaster />
+        <ConfirmHost />
       </body>
     </html>
   );

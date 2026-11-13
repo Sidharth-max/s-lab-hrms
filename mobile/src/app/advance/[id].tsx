@@ -1,12 +1,13 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Text } from "react-native";
+import { Text } from "react-native";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { api } from "@/lib/api";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useDialog } from "@/components/dialog";
 
 interface Adv {
   id: string; employeeId: string; employee: string; code: string; amount: number; givenOn: string; recoveryMonths: number;
@@ -21,6 +22,7 @@ function today() {
 }
 
 function EditForm({ a, onSaved }: { a: Adv; onSaved: (msg: string) => void }) {
+  const dialog = useDialog();
   const [amount, setAmount] = useState(String(a.amount / 100));
   const [givenOn, setGivenOn] = useState(a.givenOn);
   const [months, setMonths] = useState(String(a.recoveryMonths));
@@ -59,7 +61,7 @@ function EditForm({ a, onSaved }: { a: Adv; onSaved: (msg: string) => void }) {
           title="Cancel this advance"
           variant="danger"
           loading={busy === "cancel"}
-          onPress={() => Alert.alert("Cancel this advance?", "It will no longer be recovered from salary.", [{ text: "Keep" }, { text: "Cancel advance", style: "destructive", onPress: () => void send({ cancel: "1" }, "cancel") }])}
+          onPress={async () => { if (await dialog.confirm({ title: "Cancel this advance?", message: "It will no longer be recovered from salary.", cancelText: "Keep", confirmText: "Cancel advance", danger: true })) void send({ cancel: "1" }, "cancel"); }}
         />
       ) : null}
     </Card>

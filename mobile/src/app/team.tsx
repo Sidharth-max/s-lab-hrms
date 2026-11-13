@@ -1,8 +1,8 @@
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, Switch, Text, View } from "react-native";
+import { Pressable, RefreshControl, Text, View } from "react-native";
 import { ChevronDown, ChevronUp, UserPlus } from "lucide-react-native";
-import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { Badge, Button, Card, ErrorView, Field, Loading, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
@@ -28,7 +28,7 @@ function ManagerForm({ team, m, onSave, busy }: { team: Team; m?: Manager; onSav
       <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Can do</Text>
       {team.permissions.map((p) => (
         <View key={p.key} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Switch value={perms.includes(p.key)} onValueChange={() => setPerms((x) => toggle(x, p.key))} trackColor={{ true: C.green, false: C.line }} />
+          <Toggle value={perms.includes(p.key)} onValueChange={() => setPerms((x) => toggle(x, p.key))} />
           <Text style={{ flex: 1, color: C.text }}>{p.label}</Text>
         </View>
       ))}

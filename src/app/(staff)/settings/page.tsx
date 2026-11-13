@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dbToDateKey, formatDateKey } from "@/lib/time";
 import { parseDayRules } from "@/lib/day-rules";
+import { DateInput, TimeInput } from "@/components/controls";
 
 export default async function SettingsPage() {
   const actor = await requireStaff("settings.manage");
@@ -58,8 +59,8 @@ export default async function SettingsPage() {
                     <td data-label={"Weekly off"}>
                       <input type="checkbox" name={`off_${i}`} defaultChecked={b.weeklyOffDays.includes(i)} className="h-5 w-5" />
                     </td>
-                    <td data-label={"Opens"}><input type="time" name={`open_${i}`} defaultValue={r.open} className="input !w-32" required /></td>
-                    <td data-label={"Closes"}><input type="time" name={`close_${i}`} defaultValue={r.close} className="input !w-32" required /></td>
+                    <td data-label={"Opens"}><TimeInput name={`open_${i}`} defaultValue={r.open} className="w-36" /></td>
+                    <td data-label={"Closes"}><TimeInput name={`close_${i}`} defaultValue={r.close} className="w-36" /></td>
                     <td data-label={"Half day below (hours)"}>
                       <input type="number" name={`half_${i}`} step="0.5" min={0} max={12} defaultValue={r.halfDayBelowMins / 60} className="input !w-24" />
                     </td>
@@ -106,7 +107,7 @@ export default async function SettingsPage() {
         <section className="card flex flex-col gap-3">
           <h2 className="font-semibold">Holidays (paid for monthly staff)</h2>
           <ActionForm action={addHoliday} className="flex flex-wrap gap-2" submitLabel={"Add"} resetOnSuccess>
-            <input name="date" type="date" className="input max-w-[11rem]" required />
+            <DateInput name="date" className="w-44" />
             <input name="name" className="input max-w-[14rem]" placeholder={"Holiday name"} required />
           </ActionForm>
           <ul className="flex flex-col gap-1">

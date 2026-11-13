@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, Text, View } from "react-native";
+import { Pressable, RefreshControl, Text, View } from "react-native";
 import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "lucide-react-native";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useDialog } from "@/components/dialog";
 
 interface Detail {
   employee: {
@@ -142,6 +143,7 @@ function GiveAdvance({ employeeId, onDone }: { employeeId: string; onDone: (m: {
 }
 
 export default function EmployeeDetail() {
+  const dialog = useDialog();
   const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
   const { me, can } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "payroll", "attendance"]);
@@ -232,7 +234,7 @@ export default function EmployeeDetail() {
                 title="Remove face"
                 variant="secondary"
                 loading={busy === "removeFace"}
-                onPress={() => Alert.alert("Remove face?", "The employee will not be able to scan.", [{ text: "Cancel" }, { text: "Remove", style: "destructive", onPress: () => void run("removeFace", { id: e.id }) }])}
+                onPress={async () => { if (await dialog.confirm({ title: "Remove face?", message: "The employee will not be able to scan.", confirmText: "Remove", danger: true })) void run("removeFace", { id: e.id }); }}
               />
             ) : null}
           </Card>
@@ -313,14 +315,10 @@ export default function EmployeeDetail() {
               title={e.active ? "Mark as left" : "Make active again"}
               variant={e.active ? "danger" : "secondary"}
               loading={busy === "setEmployeeLeft"}
-              onPress={() =>
-                e.active
-                  ? Alert.alert("Mark as left?", `Left on ${dateLabel(leftOn)}. Their face will be deleted. Attendance and salary history are kept.`, [
-                      { text: "Cancel" },
-                      { text: "Mark as left", style: "destructive", onPress: () => void run("setEmployeeLeft", { id: e.id, leftOn }) },
-                    ])
-                  : run("setEmployeeLeft", { id: e.id, leftOn: "" })
-              }
+              onPress={async () => {
+                if (!e.active) return void run("setEmployeeLeft", { id: e.id, leftOn: "" });
+                if (await dialog.confirm({ title: "Mark as left?", message: `Left on ${dateLabel(leftOn)}. Their face will be deleted. Attendance and salary history are kept.`, confirmText: "Mark as left", danger: true })) void run("setEmployeeLeft", { id: e.id, leftOn });
+              }}
             />
           </Card>
         </>

@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { getDevice, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { siteWhere } from "@/lib/scope";
+import { Select } from "@/components/controls";
 
 export default async function DevicesPage() {
   const actor = await requireStaff("devices.register");
@@ -33,9 +34,7 @@ export default async function DevicesPage() {
             <ActionForm action={registerDevice} className="grid gap-3 @2xl:grid-cols-2" submitLabel={"Make this device a scanner"}>
               <div>
                 <label className="label">Site</label>
-                <select name="siteId" className="input" required>
-                  {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <Select name="siteId" options={sites.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="Site" />
               </div>
               <div>
                 <label className="label">Name</label>
@@ -69,9 +68,7 @@ export default async function DevicesPage() {
                       <ActionForm action={renameDevice} className="mt-2 flex flex-col gap-2" submitLabel="Save">
                         <input type="hidden" name="deviceId" value={d.id} />
                         <input name="name" className="input" defaultValue={d.name} required maxLength={60} />
-                        <select name="siteId" className="input" defaultValue={d.siteId}>
-                          {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        <Select name="siteId" defaultValue={d.siteId} options={sites.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="Site" />
                       </ActionForm>
                     </details>
                     <ActionForm action={revokeDevice} submitLabel={"Remove"} submitClass="btn-danger !py-1" confirm={"Remove this scanner? It will stop working immediately."}>

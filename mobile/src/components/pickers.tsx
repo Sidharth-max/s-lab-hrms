@@ -1,119 +1,194 @@
-import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock } from "lucide-react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Minus, Plus } from "lucide-react-native";
 import { dateLabel, monthLabel } from "@/lib/format";
 import { C, R } from "@/lib/theme";
-import { Button } from "./ui";
+import { Button, Segmented } from "./ui";
 
-// Native date / time pickers. Values stay as plain strings: "YYYY-MM-DD", "HH:MM" (24 h), "YYYY-MM".
+// Our own date, time and month pickers (no Android system dialogs).
+// Values stay plain strings: "YYYY-MM-DD", "HH:MM" (24 h), "YYYY-MM".
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const toKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const fromKey = (k: string) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(k);
-  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date();
-};
-const fromTime = (t: string) => {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
-  const d = new Date();
-  d.setHours(m ? Number(m[1]) : 9, m ? Number(m[2]) : 0, 0, 0);
-  return d;
-};
+const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
+
+function todayKey() {
+  return new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
+}
+
+function shiftMonth(m: string, by: number) {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(Date.UTC(y, mo - 1 + by, 1));
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`;
+}
+
 function time12(t: string) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(t);
-  if (!m) return t || "Choose time";
+  if (!m) return "Choose time";
   const h = Number(m[1]);
   return `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? "am" : "pm"}`;
 }
 
-function open(mode: "date" | "time", value: Date, onPick: (d: Date) => void, limits: { min?: Date; max?: Date }, setIos: (v: { mode: "date" | "time"; value: Date } | null) => void) {
-  if (Platform.OS === "android") {
-    DateTimePickerAndroid.open({
-      value,
-      mode,
-      is24Hour: false,
-      minimumDate: limits.min,
-      maximumDate: limits.max,
-      onChange: (e: DateTimePickerEvent, d?: Date) => {
-        if (e.type === "set" && d) onPick(d);
-      },
-    });
-  } else {
-    setIos({ mode, value });
-  }
+/** Bottom sheet frame shared by the pickers. */
+function Sheet({ visible, title, onClose, children }: { visible: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <Modal transparent visible={visible} animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,10,10,0.55)", justifyContent: "flex-end" }}>
+        <Pressable onPress={() => {}} style={{ backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 28, gap: 12, width: "100%", maxWidth: 520, alignSelf: "center" }}>
+          <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: C.line }} />
+          <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>{title}</Text>
+          {children}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 }
 
-function Box({ label, text, icon, onPress, compact }: { label?: string; text: string; icon: React.ReactNode; onPress: () => void; compact?: boolean }) {
+/** Month calendar in a sheet. */
+export function DatePickerSheet({ visible, value, onChange, onClose, min, max, title = "Choose date" }: { visible: boolean; value: string; onChange: (v: string) => void; onClose: () => void; min?: string; max?: string; title?: string }) {
+  const start = (value || todayKey()).slice(0, 7);
+  // Mounted only while open (see the fields below), so it always starts at the selected month.
+  const [shown, setShown] = useState(start);
+  const [y, m] = shown.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  const count = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const cells: (string | null)[] = [...Array(first).fill(null), ...Array.from({ length: count }, (_, i) => `${shown}-${pad(i + 1)}`)];
+  while (cells.length % 7) cells.push(null);
+  const today = todayKey();
+  const ok = (d: string) => (!min || d >= min) && (!max || d <= max);
+  const canBack = !min || shiftMonth(shown, -1) >= min.slice(0, 7);
+  const canNext = !max || shiftMonth(shown, 1) <= max.slice(0, 7);
+  const pick = (d: string) => {
+    onChange(d);
+    onClose();
+  };
+  return (
+    <Sheet visible={visible} title={title} onClose={onClose}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Pressable onPress={() => canBack && setShown(shiftMonth(shown, -1))} hitSlop={10} style={[styles.nav, !canBack && { opacity: 0.3 }]} accessibilityLabel="Previous month">
+          <ChevronLeft size={20} color={C.text} />
+        </Pressable>
+        <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{monthLabel(shown)}</Text>
+        <Pressable onPress={() => canNext && setShown(shiftMonth(shown, 1))} hitSlop={10} style={[styles.nav, !canNext && { opacity: 0.3 }]} accessibilityLabel="Next month">
+          <ChevronRight size={20} color={C.text} />
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: "row" }}>
+        {WEEK.map((d, i) => <Text key={i} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600", color: C.muted }}>{d}</Text>)}
+      </View>
+      <View style={{ gap: 4 }}>
+        {Array.from({ length: cells.length / 7 }, (_, w) => (
+          <View key={w} style={{ flexDirection: "row", gap: 4 }}>
+            {cells.slice(w * 7, w * 7 + 7).map((d, i) => {
+              if (!d) return <View key={i} style={{ flex: 1, height: 42 }} />;
+              const sel = d === value;
+              const enabled = ok(d);
+              return (
+                <Pressable
+                  key={i}
+                  disabled={!enabled}
+                  onPress={() => pick(d)}
+                  accessibilityLabel={dateLabel(d)}
+                  style={({ pressed }) => [
+                    { flex: 1, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+                    sel ? { backgroundColor: C.head } : d === today ? { borderWidth: 1, borderColor: C.text } : null,
+                    pressed && !sel && { backgroundColor: C.soft },
+                  ]}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: sel || d === today ? "700" : "400", color: sel ? C.white : enabled ? C.text : "#c4c4c4" }}>{Number(d.slice(8))}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flex: 1 }}><Button title="Cancel" variant="secondary" onPress={onClose} /></View>
+        <View style={{ flex: 1 }}><Button title="Today" disabled={!ok(today)} onPress={() => pick(today)} /></View>
+      </View>
+    </Sheet>
+  );
+}
+
+const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+function TimePickerSheet({ visible, value, onChange, onClose, title = "Choose time" }: { visible: boolean; value: string; onChange: (v: string) => void; onClose: () => void; title?: string }) {
+  const parse = (t: string) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+    return m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 9, m: 0 };
+  };
+  const [t, setT] = useState(() => parse(value));
+  const pm = t.h >= 12;
+  const h12 = ((t.h + 11) % 12) + 1;
+  const setHour12 = (h: number) => setT((o) => ({ ...o, h: (h % 12) + (o.h >= 12 ? 12 : 0) }));
+  const setPm = (p: boolean) => setT((o) => ({ ...o, h: (o.h % 12) + (p ? 12 : 0) }));
+  const nudge = (by: number) => setT((o) => {
+    const total = (o.h * 60 + o.m + by + 1440) % 1440;
+    return { h: Math.floor(total / 60), m: total % 60 };
+  });
+  const chip = (on: boolean) => [styles.chip, on && { backgroundColor: C.head, borderColor: C.head }];
+  return (
+    <Sheet visible={visible} title={title} onClose={onClose}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <Pressable onPress={() => nudge(-1)} hitSlop={8} style={styles.nav} accessibilityLabel="One minute earlier"><Minus size={18} color={C.text} /></Pressable>
+        <Text style={{ fontSize: 32, fontWeight: "700", color: C.text, minWidth: 150, textAlign: "center" }}>{time12(`${t.h}:${pad(t.m)}`)}</Text>
+        <Pressable onPress={() => nudge(1)} hitSlop={8} style={styles.nav} accessibilityLabel="One minute later"><Plus size={18} color={C.text} /></Pressable>
+      </View>
+      <Segmented options={[{ value: "am", label: "AM" }, { value: "pm", label: "PM" }]} value={pm ? "pm" : "am"} onChange={(v) => setPm(v === "pm")} />
+      <Text style={styles.label}>Hour</Text>
+      <View style={styles.grid}>
+        {HOURS.map((h) => (
+          <Pressable key={h} onPress={() => setHour12(h)} style={chip(h12 === h)}>
+            <Text style={[styles.chipText, h12 === h && { color: C.white }]}>{h}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.label}>Minute</Text>
+      <View style={styles.grid}>
+        {MINUTES.map((mm) => (
+          <Pressable key={mm} onPress={() => setT((o) => ({ ...o, m: mm }))} style={chip(t.m === mm)}>
+            <Text style={[styles.chipText, t.m === mm && { color: C.white }]}>{pad(mm)}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flex: 1 }}><Button title="Cancel" variant="secondary" onPress={onClose} /></View>
+        <View style={{ flex: 1 }}><Button title="Done" onPress={() => { onChange(`${pad(t.h)}:${pad(t.m)}`); onClose(); }} /></View>
+      </View>
+    </Sheet>
+  );
+}
+
+function Box({ label, text, icon, onPress, compact, placeholder }: { label?: string; text: string; icon: React.ReactNode; onPress: () => void; compact?: boolean; placeholder?: boolean }) {
   return (
     <View style={{ gap: 6 }}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label ? `${label}: ${text}` : text} style={({ pressed }) => [styles.box, compact && { paddingHorizontal: 10 }, pressed && { backgroundColor: C.soft }]}>
-        <Text style={styles.boxText} numberOfLines={1}>{text}</Text>
+        <Text style={[styles.boxText, placeholder && { color: "#a3a3a3" }]} numberOfLines={1}>{text}</Text>
         {icon}
       </Pressable>
     </View>
   );
 }
 
-/** iOS has no picker dialog: show the inline picker in a sheet. (The app ships for Android; this keeps other platforms usable.) */
-function IosSheet({ state, onPick, onClose, limits }: { state: { mode: "date" | "time"; value: Date } | null; onPick: (d: Date) => void; onClose: () => void; limits: { min?: Date; max?: Date } }) {
-  const [v, setV] = useState<Date | null>(null);
-  if (!state) return null;
-  return (
-    <Modal transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
-        <View style={{ backgroundColor: C.white, padding: 16, gap: 12, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-          <DateTimePicker value={v ?? state.value} mode={state.mode} display="spinner" minimumDate={limits.min} maximumDate={limits.max} onChange={(_e, d) => d && setV(d)} />
-          <Button title="Done" onPress={() => { onPick(v ?? state.value); setV(null); onClose(); }} />
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 export function DateField({ label, value, onChange, min, max, placeholder = "Choose date" }: { label?: string; value: string; onChange: (v: string) => void; min?: string; max?: string; placeholder?: string }) {
-  const [ios, setIos] = useState<{ mode: "date" | "time"; value: Date } | null>(null);
-  const limits = { min: min ? fromKey(min) : undefined, max: max ? fromKey(max) : undefined };
-  if (Platform.OS === "web") {
-    return (
-      <View style={{ gap: 6 }}>
-        {label ? <Text style={styles.label}>{label}</Text> : null}
-        <TextInput style={styles.box} value={value} onChangeText={onChange} placeholder="YYYY-MM-DD" />
-      </View>
-    );
-  }
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <Box label={label} text={value ? dateLabel(value) : placeholder} icon={<CalendarDays size={18} color={C.muted} strokeWidth={1.75} />} onPress={() => open("date", value ? fromKey(value) : new Date(), (d) => onChange(toKey(d)), limits, setIos)} />
-      <IosSheet state={ios} limits={limits} onPick={(d) => onChange(toKey(d))} onClose={() => setIos(null)} />
+      <Box label={label} text={value ? dateLabel(value) : placeholder} placeholder={!value} icon={<CalendarDays size={18} color={C.muted} strokeWidth={1.75} />} onPress={() => setOpen(true)} />
+      {open ? <DatePickerSheet visible value={value} onChange={onChange} onClose={() => setOpen(false)} min={min} max={max} title={label} /> : null}
     </>
   );
 }
 
 export function TimeField({ label, value, onChange, compact }: { label?: string; value: string; onChange: (v: string) => void; compact?: boolean }) {
-  const [ios, setIos] = useState<{ mode: "date" | "time"; value: Date } | null>(null);
-  if (Platform.OS === "web") {
-    return (
-      <View style={{ gap: 6 }}>
-        {label ? <Text style={styles.label}>{label}</Text> : null}
-        <TextInput style={styles.box} value={value} onChangeText={onChange} placeholder="HH:MM" maxLength={5} />
-      </View>
-    );
-  }
-  const pick = (d: Date) => onChange(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <Box label={label} compact={compact} text={time12(value)} icon={<Clock size={16} color={C.muted} strokeWidth={1.75} />} onPress={() => open("time", fromTime(value), pick, {}, setIos)} />
-      <IosSheet state={ios} limits={{}} onPick={pick} onClose={() => setIos(null)} />
+      <Box label={label} compact={compact} text={time12(value)} placeholder={!value} icon={<Clock size={16} color={C.muted} strokeWidth={1.75} />} onPress={() => setOpen(true)} />
+      {open ? <TimePickerSheet visible value={value} onChange={onChange} onClose={() => setOpen(false)} title={label} /> : null}
     </>
   );
-}
-
-function shiftMonth(m: string, by: number) {
-  const [y, mo] = m.split("-").map(Number);
-  const d = new Date(y, mo - 1 + by, 1);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 }
 
 /** Month chooser with previous / next buttons. */
@@ -136,13 +211,6 @@ export function MonthField({ label, value, onChange, min, max }: { label?: strin
   );
 }
 
-/** Opens the native date dialog directly (e.g. from a header "pick date" button). */
-export function pickDate(value: string, onChange: (v: string) => void, max?: string) {
-  if (Platform.OS !== "android") return false;
-  open("date", fromKey(value), (d) => onChange(toKey(d)), { max: max ? fromKey(max) : undefined }, () => {});
-  return true;
-}
-
 const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   box: {
@@ -156,8 +224,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    fontSize: 15,
-    color: C.text,
   },
   boxText: { flex: 1, fontSize: 15, color: C.text },
+  nav: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { width: "22%", flexGrow: 1, height: 40, borderRadius: R.md, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center", backgroundColor: C.white },
+  chipText: { fontSize: 15, fontWeight: "600", color: C.text },
 });

@@ -10,6 +10,7 @@ import { can } from "@/lib/permissions";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere } from "@/lib/services";
 import { addMonths, formatMonth, isMonthKey, istDateKey, istMonthKey } from "@/lib/time";
+import { DateInput, Select } from "@/components/controls";
 
 export default async function PayrollMonth({ params }: PageProps<"/payroll/[month]">) {
   const actor = await requireStaff();
@@ -119,13 +120,13 @@ export default async function PayrollMonth({ params }: PageProps<"/payroll/[mont
                           <ActionForm action={recordPayment} className="mt-2 flex min-w-[14rem] flex-col gap-2" submitLabel={"Save"}>
                             <input type="hidden" name="lineId" value={l.id} />
                             <input name="amount" className="input" defaultValue={rsInput(l.paidAmount || Math.max(0, l.net))} inputMode="decimal" />
-                            <select name="mode" className="input" defaultValue={l.paymentMode ?? "CASH"}>
-                              <option value="CASH">Cash</option>
-                              <option value="BANK">Bank transfer</option>
-                              <option value="UPI">UPI</option>
-                              <option value="CHEQUE">Cheque</option>
-                            </select>
-                            <input type="date" name="paidOn" className="input" defaultValue={istDateKey(new Date())} />
+                            <Select
+                              name="mode"
+                              defaultValue={l.paymentMode ?? "CASH"}
+                              ariaLabel="Payment mode"
+                              options={[{ value: "CASH", label: "Cash" }, { value: "BANK", label: "Bank transfer" }, { value: "UPI", label: "UPI" }, { value: "CHEQUE", label: "Cheque" }]}
+                            />
+                            <DateInput name="paidOn" defaultValue={istDateKey(new Date())} />
                             <input name="ref" className="input" placeholder={"Reference (optional)"} defaultValue={l.paymentRef ?? ""} />
                           </ActionForm>
                         </details>
@@ -155,11 +156,8 @@ export default async function PayrollMonth({ params }: PageProps<"/payroll/[mont
           {!locked ? (
             <ActionForm action={addAdjustment} className="grid gap-3 @2xl:grid-cols-5" submitLabel={"Add"} resetOnSuccess>
               <input type="hidden" name="month" value={month} />
-              <select name="employeeId" className="input @2xl:col-span-2" required>
-                <option value="">Choose employee</option>
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.name} ({e.code})</option>)}
-              </select>
-              <select name="kind" className="input"><option value="add">Add (+)</option><option value="deduct">Deduct (−)</option></select>
+              <Select name="employeeId" className="@2xl:col-span-2" defaultValue="" ariaLabel="Employee" options={[{ value: "", label: "Choose employee" }, ...employees.map((e) => ({ value: e.id, label: `${e.name} (${e.code})` }))]} />
+              <Select name="kind" ariaLabel="Add or deduct" options={[{ value: "add", label: "Add (+)" }, { value: "deduct", label: "Deduct (−)" }]} />
               <input name="amount" className="input" placeholder={"Amount ₹"} inputMode="decimal" required />
               <input name="reason" className="input" placeholder={"Reason"} required />
             </ActionForm>

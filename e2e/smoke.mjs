@@ -43,7 +43,13 @@ await page.goto(`${BASE}/employees/new`);
 await page.fill("input[name=name]", "Ramesh Kumar");
 await page.fill("input[name=code]", "E900");
 await page.fill("input[name=phone]", "9123456789");
-await page.fill("input[name=joinedOn]", "2026-10-01");
+// Our date picker: open it, go back to October 2026 and pick the 1st.
+await page.click("input[name=joinedOn] + button");
+while (!(await page.locator("[role=dialog][aria-label='Choose date'] >> text=Oct 2026").count())) {
+  await page.click("[role=dialog][aria-label='Choose date'] button[aria-label='Previous month']");
+}
+await page.click("[role=dialog][aria-label='Choose date'] button:text-is('1')");
+if ((await page.inputValue("input[name=joinedOn]")) !== "2026-10-01") throw new Error("date picker did not set the joining date");
 await page.fill("input[name=wage]", "15000");
 await page.check("input[name=pfEnabled]");
 await page.click("button:has-text('Add employee')");
@@ -125,8 +131,9 @@ await page.waitForURL("**/dashboard");
 await page.goto(`${BASE}/payroll/2026-10`);
 await page.click("button:has-text('Calculate salary')");
 await page.waitForSelector("text=Salary calculated");
-page.once("dialog", (d) => d.accept());
 await page.click("button:has-text('Approve and lock')");
+// Our confirm dialog (not the browser's).
+await page.click("[role=alertdialog] button >> nth=1");
 await page.waitForSelector("[role=status]:has-text('Salary locked')");
 await shot("05-payroll");
 

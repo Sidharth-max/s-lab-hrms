@@ -1,13 +1,15 @@
 import { router, Stack } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Button, Card, Field, H2, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { deviceInfo } from "@/lib/device-info";
 import { C } from "@/lib/theme";
+import { useDialog } from "@/components/dialog";
 
 export default function ScannerSetup() {
+  const dialog = useDialog();
   const { me, scannerMode, enterScanner, leaveScanner, signOut } = useAuth();
   const sites = me?.sites ?? [];
   const [siteId, setSiteId] = useState(sites[0]?.id ?? "");
@@ -26,7 +28,7 @@ export default function ScannerSetup() {
           <Button
             title="Stop using as scanner"
             variant="secondary"
-            onPress={() => Alert.alert("Stop using this device as scanner?", undefined, [{ text: "Cancel" }, { text: "Stop", style: "destructive", onPress: async () => { await leaveScanner(); router.back(); } }])}
+            onPress={async () => { if (await dialog.confirm({ title: "Stop using this device as scanner?", confirmText: "Stop", danger: true })) { await leaveScanner(); router.back(); } }}
           />
         </Card>
       ) : (

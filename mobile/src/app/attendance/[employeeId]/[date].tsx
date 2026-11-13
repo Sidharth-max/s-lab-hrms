@@ -1,12 +1,13 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, Switch, Text, View } from "react-native";
-import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Segmented } from "@/components/ui";
+import { Pressable, RefreshControl, Text, View } from "react-native";
+import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Screen, Segmented, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { TimeField } from "@/components/pickers";
+import { useDialog } from "@/components/dialog";
 
 interface DayDetail {
   employee: { id: string; name: string; code: string };
@@ -29,6 +30,7 @@ const STATUSES = [
 ];
 
 export default function DayScreen() {
+  const dialog = useDialog();
   const { employeeId, date } = useLocalSearchParams<{ employeeId: string; date: string }>();
   const { data, error, refreshing, reload } = useLoad(() => api.get<DayDetail>(`/api/m/attendance/${employeeId}/${date}`), [employeeId, date], ["attendance"]);
   const [type, setType] = useState<"IN" | "OUT">("IN");
@@ -77,7 +79,7 @@ export default function DayScreen() {
               <Text style={{ fontWeight: "600", color: C.text, textDecorationLine: p.voided ? "line-through" : "none" }}>{p.type} · {p.time}</Text>
               {data.editable && !p.voided ? (
                 <Pressable
-                  onPress={() => Alert.alert("Remove this punch?", "It stays in history.", [{ text: "Cancel" }, { text: "Remove", style: "destructive", onPress: () => run("voidPunch", { punchId: p.id }) }])}
+                  onPress={async () => { if (await dialog.confirm({ title: "Remove this punch?", message: "It stays in history.", confirmText: "Remove", danger: true })) void run("voidPunch", { punchId: p.id }); }}
                   hitSlop={8}
                 >
                   <Text style={{ color: C.red, fontWeight: "600" }}>Remove</Text>
@@ -99,7 +101,7 @@ export default function DayScreen() {
             <Segmented options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} value={type} onChange={setType} />
             <TimeField label="Time" value={time} onChange={setTime} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Switch value={nextDay} onValueChange={setNextDay} trackColor={{ true: C.green, false: C.line }} />
+              <Toggle value={nextDay} onValueChange={setNextDay} />
               <Text style={{ color: C.text }}>Time is after midnight (night shift)</Text>
             </View>
             <Field label="Reason" value={reason} onChangeText={setReason} placeholder="e.g. tablet not working" />

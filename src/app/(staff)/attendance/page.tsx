@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
 import { formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
+import { DateInput } from "@/components/controls";
 
 function minsToText(m: number) {
   return m ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : "—";
@@ -33,7 +34,7 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
         <h1 className="h1">{"Attendance"} · {formatDateKey(date)}</h1>
         <div className="flex flex-wrap gap-2">
           <form className="flex gap-2">
-            <input type="date" name="date" defaultValue={date} max={today} className="input" />
+            <DateInput name="date" defaultValue={date} max={today} className="w-44" />
             <button className="btn-secondary">Go</button>
           </form>
           <Link href={`/attendance/register?month=${date.slice(0, 7)}`} className="btn-secondary">Monthly register</Link>

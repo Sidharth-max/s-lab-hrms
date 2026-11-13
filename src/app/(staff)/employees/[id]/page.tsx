@@ -14,6 +14,7 @@ import { can, canSeeSite } from "@/lib/permissions";
 import { siteWhere } from "@/lib/scope";
 import { employeeBalance, outstandingAdvances } from "@/lib/services";
 import { dbToDateKey, formatDateKey, formatMonth, istDateKey, istMonthKey } from "@/lib/time";
+import { DateInput, MonthInput, Select } from "@/components/controls";
 
 export default async function EmployeePage({ params, searchParams }: PageProps<"/employees/[id]">) {
   const actor = await requireStaff();
@@ -92,16 +93,17 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           <ActionForm action={giveAdvance} className="mt-3 grid gap-3 @md:grid-cols-2" submitLabel={"Save advance"} resetOnSuccess>
             <input type="hidden" name="employeeId" value={emp.id} />
             <div><label className="label">Amount (₹)</label><input name="amount" className="input" inputMode="decimal" required /></div>
-            <div><label className="label">Date</label><input name="givenOn" type="date" className="input" defaultValue={istDateKey(new Date())} /></div>
+            <div><label className="label">Date</label><DateInput name="givenOn" defaultValue={istDateKey(new Date())} max={istDateKey(new Date())} /></div>
             <div>
               <label className="label">Recover over</label>
-              <select name="recoveryMonths" className="input" defaultValue="1">
-                <option value="1">Full, this month end</option>
-                {[2, 3, 4, 6].map((n) => <option key={n} value={n}>{`${n} months`}</option>)}
-                <option value="12">12 months (1 year)</option>
-              </select>
+              <Select
+                name="recoveryMonths"
+                defaultValue="1"
+                ariaLabel="Recover over"
+                options={[{ value: "1", label: "Full, this month end" }, ...[2, 3, 4, 6].map((n) => ({ value: String(n), label: `${n} months` })), { value: "12", label: "12 months (1 year)" }]}
+              />
             </div>
-            <div><label className="label">First recovery month</label><input name="startMonth" type="month" className="input" defaultValue={thisMonth} /></div>
+            <div><label className="label">First recovery month</label><MonthInput name="startMonth" defaultValue={thisMonth} /></div>
             <div className="@md:col-span-2"><label className="label">Note (optional)</label><input name="note" className="input" /></div>
           </ActionForm>
         </details>
@@ -193,7 +195,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
         >
           <input type="hidden" name="id" value={emp.id} />
           {emp.active && (
-            <div><label className="label">Last working day</label><input type="date" name="leftOn" className="input" required defaultValue={istDateKey(new Date())} /></div>
+            <div><label className="label">Last working day</label><DateInput name="leftOn" defaultValue={istDateKey(new Date())} /></div>
           )}
         </ActionForm>
       </section>

@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { addMonths, formatMonth, isMonthKey, istMonthKey } from "@/lib/time";
+import { MonthInput } from "@/components/controls";
 
 export default async function PayrollList({ searchParams }: PageProps<"/payroll">) {
   const actor = await requireStaff();
@@ -23,7 +24,7 @@ export default async function PayrollList({ searchParams }: PageProps<"/payroll"
       <div className="flex flex-wrap gap-2">
         {suggestions.map((m) => <Link key={m} href={`/payroll/${m}`} className="btn-primary">{"Prepare"} {formatMonth(m)}</Link>)}
         <form className="flex gap-2">
-          <input type="month" name="month" max={current} className="input" />
+          <MonthInput name="month" defaultValue={current} max={current} className="w-48" />
           <button className="btn-secondary">Open month</button>
         </form>
       </div>
