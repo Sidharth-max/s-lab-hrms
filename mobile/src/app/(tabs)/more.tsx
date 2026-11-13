@@ -2,14 +2,13 @@ import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
-import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type IconType, CalendarCheck } from "@/components/icons";
+import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, LogOut, ScanFace, Settings, Smartphone, UserCog, type IconType, CalendarCheck } from "@/components/icons";
 import { Card, Muted, Screen, Segmented } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { useWide } from "@/lib/layout";
 import { PanePlaceholder, TwoPane } from "@/components/TwoPane";
 import ApprovalsScreen from "../approvals";
 import AdvancesScreen from "../advances";
-import SalaryScreen from "../salary";
 import RegisterScreen from "../register";
 import LeavesScreen from "../leaves";
 import DevicesScreen from "../devices";
@@ -24,7 +23,6 @@ import { useDialog } from "@/components/dialog";
 const PANES: Record<string, React.ComponentType> = {
   "/approvals": ApprovalsScreen,
   "/advances": AdvancesScreen,
-  "/salary": SalaryScreen,
   "/register": RegisterScreen,
   "/leaves": LeavesScreen,
   "/devices": DevicesScreen,
@@ -70,8 +68,6 @@ export default function More() {
         <Item icon={BadgeCheck} label="Approvals" badge={me?.pendingApprovals} onPress={go("/approvals")} />
         <Divider />
         <Item icon={HandCoins} label="Advances" onPress={go("/advances")} />
-        <Divider />
-        <Item icon={IndianRupee} label="Salary" onPress={go("/salary")} />
         <Divider />
         <Item icon={CalendarRange} label="Attendance register" onPress={go("/register")} />
         <Divider />

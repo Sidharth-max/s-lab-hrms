@@ -174,7 +174,7 @@ export default function Scanner() {
               </Pressable>
             ) : null}
             <View style={styles.actions}>
-              <Pressable onPress={() => router.push("/login")} hitSlop={8} style={styles.action} accessibilityRole="button">
+              <Pressable onPress={() => router.replace("/login")} hitSlop={8} style={styles.action} accessibilityRole="button">
                 <LogIn color={"#fff"} size={18} />
                 <Text style={styles.actionText}>Manager / owner login</Text>
               </Pressable>
