@@ -3,6 +3,7 @@ import { addManualPunch, clearDayStatus, markAttendance, setDayStatus, voidPunch
 import { enrollFace, removeFace, setEmployeeLeft, setEmployeeLogin, updateEmployee } from "@/app/actions/employees";
 import { addAdjustment, lockPayrollAction, recalcPayroll, recordPayment, reopenPayrollAction } from "@/app/actions/payroll";
 import { addHoliday, addSite, removeHoliday, renameDevice, revokeDevice, saveManager, toggleManager, toggleSite, updateSettings } from "@/app/actions/admin";
+import { cancelLeave, endLeave, scheduleLeave } from "@/app/actions/leaves";
 import type { ActionResult } from "@/lib/action";
 import { actionResponse, apiError, readJson, staff, toForm } from "@/lib/api";
 
@@ -37,6 +38,9 @@ const ACTIONS: Record<string, (prev: ActionResult, form: FormData) => Promise<Ac
   removeHoliday,
   saveManager,
   toggleManager,
+  scheduleLeave,
+  endLeave,
+  cancelLeave,
 };
 
 export async function POST(req: Request, ctx: RouteContext<"/api/m/action/[name]">) {

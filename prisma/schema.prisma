@@ -146,6 +146,7 @@ model Employee {
   punches       AttendancePunch[]
   dayOverrides  DayOverride[]
   advances      Advance[]
+  leavePlans    LeavePlan[]
   adjustments   Adjustment[]
   payrollLines  PayrollLine[]
 
@@ -240,6 +241,32 @@ model DayOverride {
   employee Employee @relation(fields: [employeeId], references: [id])
 
   @@index([employeeId, workDate])
+}
+
+/// Leave scheduled ahead (e.g. 10 days). Each day in the range counts as leave unless the person
+/// scans in (then the plan ends the day before: "came back early") or a manager sets the day by hand.
+model LeavePlan {
+  id         String      @id @default(cuid())
+  businessId String
+  employeeId String
+  fromDate   DateTime    @db.Date
+  toDate     DateTime    @db.Date
+  paid       Boolean     @default(true) // paid leave or unpaid leave
+  reason     String?
+  status     LeaveStatus @default(ACTIVE)
+  plannedTo  DateTime?   @db.Date // original last day, when they came back early
+  createdBy  String
+  createdAt  DateTime    @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, fromDate])
+  @@index([businessId, toDate])
+}
+
+enum LeaveStatus {
+  ACTIVE
+  CANCELLED
 }
 
 enum AdvanceStatus {

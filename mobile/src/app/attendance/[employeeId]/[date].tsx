@@ -150,7 +150,7 @@ export default function DayScreen() {
             <H2>Set day status</H2>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {STATUSES.map((s) => (
-                <Pressable key={s.value} onPress={() => setStatus(s.value)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: status === s.value ? C.text : C.line, backgroundColor: status === s.value ? C.text : C.white }}>
+                <Pressable key={s.value} onPress={() => setStatus(s.value)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: status === s.value ? C.text : C.line, backgroundColor: status === s.value ? C.text : C.white }}>
                   <Text style={{ color: status === s.value ? C.white : C.text }}>{s.label}</Text>
                 </Pressable>
               ))}

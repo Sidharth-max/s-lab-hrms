@@ -153,6 +153,14 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
       case "approval.otp":
         return r("advance", "Approved an advance with the owner's OTP", approvalById.get(s(l.entityId)) ?? null);
 
+      case "leave.schedule":
+        return r("attendance", `Scheduled ${d.paid ? "paid" : "unpaid"} leave for ${subject}`, join(`${date(d.from)} to ${date(d.to)}`, d.reason ? `Reason: ${s(d.reason)}` : null));
+      case "leave.end":
+        return r("attendance", `Ended the leave of ${subject} early`, `Back on ${date(d.back)} (leave was ${date(d.from)} to ${date(d.plannedTo)})`);
+      case "leave.returned":
+        return r("attendance", `${subject} came back early from leave`, `Scanned in on ${date(d.back)}; leave now ends the day before (was until ${date(d.plannedTo)})`);
+      case "leave.cancel":
+        return r("attendance", `Cancelled the leave of ${subject}`, `${date(d.from)} to ${date(d.to)}`);
       case "payroll.recalculate":
         return r("salary", `Calculated salary for ${month(d.month)}`);
       case "payroll.lock":

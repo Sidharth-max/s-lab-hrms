@@ -120,21 +120,25 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
   );
 }
 
-/** Switch between views on a screen: text tabs with a black underline under the open one. Scrolls if they do not fit. */
+/** Switch between views on a screen: pill chips, the open one filled. Scrolls if they do not fit. */
 export function Tabs<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <View style={{ borderBottomWidth: 1, borderBottomColor: C.line }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 20, paddingRight: 8 }} accessibilityRole="tablist">
-        {options.map((o) => {
-          const active = o.value === value;
-          return (
-            <Pressable key={o.value} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="tab" accessibilityState={{ selected: active }} style={{ paddingTop: 6, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: active ? C.text : "transparent", marginBottom: -1 }}>
-              <Text style={{ fontSize: 14, fontWeight: active ? "600" : "500", color: active ? C.text : C.muted }}>{o.label}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} accessibilityRole="tablist" style={{ flexGrow: 0 }}>
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: active ? C.text : pressed ? "#e9e9e9" : "#f1f1f1" })}
+          >
+            <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.white : C.text }}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }
 
@@ -143,7 +147,7 @@ export function Avatar({ name, size = 40, muted }: { name: string; size?: number
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const text = ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
   return (
-    <View style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), backgroundColor: muted ? C.soft : C.head, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: muted ? C.soft : C.head, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ color: muted ? C.muted : C.white, fontWeight: "700", fontSize: Math.round(size * 0.38) }}>{text}</Text>
     </View>
   );
@@ -170,20 +174,20 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
     >
       <Animated.View
         style={{
-          width: 44,
-          height: 26,
-          borderRadius: 7,
+          width: 50,
+          height: 30,
+          borderRadius: 15,
           padding: 3,
           backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [C.line, C.green] }),
         }}
       >
         <Animated.View
           style={{
-            width: 20,
-            height: 20,
-            borderRadius: 5,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
             backgroundColor: C.white,
-            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) }],
+            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) }],
             shadowColor: "#000",
             shadowOpacity: 0.2,
             shadowRadius: 2,
@@ -212,14 +216,13 @@ export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: st
 
 export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green" | "amber"; dot?: boolean }) {
   const map = {
-    neutral: { bg: C.soft, fg: C.text, border: C.line },
-    red: { bg: C.redSoft, fg: C.red, border: "#fecaca" },
-    green: { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" },
-    amber: { bg: C.amberSoft, fg: C.amber, border: C.amberLine },
+    neutral: { bg: "#f1f1f1", fg: C.text, border: C.line },
+    red: { bg: "#fde8e8", fg: "#b91c1c", border: "#fecaca" },
+    green: { bg: "#dcfce7", fg: "#15803d", border: "#bbf7d0" },
+    amber: { bg: "#fef3c7", fg: "#a16207", border: C.amberLine },
   }[tone];
   return (
-    <View style={[styles.badge, { backgroundColor: map.bg, borderColor: map.border }]}>
-      {dot ? <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: map.fg }} /> : null}
+    <View style={[styles.badge, { backgroundColor: map.bg }]}>
       <Text style={[styles.badgeText, { color: map.fg }]}>{label}</Text>
     </View>
   );
@@ -271,7 +274,7 @@ export const styles = StyleSheet.create({
     bottom: 20,
     width: 58,
     height: 58,
-    borderRadius: 16,
+    borderRadius: 30,
     backgroundColor: C.head,
     alignItems: "center",
     justifyContent: "center",
@@ -284,21 +287,22 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   inner: { flex: 1, gap: 14 },
   padded: { padding: 16, paddingTop: 18 },
-  card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 12, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
+  card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 20, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
   h1: { fontSize: 22, fontWeight: "700", color: C.text, letterSpacing: -0.3 },
   h2: { fontSize: 16, fontWeight: "600", color: C.text, letterSpacing: -0.2 },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
-  button: { minHeight: 46, borderRadius: 10, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  button: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   buttonText: { fontSize: 15, fontWeight: "500" },
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },
-  input: { minHeight: 46, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 10, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
+  input: { minHeight: 48, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 14, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
   // Full width with equal parts, so five tabs still fit on a narrow phone.
-  segment: { flexDirection: "row", gap: 6, alignSelf: "stretch" },
-  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: "#e4e4e4", backgroundColor: C.white, alignItems: "center", justifyContent: "center" },
-  segmentActive: { backgroundColor: C.text, borderColor: C.text },
+  // Pill group: grey pill track, the chosen option a filled charcoal pill.
+  segment: { flexDirection: "row", gap: 2, padding: 4, borderRadius: 999, alignSelf: "stretch", backgroundColor: "#f1f1f1" },
+  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 9, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  segmentActive: { backgroundColor: C.text },
   segmentText: { fontSize: 13, fontWeight: "600", color: C.text },
-  badge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
   badgeText: { fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 4 },
   rowLabel: { fontSize: 14, color: C.muted },

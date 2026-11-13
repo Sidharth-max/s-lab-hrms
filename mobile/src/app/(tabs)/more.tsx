@@ -2,7 +2,7 @@ import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
-import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type IconType } from "@/components/icons";
+import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type IconType, CalendarCheck } from "@/components/icons";
 import { Card, Muted, Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
@@ -46,6 +46,8 @@ export default function More() {
         <Item icon={IndianRupee} label="Salary" onPress={go("/payroll")} />
         <Divider />
         <Item icon={CalendarRange} label="Attendance register" onPress={go("/register")} />
+        <Divider />
+        <Item icon={CalendarCheck} label="Leave" onPress={go("/leaves")} />
       </Card>
       {admin ? (
       <Card style={{ padding: 0, gap: 0 }}>

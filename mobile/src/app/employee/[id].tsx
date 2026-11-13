@@ -7,6 +7,7 @@ import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
 import { GiveAdvanceForm } from "@/components/GiveAdvanceForm";
+import { LeaveSection } from "@/components/LeaveSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
@@ -206,7 +207,13 @@ export default function EmployeeDetail() {
         </>
       ) : null}
 
-      {tab === "attendance" ? <MonthCalendar employeeId={e.id} /> : null}
+      {tab === "attendance" ? (
+        <>
+          <MonthCalendar employeeId={e.id} />
+          <H2>Leave</H2>
+          <LeaveSection employeeId={e.id} active={e.active} />
+        </>
+      ) : null}
 
       {tab === "advance" ? (
         <>

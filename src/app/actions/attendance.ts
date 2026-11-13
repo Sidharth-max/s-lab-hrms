@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { assertStaff } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { endLeaveOnReturn } from "@/lib/leave-return";
 import { canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { addMonths, dateKeyToDb, istDateKey, istDateTime } from "@/lib/time";
@@ -66,6 +67,7 @@ export const addManualPunch = safe(async (_p: ActionResult, form: FormData): Pro
   const p = await db.attendancePunch.create({
     data: { businessId: actor.businessId, employeeId: emp.id, type, at, workDate: dateKeyToDb(date), source: "MANUAL", reason, createdBy: actor.id },
   });
+  if (type === "IN") await endLeaveOnReturn(actor.businessId, emp.id, date, actor.id);
   await audit(actor.businessId, actor.id, "attendance.punch.add", "AttendancePunch", p.id, { employeeId: emp.id, date, type, time, reason });
   revalidatePath("/attendance", "layout");
   return { ok: true, message: "Punch added" };
@@ -111,6 +113,7 @@ export const markAttendance = safe(async (_p: ActionResult, form: FormData): Pro
   await db.attendancePunch.createMany({
     data: rows.map((r) => ({ businessId: actor.businessId, employeeId: emp.id, type: r.type, at: r.at, workDate: dateKeyToDb(date), source: "MANUAL" as const, reason, createdBy: actor.id })),
   });
+  if (inAt) await endLeaveOnReturn(actor.businessId, emp.id, date, actor.id);
   for (const r of rows) {
     await audit(actor.businessId, actor.id, "attendance.punch.add", "AttendancePunch", null, { employeeId: emp.id, date, type: r.type, time: r.type === "IN" ? inTime : outTime, reason });
   }

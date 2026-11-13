@@ -234,9 +234,9 @@ const styles = StyleSheet.create({
   oval: { alignSelf: "center", width: "60%", aspectRatio: 3 / 4, borderRadius: 1000, borderWidth: 3, borderColor: "rgba(255,255,255,0.7)" },
   footer: { alignItems: "center", gap: 8, padding: 20, backgroundColor: "rgba(0,0,0,0.6)" },
   big: { color: C.white, fontSize: 22, fontWeight: "600", textAlign: "center" },
-  pill: { color: C.white, borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
+  pill: { color: C.white, borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
   result: { alignItems: "center", justifyContent: "center", padding: 24 },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 },
-  action: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
+  action: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
   actionText: { color: C.white, fontWeight: "600", fontSize: 14 },
 });

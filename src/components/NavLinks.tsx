@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   BadgeCheck,
+  CalendarCheck,
   CalendarDays,
   HandCoins,
   History,
@@ -25,6 +26,7 @@ export const ICONS = {
   attendance: CalendarDays,
   salary: IndianRupee,
   advances: HandCoins,
+  leave: CalendarCheck,
   approvals: BadgeCheck,
   devices: Smartphone,
   managers: UserCog,

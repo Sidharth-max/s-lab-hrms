@@ -66,7 +66,7 @@ export default function HistoryScreen() {
           const Icon = ICON[i.area] ?? Settings;
           return (
             <View style={{ flexDirection: "row", gap: 12, backgroundColor: C.white, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
-              <View style={{ width: 32, height: 32, borderRadius: 8, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" }}>
                 <Icon size={16} color={C.text} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>

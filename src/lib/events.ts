@@ -28,6 +28,7 @@ export function subscribe(businessId: string, fn: (e: LiveEvent) => void): () =>
 export function kindOf(action: string): string {
   const head = action.split(".")[0];
   if (head === "face" || head === "employee") return "employee";
+  if (head === "leave") return "attendance";
   if (head === "site" || head === "holiday" || head === "settings" || head === "manager") return "settings";
   return head;
 }

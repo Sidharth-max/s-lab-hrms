@@ -16,7 +16,7 @@ function SitePicker({ sites, value, onChange }: { sites: { id: string; name: str
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {sites.map((s) => (
-        <Pressable key={s.id} onPress={() => onChange(s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: value === s.id ? C.text : C.line, backgroundColor: value === s.id ? C.text : C.white }}>
+        <Pressable key={s.id} onPress={() => onChange(s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: value === s.id ? C.text : C.line, backgroundColor: value === s.id ? C.text : C.white }}>
           <Text style={{ color: value === s.id ? C.white : C.text }}>{s.name}</Text>
         </Pressable>
       ))}

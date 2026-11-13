@@ -67,7 +67,7 @@ export function EmployeeForm({
         <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {sites.map((s) => (
-            <Pressable key={s.id} onPress={() => set("siteId", s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: v.siteId === s.id ? C.text : C.line, backgroundColor: v.siteId === s.id ? C.text : C.white }}>
+            <Pressable key={s.id} onPress={() => set("siteId", s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: v.siteId === s.id ? C.text : C.line, backgroundColor: v.siteId === s.id ? C.text : C.white }}>
               <Text style={{ color: v.siteId === s.id ? C.white : C.text, fontWeight: "500" }}>{s.name}</Text>
             </Pressable>
           ))}
@@ -121,7 +121,7 @@ export function EmployeeForm({
             {DAYS.map((d, i) => {
               const on = v.weeklyOffDays.includes(i);
               return (
-                <Pressable key={d} onPress={() => set("weeklyOffDays", on ? v.weeklyOffDays.filter((x) => x !== i) : [...v.weeklyOffDays, i])} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
+                <Pressable key={d} onPress={() => set("weeklyOffDays", on ? v.weeklyOffDays.filter((x) => x !== i) : [...v.weeklyOffDays, i])} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
                   <Text style={{ color: on ? C.white : C.text }}>{d}</Text>
                 </Pressable>
               );

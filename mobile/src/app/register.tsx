@@ -42,7 +42,7 @@ export default function Register() {
             <MonthField value={data.month} onChange={setMonth} max={data.current} />
             <Tabs options={[{ value: "active", label: "Active" }, { value: "all", label: "All" }, { value: "archived", label: "Archived" }]} value={show} onChange={setShow} />
             {data.rows.length > 4 ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 10, backgroundColor: C.white, paddingHorizontal: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 999, backgroundColor: C.white, paddingHorizontal: 12 }}>
                 <Search size={18} color={C.muted} />
                 <TextInput value={q} onChangeText={setQ} placeholder="Search employee…" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
               </View>

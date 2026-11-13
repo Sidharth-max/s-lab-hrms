@@ -106,7 +106,7 @@ export default function PayrollMonth() {
             <>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {data.employees.map((e) => (
-                  <Pressable key={e.id} onPress={() => setAdjEmp(e.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: adjEmp === e.id ? C.text : C.line, backgroundColor: adjEmp === e.id ? C.text : C.white }}>
+                  <Pressable key={e.id} onPress={() => setAdjEmp(e.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: adjEmp === e.id ? C.text : C.line, backgroundColor: adjEmp === e.id ? C.text : C.white }}>
                     <Text style={{ color: adjEmp === e.id ? C.white : C.text }}>{e.name}</Text>
                   </Pressable>
                 ))}

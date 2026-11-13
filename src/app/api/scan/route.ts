@@ -1,3 +1,4 @@
+import { endLeaveOnReturn } from "@/lib/leave-return";
 import { NextResponse } from "next/server";
 import { getDevice } from "@/lib/auth";
 import { nextPunch } from "@/lib/attendance";
@@ -120,10 +121,14 @@ export async function POST(req: Request) {
         liveness,
       },
     });
-    return { duplicate: false as const, type: p.type, at: p.at };
+    return { duplicate: false as const, type: p.type, at: p.at, workDate: decision.workDate };
   });
 
-  if (!result.duplicate) publish(device.businessId, "attendance");
+  if (!result.duplicate) {
+    // Back during a scheduled leave: the leave ends the day before (counted as present today).
+    if (result.type === "IN") await endLeaveOnReturn(device.businessId, employee.id, result.workDate, null).catch((e) => console.error("Leave end failed", e));
+    publish(device.businessId, "attendance");
+  }
   const time = formatIstTime(result.at);
   const first = employee.name.split(" ")[0];
   const speech = result.duplicate

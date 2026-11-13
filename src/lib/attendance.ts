@@ -53,6 +53,7 @@ export function deriveDay(
   override: OverrideInput | undefined,
   rules: DayRules,
   ctx: { today: string; joinedOn: string; leftOn: string | null; inHouse?: boolean },
+  leave?: "PAID_LEAVE" | "UNPAID_LEAVE",
 ): DayResult {
   const offDay = rules.holidays.has(date) || rules.weeklyOffDays.includes(weekday(date));
   const sorted = punches.filter((p) => p.workDate === date).sort((a, b) => a.at.getTime() - b.at.getTime());
@@ -81,26 +82,23 @@ export function deriveDay(
   }
   if (override && override.status !== "AUTO") return { ...base, status: override.status, overridden: true };
 
-  if (ctx.inHouse) {
-    // In-house: always a full day on working days, scanned or not. Scans are kept only to show times.
-    if (firstIn) return { ...base, status: "PRESENT", overridden: false };
-    if (date > ctx.today) return { ...base, status: "FUTURE", overridden: false };
-    if (rules.holidays.has(date)) return { ...base, status: "HOLIDAY", overridden: false };
-    if (rules.weeklyOffDays.includes(weekday(date))) return { ...base, status: "WEEKLY_OFF", overridden: false };
-    return { ...base, status: "PRESENT", overridden: false, auto: true };
-  }
-
+  const dayRule = rules.byWeekday?.[weekday(date)];
   if (firstIn) {
-    // A missing OUT punch still counts as present; it is flagged for the manager to fix.
-    // Short days (e.g. Sunday) can be set so that any scan is a full day.
-    const dayRule = rules.byWeekday?.[weekday(date)];
+    // In-house staff: any scan is a full day. Others: a missing OUT still counts as present (flagged
+    // for the manager); short days (e.g. Sunday) can be set so that any scan is a full day.
+    if (ctx.inHouse) return { ...base, status: "PRESENT", overridden: false };
     const halfBelow = dayRule ? dayRule.halfDayBelowMins : rules.halfDayBelowMins;
     const half = !dayRule?.anyScanFullDay && !missingOut && halfBelow > 0 && workedMins < halfBelow;
     return { ...base, status: half ? "HALF_DAY" : "PRESENT", overridden: false };
   }
+  const offDayToday = rules.holidays.has(date) || rules.weeklyOffDays.includes(weekday(date));
+  // Scheduled leave (also shown for future days). Weekly offs and holidays inside it stay off days.
+  if (leave && !offDayToday) return { ...base, status: leave, overridden: false };
   if (date > ctx.today) return { ...base, status: "FUTURE", overridden: false };
   if (rules.holidays.has(date)) return { ...base, status: "HOLIDAY", overridden: false };
   if (rules.weeklyOffDays.includes(weekday(date))) return { ...base, status: "WEEKLY_OFF", overridden: false };
+  // In-house: present automatically on working days without scanning.
+  if (ctx.inHouse) return { ...base, status: "PRESENT", overridden: false, auto: true };
   return { ...base, status: "ABSENT", overridden: false };
 }
 
@@ -120,9 +118,11 @@ export function deriveMonth(
   overrides: OverrideInput[],
   rules: DayRules,
   ctx: { today: string; joinedOn: string; leftOn: string | null; inHouse?: boolean },
+  /** Scheduled leave by date (from leave plans). */
+  leaves?: Map<string, "PAID_LEAVE" | "UNPAID_LEAVE">,
 ): DayResult[] {
   const latest = latestOverrides(overrides);
-  return monthDates(month).map((d) => deriveDay(d, punches, latest.get(d), rules, ctx));
+  return monthDates(month).map((d) => deriveDay(d, punches, latest.get(d), rules, ctx, leaves?.get(d)));
 }
 
 export interface DayCounts {

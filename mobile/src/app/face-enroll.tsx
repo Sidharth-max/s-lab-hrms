@@ -56,7 +56,7 @@ export default function FaceEnroll() {
       {photos.length ? (
         <View style={{ flexDirection: "row", gap: 8, justifyContent: "center" }}>
           {photos.map((p, i) => (
-            <Image key={i} source={{ uri: p }} style={{ width: 72, aspectRatio: 3 / 4, borderRadius: 8, backgroundColor: C.line }} />
+            <Image key={i} source={{ uri: p }} style={{ width: 72, aspectRatio: 3 / 4, borderRadius: 14, backgroundColor: C.line }} />
           ))}
         </View>
       ) : null}

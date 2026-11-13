@@ -32,7 +32,7 @@ function ManagerForm({ team, m, onSave, busy }: { team: Team; m?: Manager; onSav
       <Field label="Mobile (used to log in)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Can do</Text>
       {(team.groups ?? [{ title: "", items: team.permissions }]).map((g) => (
-        <View key={g.title} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 10, padding: 12, gap: 10 }}>
+        <View key={g.title} style={{ borderWidth: 1, borderColor: C.line, borderRadius: 16, padding: 12, gap: 10 }}>
           {g.title ? <Text style={{ fontSize: 12, fontWeight: "600", color: C.muted, letterSpacing: 0.4 }}>{g.title.toUpperCase()}</Text> : null}
           {g.items.map((p) => (
             <View key={p.key} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -47,7 +47,7 @@ function ManagerForm({ team, m, onSave, busy }: { team: Team; m?: Manager; onSav
         {team.sites.map((s) => {
           const on = sites.includes(s.id);
           return (
-            <Pressable key={s.id} onPress={() => setSites((x) => toggle(x, s.id))} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
+            <Pressable key={s.id} onPress={() => setSites((x) => toggle(x, s.id))} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: on ? C.text : C.line, backgroundColor: on ? C.text : C.white }}>
               <Text style={{ color: on ? C.white : C.text }}>{s.name}</Text>
             </Pressable>
           );

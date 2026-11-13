@@ -75,6 +75,25 @@ describe("attendance", () => {
     expect(days[10].status).toBe("FUTURE"); // 11 Nov is after "today"
   });
 
+  it("scheduled leave marks working days; a scan or a manual status wins; offs stay off", () => {
+    const leaves = new Map<string, "PAID_LEAVE" | "UNPAID_LEAVE">();
+    for (let d = 1; d <= 10; d++) leaves.set(`2026-11-${String(d).padStart(2, "0")}`, "PAID_LEAVE");
+    const days = deriveMonth(
+      "2026-11",
+      [punch("IN", "2026-11-05", "09:00"), punch("OUT", "2026-11-05", "18:00")],
+      [{ workDate: "2026-11-06", status: "ABSENT", createdAt: new Date("2026-11-06T10:00:00Z") }],
+      noRules,
+      { ...ctx, today: "2026-11-03" },
+      leaves,
+    );
+    expect(days[0].status).toBe("WEEKLY_OFF"); // Sunday 1 Nov inside the leave stays off
+    expect(days[1].status).toBe("PAID_LEAVE"); // 2 Nov
+    expect(days[4].status).toBe("PRESENT"); // 5 Nov: came back and scanned
+    expect(days[5].status).toBe("ABSENT"); // 6 Nov: manager set absent
+    expect(days[8].status).toBe("PAID_LEAVE"); // 9 Nov is in the future but planned leave shows
+    expect(days[11].status).toBe("FUTURE"); // 12 Nov: after the leave
+  });
+
   it("counts a missing OUT as present but flags it", () => {
     const days = deriveMonth("2026-11", [punch("IN", "2026-11-04", "09:00")], [], noRules, ctx);
     expect(days[3].status).toBe("PRESENT");

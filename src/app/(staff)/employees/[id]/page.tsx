@@ -14,6 +14,8 @@ import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { employeeBalance, outstandingAdvances, todayStatus } from "@/lib/services";
+import { listLeaves } from "@/lib/leaves";
+import { LeavePanel } from "@/components/LeavePanel";
 import { dbToDateKey, formatDateKey, formatMonth, istDateKey, istMonthKey } from "@/lib/time";
 import { DateInput, MonthInput, Select } from "@/components/controls";
 
@@ -23,12 +25,13 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
-  const [advances, pendingAdvances, balance, lines, today] = await Promise.all([
+  const [advances, pendingAdvances, balance, lines, today, leaves] = await Promise.all([
     outstandingAdvances(emp.id),
     db.advance.findMany({ where: { employeeId: emp.id, status: "PENDING_APPROVAL" } }),
     employeeBalance(emp),
     db.payrollLine.findMany({ where: { employeeId: emp.id }, include: { run: true }, orderBy: { run: { month: "desc" } }, take: 12 }),
     emp.active ? todayStatus(emp) : Promise.resolve(null),
+    listLeaves(actor, { employeeId: emp.id }),
   ]);
   const manage = can(actor, "employees.manage");
   const thisMonth = istMonthKey(new Date());
@@ -207,6 +210,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     { id: "face", label: "Face", content: face },
     { id: "advance", label: "Advance", content: advance },
     { id: "salary", label: "Salary", content: salary },
+    { id: "leave", label: "Leave", content: <LeavePanel rows={leaves} employeeId={emp.id} canEdit={can(actor, "attendance.edit") && emp.active} /> },
     ...(account ? [{ id: "account", label: "Access & archive", content: account }] : []),
   ];
 
@@ -224,7 +228,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
                 {emp.inHouse && <span className="badge badge-neutral">In-house</span>}
                 {today && (
                   <span className={statusBadgeClass(today.status)}>
-                    <span className="h-1.5 w-1.5 rounded-[2px] bg-current" />Today: {today.label}
+                    Today: {today.label}
                   </span>
                 )}
               </div>

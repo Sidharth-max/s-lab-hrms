@@ -90,7 +90,7 @@ export function DatePickerSheet({ visible, value, onChange, onClose, min, max, t
                   onPress={() => pick(d)}
                   accessibilityLabel={dateLabel(d)}
                   style={({ pressed }) => [
-                    { flex: 1, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+                    { flex: 1, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
                     sel ? { backgroundColor: C.head } : d === today ? { borderWidth: 1, borderColor: C.text } : null,
                     pressed && !sel && { backgroundColor: C.soft },
                   ]}
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   boxText: { flex: 1, fontSize: 15, color: C.text },
-  nav: { width: 36, height: 36, borderRadius: 8, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
+  nav: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { width: "22%", flexGrow: 1, height: 40, borderRadius: R.md, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center", backgroundColor: C.white },
   chipText: { fontSize: 15, fontWeight: "600", color: C.text },

@@ -142,6 +142,36 @@ check(r.data.punches.filter((p) => p.source === "MANUAL").map((p) => p.type).joi
 r = await call("GET", "/api/m/attendance?show=archived");
 check(r.data.show === "archived" && !r.data.rows.some((x) => x.employeeId === houseId), "archived filter should not list active staff");
 
+step("leave schedule: on leave, came back early, end early, overlap refused");
+const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
+r = await call("POST", "/api/m/employees", { name: "Leave Person", siteId, joinedOn: "2026-10-01", wageType: "MONTHLY", wage: "9000" });
+const leaveEmp = r.data.data.id;
+r = await call("POST", "/api/m/action/scheduleLeave", { employeeId: leaveEmp, fromDate: today, toDate: addDays(today, 9), paid: "1", reason: "api test" });
+check(r.data.ok, "schedule leave failed: " + JSON.stringify(r.data));
+r = await call("POST", "/api/m/action/scheduleLeave", { employeeId: leaveEmp, fromDate: addDays(today, 3), toDate: addDays(today, 4) });
+check(r.status === 400 && /Overlaps/.test(r.data.error), "overlapping leave must be refused: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/attendance?date=${today}`);
+const onLeave = r.data.rows.find((x) => x.employeeId === leaveEmp);
+if (onLeave && onLeave.status !== "WEEKLY_OFF" && onLeave.status !== "HOLIDAY") check(onLeave.status === "PAID_LEAVE", "should be on leave today: " + JSON.stringify(onLeave));
+r = await call("GET", `/api/m/leaves?employeeId=${leaveEmp}`);
+check(r.data.leaves.length === 1 && r.data.leaves[0].state === "on_leave", "leave list wrong: " + JSON.stringify(r.data.leaves));
+// Comes back on the first day: marking attendance ends (cancels) the leave.
+r = await call("POST", "/api/m/action/markAttendance", { employeeId: leaveEmp, date: today, inTime: "00:05" });
+check(r.data.ok, "mark attendance failed: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/leaves?employeeId=${leaveEmp}`);
+check(r.data.leaves[0].status === "CANCELLED" && r.data.leaves[0].plannedTo === addDays(today, 9), "came back on day 1 should end the leave: " + JSON.stringify(r.data.leaves[0]));
+// A future leave ended early by hand.
+r = await call("POST", "/api/m/action/scheduleLeave", { employeeId: leaveEmp, fromDate: addDays(today, 1), toDate: addDays(today, 10), paid: "0" });
+check(r.data.ok, "second leave failed: " + JSON.stringify(r.data));
+const leave2 = r.data.data.id;
+r = await call("POST", "/api/m/action/endLeave", { leaveId: leave2, returnDate: addDays(today, 5) });
+check(r.data.ok, "end leave failed: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/leaves?employeeId=${leaveEmp}`);
+const l2 = r.data.leaves.find((x) => x.id === leave2);
+check(l2.to === addDays(today, 4) && l2.days === 4 && !l2.paid, "leave should end the day before the return: " + JSON.stringify(l2));
+r = await call("POST", "/api/m/action/cancelLeave", { leaveId: leave2 });
+check(r.data.ok, "cancel leave failed: " + JSON.stringify(r.data));
+
 step("advance and salary");
 r = await call("POST", "/api/m/action/giveAdvance", { employeeId: empId, amount: "100", recoveryMonths: "1" });
 check(r.data.ok, "advance failed: " + JSON.stringify(r.data));

@@ -37,7 +37,7 @@ export default function Employees() {
       contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
       ListHeaderComponent={
         <View style={{ gap: 10, marginBottom: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 8, backgroundColor: C.white, paddingHorizontal: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 999, backgroundColor: C.white, paddingHorizontal: 12 }}>
             <Search size={18} color={C.muted} />
             <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or mobile…" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
           </View>

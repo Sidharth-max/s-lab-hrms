@@ -43,9 +43,10 @@ export async function monthAttendance(
   const { business, rules } = await businessRules(businessId, month, tx);
   const { start, end } = monthRange(month);
   const ids = employees.map((e) => e.id);
-  const [punches, overrides] = await Promise.all([
+  const [punches, overrides, plans] = await Promise.all([
     tx.attendancePunch.findMany({ where: { employeeId: { in: ids }, workDate: { gte: start, lte: end }, voidedAt: null } }),
     tx.dayOverride.findMany({ where: { employeeId: { in: ids }, workDate: { gte: start, lte: end } } }),
+    tx.leavePlan.findMany({ where: { employeeId: { in: ids }, status: "ACTIVE", fromDate: { lte: end }, toDate: { gte: start } } }),
   ]);
   const today = istDateKey(new Date());
   const days = new Map<string, DayResult[]>();
@@ -58,10 +59,22 @@ export async function monthAttendance(
         overrides.filter((o) => o.employeeId === e.id).map((o) => ({ workDate: dbToDateKey(o.workDate), status: o.status, createdAt: o.createdAt })),
         { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e) },
         { today, joinedOn: dbToDateKey(e.joinedOn), leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null, inHouse: e.inHouse },
+        leaveDays(plans.filter((p) => p.employeeId === e.id)),
       ),
     );
   }
   return { business, days };
+}
+
+/** Date -> leave type for a set of leave plans. */
+export function leaveDays(plans: { fromDate: Date; toDate: Date; paid: boolean }[]) {
+  const map = new Map<string, "PAID_LEAVE" | "UNPAID_LEAVE">();
+  for (const p of plans) {
+    for (let t = p.fromDate.getTime(); t <= p.toDate.getTime(); t += 86400000) {
+      map.set(dbToDateKey(new Date(t)), p.paid ? "PAID_LEAVE" : "UNPAID_LEAVE");
+    }
+  }
+  return map;
 }
 
 /** Amount of each advance already recovered in LOCKED salary months. */

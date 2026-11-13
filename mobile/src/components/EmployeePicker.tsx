@@ -23,7 +23,7 @@ export function EmployeePicker({ label = "Employee", employees, value, onChange 
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${chosen ? chosen.name : "choose"}`}
-        style={({ pressed }) => ({ minHeight: 46, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 10, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: pressed ? C.soft : C.white })}
+        style={({ pressed }) => ({ minHeight: 48, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 14, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: pressed ? C.soft : C.white })}
       >
         {chosen ? <Avatar name={chosen.name} size={26} /> : null}
         <Text style={{ flex: 1, fontSize: 15, color: chosen ? C.text : "#a3a3a3" }} numberOfLines={1}>{chosen ? `${chosen.name} (${chosen.code})` : "Choose employee…"}</Text>
@@ -35,7 +35,7 @@ export function EmployeePicker({ label = "Employee", employees, value, onChange 
             <Pressable onPress={() => {}} style={{ backgroundColor: C.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 24, gap: 12, maxHeight: "80%" }}>
               <View style={{ alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: C.line }} />
               <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>Choose employee</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 10, paddingHorizontal: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 999, paddingHorizontal: 12 }}>
                 <MagnifyingGlass size={18} color={C.muted} />
                 <TextInput value={q} onChangeText={setQ} placeholder="Search name or code…" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
               </View>
@@ -47,7 +47,7 @@ export function EmployeePicker({ label = "Employee", employees, value, onChange 
                 renderItem={({ item: e }) => (
                   <Pressable
                     onPress={() => { onChange(e.id); setOpen(false); setQ(""); }}
-                    style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 8, backgroundColor: e.id === value ? C.soft : pressed ? C.soft : "transparent" })}
+                    style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 14, backgroundColor: e.id === value ? C.soft : pressed ? C.soft : "transparent" })}
                   >
                     <Avatar name={e.name} size={32} />
                     <View style={{ flex: 1 }}>

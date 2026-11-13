@@ -39,7 +39,7 @@ export default function ScannerSetup() {
           <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {sites.map((s) => (
-              <Pressable key={s.id} onPress={() => setSiteId(s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: siteId === s.id ? C.text : C.line, backgroundColor: siteId === s.id ? C.text : C.white }}>
+              <Pressable key={s.id} onPress={() => setSiteId(s.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: siteId === s.id ? C.text : C.line, backgroundColor: siteId === s.id ? C.text : C.white }}>
                 <Text style={{ color: siteId === s.id ? C.white : C.text }}>{s.name}</Text>
               </Pressable>
             ))}
