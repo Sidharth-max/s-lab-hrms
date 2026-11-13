@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Keyboard, Pressable, View } from "react-native";
+import { Keyboard, Pressable, useWindowDimensions, View } from "react-native";
 import Animated, { FadeIn, LinearTransition, ReduceMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ComponentProps } from "react";
@@ -53,6 +53,9 @@ function Dot({ n }: { n?: number }) {
  */
 export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: BottomTabBarProps & { rail: boolean }) {
   const insets = useSafeAreaInsets();
+  // The active tab's label only fits beside the Search button from about 480 dp; narrower phones
+  // (and the closed Fold cover screen) show the highlighted icon, so the More button is never covered.
+  const showLabel = useWindowDimensions().width >= 480;
   const overlay = useOverlay();
   const { me } = useAuth();
   const keyboard = useKeyboardOpen();
@@ -100,18 +103,18 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
   if (keyboard) return null;
   return (
     <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: Math.max(insets.bottom, 10) + 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-      <View style={{ flex: 1, maxWidth: 460, height: 64, borderRadius: 32, backgroundColor: C.card, borderWidth: 1, borderColor: C.hairline, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, ...shadow(3) }}>
+      <View style={{ flex: 1, minWidth: 0, maxWidth: 460, height: 64, borderRadius: 32, backgroundColor: C.card, borderWidth: 1, borderColor: C.hairline, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, ...shadow(3) }}>
         {items.map(({ route, focused, t, Icon }) => (
-          <Animated.View key={route.key} layout={LAYOUT} style={{ flexGrow: focused ? 1 : 0, maxWidth: focused ? 170 : 52 }}>
+          <Animated.View key={route.key} layout={LAYOUT} style={{ flexGrow: focused ? 1 : 0, flexShrink: 1, minWidth: 40, maxWidth: focused ? 170 : 52 }}>
             <Pressable
               onPress={() => press(route.key, focused)}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={t.label}
-              style={{ height: 52, minWidth: 52, borderRadius: 26, paddingHorizontal: focused ? 16 : 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: focused ? C.brandSoft : "transparent" }}
+              style={{ height: 52, minWidth: 40, borderRadius: 26, paddingHorizontal: focused && showLabel ? 16 : 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: focused ? C.brandSoft : "transparent" }}
             >
               <Icon size={23} color={focused ? C.brandInk : C.muted} />
-              {focused ? (
+              {focused && showLabel ? (
                 <Animated.Text entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)} numberOfLines={1} style={{ fontFamily: "Geist_600SemiBold", fontSize: 14, color: C.brandInk }}>
                   {t.label}
                 </Animated.Text>
@@ -119,7 +122,7 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
             </Pressable>
           </Animated.View>
         ))}
-        <Pressable onPress={() => { haptic.select(); openMore(); }} accessibilityRole="button" accessibilityLabel={me?.pendingApprovals ? `More, ${me.pendingApprovals} waiting for approval` : "More"} style={{ height: 52, width: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: overlay === "more" ? C.brandSoft : "transparent" }}>
+        <Pressable onPress={() => { haptic.select(); openMore(); }} accessibilityRole="button" accessibilityLabel={me?.pendingApprovals ? `More, ${me.pendingApprovals} waiting for approval` : "More"} style={{ height: 52, width: 52, minWidth: 40, flexShrink: 1, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: overlay === "more" ? C.brandSoft : "transparent" }}>
           <View>
             <Grid size={23} color={overlay === "more" ? C.brandInk : C.muted} />
             <Dot n={me?.pendingApprovals} />

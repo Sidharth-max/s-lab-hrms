@@ -1,6 +1,6 @@
 import { router, type Href } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
+import { useWindowDimensions, View } from "react-native";
 import { Text } from "./Text";
 import { BadgeCheck, Beach, CalendarRange, Coins, Download, History, LogOut, ScanFace, Settings, Smartphone, UserCog, type IconType } from "./icons";
 import { Sheet } from "./Sheet";
@@ -12,9 +12,9 @@ import { checkForUpdate, installedVersion, startUpdate, useAppUpdate } from "@/l
 import { closeOverlay, useOverlay } from "@/lib/moreSheet";
 import { PressScale } from "@/lib/motion";
 
-function Tile({ icon: Icon, label, ink, badge, onPress }: { icon: IconType; label: string; ink: Ink; badge?: number; onPress: () => void }) {
+function Tile({ icon: Icon, label, ink, badge, onPress, minWidth }: { icon: IconType; label: string; ink: Ink; badge?: number; onPress: () => void; minWidth: `${number}%` }) {
   return (
-    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={badge ? `${label}, ${badge} waiting` : label} style={{ flex: 1, minWidth: "30%", backgroundColor: C.soft, borderRadius: 20, padding: 14, gap: 10, minHeight: 96 }}>
+    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={badge ? `${label}, ${badge} waiting` : label} style={{ flex: 1, minWidth, backgroundColor: C.soft, borderRadius: 20, padding: 14, gap: 10, minHeight: 96 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
         <View style={{ width: 38, height: 38, borderRadius: 14, backgroundColor: C.tint[ink], alignItems: "center", justifyContent: "center" }}>
           <Icon size={21} color={C.ink[ink]} />
@@ -59,13 +59,16 @@ export function MoreSheet() {
     { icon: History, label: "History", ink: "violet", href: "/history", show: isOwner },
   ];
   const shown = tiles.filter((t) => t.show);
+  // Three tiles per row; two on narrow screens (closed Fold cover) so labels like "Approvals" do not break mid-word.
+  const cols = useWindowDimensions().width < 380 ? 2 : 3;
+  const minWidth = cols === 2 ? "45%" : "30%";
 
   return (
     <Sheet visible={overlay === "more"} onClose={closeOverlay} title="More">
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-        {shown.map((t) => <Tile key={String(t.href)} icon={t.icon} label={t.label} ink={t.ink} badge={t.badge} onPress={go(t.href)} />)}
+        {shown.map((t) => <Tile key={String(t.href)} icon={t.icon} label={t.label} ink={t.ink} badge={t.badge} onPress={go(t.href)} minWidth={minWidth} />)}
         {/* Fill the last row so tiles keep the same width. */}
-        {Array.from({ length: (3 - (shown.length % 3)) % 3 }, (_, i) => <View key={`pad${i}`} style={{ flex: 1, minWidth: "30%" }} />)}
+        {Array.from({ length: (cols - (shown.length % cols)) % cols }, (_, i) => <View key={`pad${i}`} style={{ flex: 1, minWidth }} />)}
       </View>
 
       <View style={{ backgroundColor: C.soft, borderRadius: 20, padding: 14, gap: 10 }}>

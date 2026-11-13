@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   Easing,
   FadeInDown,
@@ -33,9 +33,11 @@ export function PressScale({
 }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle>; scaleTo?: number; haptics?: boolean; children: React.ReactNode }) {
   const s = useSharedValue(1);
   const a = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+  const { outer, inner } = splitLayout(style);
   return (
     <Pressable
       {...rest}
+      style={outer}
       onPressIn={(e) => {
         s.set(withSpring(scaleTo, SPRING));
         rest.onPressIn?.(e);
@@ -49,9 +51,32 @@ export function PressScale({
         onPress?.(e);
       }}
     >
-      <Animated.View style={[style, a]}>{children}</Animated.View>
+      <Animated.View style={[inner, a]}>{children}</Animated.View>
     </Pressable>
   );
+}
+
+/**
+ * Keys that size or place the button among its siblings. They must sit on the outer Pressable:
+ * on the inner view, `flex: 1` / `minWidth: "30%"` had no sized parent to fill, so rows of
+ * buttons collapsed (uneven More tiles; on Android the Download / Log out buttons became tall,
+ * zero-width pillars with the text wrapped one letter per line).
+ */
+const OUTER_KEYS = new Set<string>([
+  "flex", "flexGrow", "flexShrink", "flexBasis", "alignSelf",
+  "width", "minWidth", "maxWidth",
+  "margin", "marginHorizontal", "marginVertical", "marginTop", "marginBottom", "marginLeft", "marginRight", "marginStart", "marginEnd",
+  "position", "top", "bottom", "left", "right", "start", "end", "zIndex",
+]);
+
+function splitLayout(style: StyleProp<ViewStyle>): { outer: ViewStyle | undefined; inner: ViewStyle } {
+  const flat = (StyleSheet.flatten(style) ?? {}) as Record<string, unknown>;
+  const outer: Record<string, unknown> = {};
+  const inner: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(flat)) (OUTER_KEYS.has(k) ? outer : inner)[k] = v;
+  if (!Object.keys(outer).length) return { outer: undefined, inner: inner as ViewStyle };
+  // The visible box fills the outer Pressable (its width by stretch, its height here), so tiles in a row stay equal.
+  return { outer: outer as ViewStyle, inner: { flexGrow: 1, ...inner } as ViewStyle };
 }
 
 /** List rows slide up and fade in, one after another (first few only, so long lists stay fast). */
