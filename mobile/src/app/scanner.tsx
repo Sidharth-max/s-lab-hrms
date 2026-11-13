@@ -1,15 +1,18 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useKeepAwake } from "expo-keep-awake";
-import { router } from "expo-router";
+import { router, useIsFocused } from "expo-router";
 import * as Speech from "expo-speech";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CircleCheck, CircleX, ScanFace } from "lucide-react-native";
+import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "lucide-react-native";
 import { Button } from "@/components/ui";
 import { api, type ScanConfig } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCameraSession } from "@/lib/camera";
 import { capture } from "@/lib/photo";
+import { useAppUpdate } from "@/lib/update";
 import { C } from "@/lib/theme";
 
 type Result = { ok: boolean; title: string; detail?: string };
@@ -28,7 +31,11 @@ export default function Scanner() {
   const { scannerMode, leaveScanner } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
-  const [ready, setReady] = useState(false);
+  const camera = useCameraSession();
+  // Light status bar icons on the black screen; the login page on top gets the normal dark icons back.
+  const focused = useIsFocused();
+  const ready = camera.ready;
+  const update = useAppUpdate();
   const [config, setConfig] = useState<ScanConfig | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -120,10 +127,11 @@ export default function Scanner() {
     }
   }, [busy, result, picking, config, ready, send, show]);
 
-  if (!permission) return <View style={styles.black} />;
+  if (!permission) return <View style={styles.black}>{focused ? <StatusBar style="light" /> : null}</View>;
   if (!permission.granted) {
     return (
       <SafeAreaView style={[styles.black, { justifyContent: "center", padding: 24, gap: 16 }]}>
+        {focused ? <StatusBar style="light" /> : null}
         <Text style={styles.big}>Camera permission needed</Text>
         <Button title="Allow camera" variant="secondary" onPress={requestPermission} />
       </SafeAreaView>
@@ -132,7 +140,10 @@ export default function Scanner() {
 
   return (
     <View style={styles.black}>
-      <CameraView ref={cam} style={StyleSheet.absoluteFill} facing="front" mirror onCameraReady={() => setReady(true)} />
+      {focused ? <StatusBar style="light" /> : null}
+      {camera.show ? (
+        <CameraView key={camera.key} ref={cam} style={StyleSheet.absoluteFill} facing="front" mirror onCameraReady={camera.onReady} />
+      ) : null}
       <Pressable style={StyleSheet.absoluteFill} onPress={scan} accessibilityLabel="Scan face">
         <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
           <View style={styles.header}>
@@ -147,16 +158,30 @@ export default function Scanner() {
           <View style={styles.oval} pointerEvents="none" />
           <View style={styles.footer}>
             {busy ? <ActivityIndicator color={C.white} size="large" /> : <ScanFace color={C.white} size={40} strokeWidth={1.5} />}
-            <Text style={styles.big}>{busy ? "Checking…" : "Tap the screen and look at the camera"}</Text>
+            <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
+            {!ready && camera.show ? (
+              <Pressable onPress={camera.restart} style={{ padding: 8 }}>
+                <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Camera black? Tap to restart it</Text>
+              </Pressable>
+            ) : null}
             {config?.mode === "mock" ? <Text style={styles.pill}>TEST MODE</Text> : null}
             {configError ? (
               <Pressable onPress={loadConfig} style={{ padding: 8 }}>
                 <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Retry connection</Text>
               </Pressable>
             ) : null}
-            <Pressable onPress={() => router.push("/login")} hitSlop={12} style={{ alignSelf: "flex-end", padding: 8 }}>
-              <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Manager login</Text>
-            </Pressable>
+            <View style={styles.actions}>
+              <Pressable onPress={() => router.push("/login")} hitSlop={8} style={styles.action} accessibilityRole="button">
+                <LogIn color={C.white} size={18} strokeWidth={1.75} />
+                <Text style={styles.actionText}>Manager / owner login</Text>
+              </Pressable>
+              {update ? (
+                <Pressable onPress={() => Linking.openURL(update.url)} hitSlop={8} style={[styles.action, { backgroundColor: C.green, borderColor: C.green }]} accessibilityRole="button">
+                  <Download color={C.white} size={18} strokeWidth={1.75} />
+                  <Text style={styles.actionText}>Update app ({update.name})</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </SafeAreaView>
       </Pressable>
@@ -207,4 +232,7 @@ const styles = StyleSheet.create({
   big: { color: C.white, fontSize: 22, fontWeight: "600", textAlign: "center" },
   pill: { color: C.white, borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
   result: { alignItems: "center", justifyContent: "center", padding: 24 },
+  actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 },
+  action: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
+  actionText: { color: C.white, fontWeight: "600", fontSize: 14 },
 });

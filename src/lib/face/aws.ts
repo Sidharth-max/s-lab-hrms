@@ -57,40 +57,57 @@ async function searchRaw(businessId: string, image: Buffer) {
 export const awsFace: FaceProvider = {
   name: "aws",
 
-  async enroll(businessId, employeeId, image, previousFaceId) {
+  async enroll(businessId, employeeId, images, previousFaceIds) {
+    const CollectionId = await ensureCollection(businessId);
+    const added: string[] = [];
+    const ownOld = new Set(previousFaceIds);
+    const undo = async () => {
+      if (added.length) await rekognition().send(new DeleteFacesCommand({ CollectionId, FaceIds: added })).catch(() => {});
+    };
     try {
-      // Refuse if this face already belongs to someone else.
-      let matches: Awaited<ReturnType<typeof searchRaw>> = [];
-      try {
-        matches = await searchRaw(businessId, image);
-      } catch (e) {
-        if (errName(e) === "InvalidParameterException") return { ok: false, error: "No clear face found. Look straight at the camera in good light." };
-        throw e;
+      for (const [i, image] of images.entries()) {
+        const label = images.length > 1 ? `Photo ${i + 1}: ` : "";
+        // Refuse if this face already belongs to someone else.
+        let matches: Awaited<ReturnType<typeof searchRaw>> = [];
+        try {
+          matches = await searchRaw(businessId, image);
+        } catch (e) {
+          if (errName(e) === "InvalidParameterException") {
+            await undo();
+            return { ok: false, error: `${label}No clear face found. Look at the camera in good light.` };
+          }
+          throw e;
+        }
+        if (matches.some((m) => m.employeeId !== employeeId)) {
+          await undo();
+          return { ok: false, error: `${label}This face is already enrolled for another employee.` };
+        }
+        for (const m of matches) if (!added.includes(m.faceId)) ownOld.add(m.faceId);
+
+        const res = await rekognition().send(
+          new IndexFacesCommand({
+            CollectionId,
+            Image: { Bytes: image },
+            ExternalImageId: employeeId,
+            MaxFaces: 1,
+            QualityFilter: "HIGH",
+            DetectionAttributes: [],
+          }),
+        );
+        const faceId = res.FaceRecords?.[0]?.Face?.FaceId;
+        if (!faceId) {
+          await undo();
+          return { ok: false, error: `${label}Face quality too low. Use good light, remove mask or cap, and retry.` };
+        }
+        added.push(faceId);
       }
-      const other = matches.find((m) => m.employeeId !== employeeId);
-      if (other) return { ok: false, error: "This face is already enrolled for another employee." };
-
-      const CollectionId = await ensureCollection(businessId);
-      const res = await rekognition().send(
-        new IndexFacesCommand({
-          CollectionId,
-          Image: { Bytes: image },
-          ExternalImageId: employeeId,
-          MaxFaces: 1,
-          QualityFilter: "HIGH",
-          DetectionAttributes: [],
-        }),
-      );
-      const faceId = res.FaceRecords?.[0]?.Face?.FaceId;
-      if (!faceId) return { ok: false, error: "Face quality too low. Use good light, remove mask or cap, and retry." };
-
-      const stale = [previousFaceId, ...matches.filter((m) => m.employeeId === employeeId).map((m) => m.faceId)].filter(
-        (f): f is string => !!f && f !== faceId && !f.startsWith("mock-"),
-      );
+      // The new photos replace all earlier photos of this person.
+      const stale = [...ownOld].filter((f) => !added.includes(f) && !f.startsWith("mock-"));
       if (stale.length) await rekognition().send(new DeleteFacesCommand({ CollectionId, FaceIds: stale }));
-      return { ok: true, faceId };
+      return { ok: true, faceIds: added };
     } catch (e) {
       console.error("Face enroll failed", e);
+      await undo();
       return { ok: false, error: "Face service error. Try again." };
     }
   },
@@ -111,8 +128,8 @@ export const awsFace: FaceProvider = {
     }
   },
 
-  async remove(businessId, faceId) {
-    if (faceId.startsWith("mock-")) return;
-    await rekognition().send(new DeleteFacesCommand({ CollectionId: collectionId(businessId), FaceIds: [faceId] }));
+  async remove(businessId, faceIds) {
+    const real = faceIds.filter((f) => !f.startsWith("mock-"));
+    if (real.length) await rekognition().send(new DeleteFacesCommand({ CollectionId: collectionId(businessId), FaceIds: real }));
   },
 };

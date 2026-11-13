@@ -70,6 +70,11 @@ step("enroll face (test mode)");
 const fakeJpeg = "data:image/jpeg;base64," + Buffer.alloc(2000, 7).toString("base64");
 r = await call("POST", "/api/m/action/enrollFace", { id: empId, image: fakeJpeg, consent: true });
 check(r.data.ok, "enroll failed: " + JSON.stringify(r.data));
+// Three photos (straight, left, right) are stored together.
+r = await call("POST", "/api/m/action/enrollFace", { id: empId, image: [fakeJpeg, fakeJpeg, fakeJpeg], consent: true });
+check(r.data.ok && /3 photos/.test(r.data.message), "enroll with 3 photos failed: " + JSON.stringify(r.data));
+r = await call("POST", "/api/m/action/enrollFace", { id: empId, image: Array(6).fill(fakeJpeg), consent: true });
+check(r.status === 400, "more than 5 photos should be refused");
 
 step("register this app as a scanner and scan");
 r = await call("POST", "/api/m/devices/register", { siteId, name: "API tablet" });

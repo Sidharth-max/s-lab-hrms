@@ -5,25 +5,31 @@ import { Image, Switch, Text, View } from "react-native";
 import { Camera, RotateCcw } from "lucide-react-native";
 import { Button, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useCameraSession } from "@/lib/camera";
 import { capture } from "@/lib/photo";
 import { C } from "@/lib/theme";
+
+/** Three photos from slightly different angles make the scanner recognise the person more reliably. */
+const STEPS = ["Look straight at the camera", "Turn the head a little to the left", "Turn the head a little to the right"];
 
 export default function FaceEnroll() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
-  const [ready, setReady] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const camera = useCameraSession();
+  const [photos, setPhotos] = useState<string[]>([]);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [taking, setTaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const done = photos.length >= STEPS.length;
 
   if (!permission) return <Screen><Muted>Checking camera permission…</Muted></Screen>;
   if (!permission.granted) {
     return (
       <Screen>
-        <Stack.Screen options={{ title: "Face photo" }} />
-        <Muted>The camera is needed to take the face photo.</Muted>
+        <Stack.Screen options={{ title: "Face photos" }} />
+        <Muted>The camera is needed to take the face photos.</Muted>
         <Button title="Allow camera" onPress={requestPermission} />
       </Screen>
     );
@@ -31,16 +37,50 @@ export default function FaceEnroll() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: name ? `Face: ${name}` : "Face photo" }} />
-      <View style={{ aspectRatio: 3 / 4, borderRadius: 12, overflow: "hidden", backgroundColor: "#000" }}>
-        {photo ? (
-          <Image source={{ uri: photo }} style={{ flex: 1 }} />
-        ) : (
-          <CameraView ref={cam} style={{ flex: 1 }} facing="front" mirror onCameraReady={() => setReady(true)} />
-        )}
-      </View>
-      <Muted style={{ textAlign: "center" }}>Face straight, good light, no cap, mask or dark glasses.</Muted>
-      {photo ? (
+      <Stack.Screen options={{ title: name ? `Face: ${name}` : "Face photos" }} />
+      {!done ? (
+        <>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: C.text, textAlign: "center" }}>
+            Photo {photos.length + 1} of {STEPS.length}: {STEPS[photos.length]}
+          </Text>
+          <View style={{ aspectRatio: 3 / 4, borderRadius: 12, overflow: "hidden", backgroundColor: "#000" }}>
+            {camera.show ? (
+              <CameraView key={camera.key} ref={cam} style={{ flex: 1 }} facing="front" mirror onCameraReady={camera.onReady} />
+            ) : null}
+          </View>
+          <Muted style={{ textAlign: "center" }}>Good light, no cap, mask or dark glasses.</Muted>
+        </>
+      ) : null}
+
+      {photos.length ? (
+        <View style={{ flexDirection: "row", gap: 8, justifyContent: "center" }}>
+          {photos.map((p, i) => (
+            <Image key={i} source={{ uri: p }} style={{ width: 72, aspectRatio: 3 / 4, borderRadius: 8, backgroundColor: C.line }} />
+          ))}
+        </View>
+      ) : null}
+
+      {!done ? (
+        <Button
+          title={`Take photo ${photos.length + 1}`}
+          icon={<Camera size={18} color={C.white} />}
+          disabled={!camera.ready}
+          loading={taking}
+          onPress={async () => {
+            setTaking(true);
+            setError(null);
+            try {
+              const p = await capture(cam.current);
+              if (p) setPhotos((list) => [...list, p]);
+              else setError("Camera not ready. Try again.");
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setTaking(false);
+            }
+          }}
+        />
+      ) : (
         <>
           <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
             <Switch value={consent} onValueChange={setConsent} trackColor={{ true: C.green, false: C.line }} />
@@ -56,7 +96,7 @@ export default function FaceEnroll() {
               setBusy(true);
               setError(null);
               try {
-                await api.action("enrollFace", { id, image: photo, consent: true });
+                await api.action("enrollFace", { id, image: photos, consent: true });
                 router.back();
               } catch (e) {
                 setError((e as Error).message);
@@ -65,22 +105,11 @@ export default function FaceEnroll() {
               }
             }}
           />
-          <Button title="Retake" variant="secondary" icon={<RotateCcw size={18} color={C.text} />} onPress={() => setPhoto(null)} />
         </>
-      ) : (
-        <Button
-          title="Take photo"
-          icon={<Camera size={18} color={C.white} />}
-          disabled={!ready}
-          onPress={async () => {
-            try {
-              setPhoto(await capture(cam.current));
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          }}
-        />
       )}
+      {photos.length ? (
+        <Button title="Start again" variant="secondary" icon={<RotateCcw size={18} color={C.text} />} onPress={() => { setPhotos([]); setConsent(false); camera.restart(); }} />
+      ) : null}
       {error ? <Notice tone="red" text={error} /> : null}
     </Screen>
   );

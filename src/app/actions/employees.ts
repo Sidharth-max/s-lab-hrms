@@ -6,7 +6,7 @@ import type { Prisma } from "@prisma/client";
 import { assertStaff, normalizePhone } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { decodeImage, faceProvider } from "@/lib/face";
+import { decodeImage, faceProvider, storedFaceIds } from "@/lib/face";
 import { parseRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
@@ -131,11 +131,12 @@ export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Pr
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(leftOn)) return { error: "Enter the leaving date" };
   await db.$transaction(async (tx) => {
-    await tx.employee.update({ where: { id: emp.id }, data: { leftOn: dateKeyToDb(leftOn), active: false, faceId: null, faceEnrolledAt: null } });
+    await tx.employee.update({ where: { id: emp.id }, data: { leftOn: dateKeyToDb(leftOn), active: false, faceId: null, faceIds: [], faceEnrolledAt: null } });
     if (emp.userId) await tx.user.update({ where: { id: emp.userId }, data: { active: false } });
   });
   // Remove the face so the person can no longer mark attendance. Attendance and salary history stay.
-  if (emp.faceId) await faceProvider().remove(actor.businessId, emp.faceId).catch((e) => console.error("Face delete failed", e));
+  const faces = storedFaceIds(emp);
+  if (faces.length) await faceProvider().remove(actor.businessId, faces).catch((e) => console.error("Face delete failed", e));
   await audit(actor.businessId, actor.id, "employee.left", "Employee", emp.id, { leftOn });
   revalidatePath("/employees", "layout");
   return { ok: true, message: "Marked as left. Face removed." };
@@ -146,21 +147,26 @@ export const enrollFace = safe(async (_p: ActionResult, form: FormData): Promise
   const emp = await loadEmployee(str(form, "id"), actor.businessId);
   if (!emp.active) return { error: "Employee has left" };
   if (form.get("consent") !== "on") return { error: "Confirm the employee was told how the face is used" };
-  const image = decodeImage(form.get("image"));
-  if (!image) return { error: "Take a photo first" };
-  const r = await faceProvider().enroll(actor.businessId, emp.id, image, emp.faceId);
+  // Up to 5 photos of the same person (straight, a little left, a little right) make recognition more reliable.
+  const raw = form.getAll("image").filter((v) => typeof v === "string" && v);
+  if (raw.length === 0) return { error: "Take a photo first" };
+  if (raw.length > 5) return { error: "Use at most 5 photos" };
+  const images = raw.map(decodeImage);
+  if (images.some((i) => !i)) return { error: "A photo could not be read. Take the photos again." };
+  const r = await faceProvider().enroll(actor.businessId, emp.id, images as Buffer[], storedFaceIds(emp));
   if (!r.ok) return { error: r.error };
-  await db.employee.update({ where: { id: emp.id }, data: { faceId: r.faceId, faceEnrolledAt: new Date() } });
-  await audit(actor.businessId, actor.id, "face.enroll", "Employee", emp.id);
+  await db.employee.update({ where: { id: emp.id }, data: { faceId: r.faceIds[0], faceIds: r.faceIds, faceEnrolledAt: new Date() } });
+  await audit(actor.businessId, actor.id, "face.enroll", "Employee", emp.id, { photos: r.faceIds.length });
   revalidatePath("/employees", "layout");
-  return { ok: true, message: "Face enrolled" };
+  return { ok: true, message: r.faceIds.length > 1 ? `Face enrolled (${r.faceIds.length} photos)` : "Face enrolled" };
 });
 
 export const removeFace = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
   const emp = await loadEmployee(str(form, "id"), actor.businessId);
-  if (emp.faceId) await faceProvider().remove(actor.businessId, emp.faceId);
-  await db.employee.update({ where: { id: emp.id }, data: { faceId: null, faceEnrolledAt: null } });
+  const faces = storedFaceIds(emp);
+  if (faces.length) await faceProvider().remove(actor.businessId, faces);
+  await db.employee.update({ where: { id: emp.id }, data: { faceId: null, faceIds: [], faceEnrolledAt: null } });
   await audit(actor.businessId, actor.id, "face.remove", "Employee", emp.id);
   revalidatePath("/employees", "layout");
   return { ok: true, message: "Face removed" };

@@ -4,7 +4,7 @@ import { awsFace } from "./aws";
 import { mockFace } from "./mock";
 
 export type EnrollResult =
-  | { ok: true; faceId: string }
+  | { ok: true; faceIds: string[] }
   | { ok: false; error: string };
 
 export type SearchResult =
@@ -13,14 +13,20 @@ export type SearchResult =
 
 export interface FaceProvider {
   name: "mock" | "aws";
-  enroll(businessId: string, employeeId: string, image: Buffer, previousFaceId: string | null): Promise<EnrollResult>;
+  /** Enrolls one or more photos of the same person and replaces their earlier photos. */
+  enroll(businessId: string, employeeId: string, images: Buffer[], previousFaceIds: string[]): Promise<EnrollResult>;
   /** mockEmployeeId is only honoured by the mock provider (test mode). */
   search(businessId: string, image: Buffer, mockEmployeeId?: string): Promise<SearchResult>;
-  remove(businessId: string, faceId: string): Promise<void>;
+  remove(businessId: string, faceIds: string[]): Promise<void>;
 }
 
 export function faceProvider(): FaceProvider {
   return env.faceProvider === "aws" ? awsFace : mockFace;
+}
+
+/** All face ids stored for an employee (older rows only have faceId). */
+export function storedFaceIds(e: { faceId: string | null; faceIds: string[] }): string[] {
+  return [...new Set([...(e.faceIds ?? []), ...(e.faceId ? [e.faceId] : [])])];
 }
 
 export function decodeImage(dataUrl: unknown): Buffer | null {

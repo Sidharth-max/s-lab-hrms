@@ -53,10 +53,13 @@ const empUrl = page.url().split("?")[0];
 step("enroll face with camera");
 await page.click("button:has-text('Enroll face')");
 await page.waitForTimeout(1500);
-await page.click("button:has-text('Take photo')");
+for (const n of [1, 2, 3]) {
+  await page.click(`button:has-text('Take photo ${n}')`);
+  await page.waitForTimeout(800);
+}
 await page.check("input[name=consent]");
 await page.click("button:has-text('Save face')");
-await page.waitForSelector("text=Face enrolled");
+await page.waitForSelector("text=Face enrolled (3 photos)");
 
 step("give advance within balance needs no approval");
 await page.click("button[role=tab]:has-text('Advance')");

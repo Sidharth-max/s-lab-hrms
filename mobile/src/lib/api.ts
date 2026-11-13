@@ -50,11 +50,26 @@ async function request<T>(method: string, path: string, body?: unknown, opts: { 
     const t = await tokens.getSession();
     if (t) headers.Authorization = `Bearer ${t}`;
   }
+  const send = async () => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      return await fetch(API_URL + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: ctrl.signal });
+    } finally {
+      clearTimeout(t);
+    }
+  };
   let res: Response;
   try {
-    res = await fetch(API_URL + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    res = await send();
   } catch {
-    throw new ApiError("No internet connection. Check the network and try again.", 0);
+    // One quiet retry: mobile networks often drop the first request after the app wakes up.
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      res = await send();
+    } catch {
+      throw new ApiError(`Could not reach the server (${API_URL.replace(/^https?:\/\//, "")}). Check the internet and try again.`, 0);
+    }
   }
   const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
   if (res.status === 401 && !opts.device && !path.startsWith("/api/m/auth/")) onUnauthorized();

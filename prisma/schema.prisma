@@ -130,7 +130,8 @@ model Employee {
   customWeeklyOff Boolean @default(false) // true = use weeklyOffDays below instead of the business default
   weeklyOffDays   Int[]   @default([])
 
-  faceId         String? // Rekognition FaceId (or mock id)
+  faceId         String? // first Rekognition FaceId (or mock id); set = face enrolled
+  faceIds        String[] @default([]) // every FaceId enrolled for this person (several photos)
   faceEnrolledAt DateTime?
 
   createdAt DateTime @default(now())

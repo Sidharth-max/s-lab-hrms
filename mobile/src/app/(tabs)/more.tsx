@@ -1,10 +1,11 @@
-import Constants from "expo-constants";
 import { router, type Href } from "expo-router";
-import { Alert, Pressable, Text, View } from "react-native";
-import { BadgeCheck, CalendarRange, ChevronRight, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type LucideIcon } from "lucide-react-native";
+import { useState } from "react";
+import { Alert, Linking, Pressable, Text, View } from "react-native";
+import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type LucideIcon } from "lucide-react-native";
 import { Card, Muted, Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
+import { checkForUpdate, installedVersion, useAppUpdate } from "@/lib/update";
 
 function Item({ icon: Icon, label, onPress, badge, danger }: { icon: LucideIcon; label: string; onPress: () => void; badge?: number; danger?: boolean }) {
   return (
@@ -28,6 +29,10 @@ function Divider() {
 export default function More() {
   const { me, can, signOut, scannerMode } = useAuth();
   const go = (href: Href) => () => router.push(href);
+  const update = useAppUpdate();
+  const [checking, setChecking] = useState(false);
+  const isOwner = me?.user.role === "OWNER";
+  const admin = can("devices.register") || can("settings.manage") || isOwner;
   return (
     <Screen>
       <Card style={{ padding: 0, gap: 0 }}>
@@ -39,6 +44,7 @@ export default function More() {
         <Divider />
         <Item icon={CalendarRange} label="Attendance register" onPress={go("/register")} />
       </Card>
+      {admin ? (
       <Card style={{ padding: 0, gap: 0 }}>
         {can("devices.register") ? (
           <>
@@ -49,20 +55,35 @@ export default function More() {
         ) : null}
         {can("settings.manage") ? (
           <>
-            <Divider />
+            {can("devices.register") ? <Divider /> : null}
             <Item icon={Settings} label="Settings" onPress={go("/settings")} />
           </>
         ) : null}
-        {me?.user.role === "OWNER" ? (
+        {isOwner ? (
           <>
-            <Divider />
+            {can("devices.register") || can("settings.manage") ? <Divider /> : null}
             <Item icon={UserCog} label="Managers" onPress={go("/team")} />
             <Divider />
             <Item icon={History} label="History" onPress={go("/history")} />
           </>
         ) : null}
       </Card>
+      ) : null}
       <Card style={{ padding: 0, gap: 0 }}>
+        <Item
+          icon={Download}
+          label={update ? `Update to version ${update.name}` : checking ? "Checking for updates…" : "Check for updates"}
+          badge={update ? 1 : undefined}
+          onPress={async () => {
+            if (update) return void Linking.openURL(update.url);
+            setChecking(true);
+            const u = await checkForUpdate(true);
+            setChecking(false);
+            if (u) Alert.alert("New version " + u.name, "Download and install it now?", [{ text: "Later" }, { text: "Download", onPress: () => void Linking.openURL(u.url) }]);
+            else Alert.alert("You have the latest version", `Version ${installedVersion.name}`);
+          }}
+        />
+        <Divider />
         <Item
           icon={LogOut}
           danger
@@ -71,7 +92,7 @@ export default function More() {
         />
       </Card>
       <Muted style={{ textAlign: "center" }}>
-        {me?.user.name} · {me?.user.role === "OWNER" ? "Owner" : "Manager"} · version {Constants.expoConfig?.version}
+        {me?.user.name} · {me?.user.role === "OWNER" ? "Owner" : "Manager"} · version {installedVersion.name}
       </Muted>
     </Screen>
   );
