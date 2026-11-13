@@ -85,8 +85,6 @@ export const addHoliday = safe(async (_p: ActionResult, form: FormData): Promise
   const date = str(form, "date");
   const name = str(form, "name");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !name) return { error: "Enter date and name" };
-  const locked = await db.payrollRun.findUnique({ where: { businessId_month: { businessId: actor.businessId, month: date.slice(0, 7) } } });
-  if (locked?.status === "LOCKED") return { error: "Salary for that month is locked" };
   await db.holiday.upsert({
     where: { businessId_date: { businessId: actor.businessId, date: dateKeyToDb(date) } },
     create: { businessId: actor.businessId, date: dateKeyToDb(date), name },
@@ -101,10 +99,6 @@ export const removeHoliday = safe(async (_p: ActionResult, form: FormData): Prom
   const actor = await assertStaff("settings.manage");
   const h = await db.holiday.findFirst({ where: { id: str(form, "holidayId"), businessId: actor.businessId } });
   if (!h) return { error: "Not found" };
-  const locked = await db.payrollRun.findUnique({
-    where: { businessId_month: { businessId: actor.businessId, month: h.date.toISOString().slice(0, 7) } },
-  });
-  if (locked?.status === "LOCKED") return { error: "Salary for that month is locked" };
   await db.holiday.delete({ where: { id: h.id } });
   await audit(actor.businessId, actor.id, "holiday.remove", "Holiday", h.id, { date: h.date.toISOString().slice(0, 10), name: h.name });
   revalidatePath("/settings");

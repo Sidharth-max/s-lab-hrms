@@ -18,17 +18,16 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
   const emp = await db.employee.findFirst({ where: { id: employeeId, businessId: actor.businessId } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
 
-  const [punches, overrides, run, { days, business }] = await Promise.all([
+  const [punches, overrides, { days, business }] = await Promise.all([
     db.attendancePunch.findMany({ where: { employeeId, workDate: dateKeyToDb(date) }, orderBy: { at: "asc" } }),
     db.dayOverride.findMany({ where: { employeeId, workDate: dateKeyToDb(date) }, orderBy: { createdAt: "desc" } }),
-    db.payrollRun.findUnique({ where: { businessId_month: { businessId: actor.businessId, month: date.slice(0, 7) } } }),
     monthAttendance(actor.businessId, date.slice(0, 7), [emp]),
   ]);
   const userIds = [...new Set([...punches.map((p) => p.createdBy), ...punches.map((p) => p.voidedBy), ...overrides.map((o) => o.createdBy)].filter(Boolean) as string[])];
   const users = new Map((await db.user.findMany({ where: { id: { in: userIds } } })).map((u) => [u.id, u.name]));
   const day = days.get(emp.id)!.find((d) => d.date === date)!;
-  const locked = run?.status === "LOCKED";
-  const editable = can(actor, "attendance.edit") && !locked && date <= istDateKey(new Date());
+  // Any past date can be corrected; the salary balance follows by itself.
+  const editable = can(actor, "attendance.edit") && date <= istDateKey(new Date());
   const hours = parseDayRules(business.dayRules)[weekday(date)]; // default "full day" for marking by hand
   const statuses = [
     ["PRESENT", "Present"],
@@ -47,11 +46,6 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
           {STATUS_LABEL[day.status] ? <span className={`${statusBadgeClass(day.status)} !text-base`}>{STATUS_LABEL[day.status]}</span> : "—"} {day.overridden && <span className="badge badge-neutral">manual</span>}
         </p>
       </div>
-      {locked && (
-        <div className="notice">
-          {"Salary for this month is locked, so this day cannot be edited. Use an adjustment in next month's salary."}
-        </div>
-      )}
       {!can(actor, "attendance.edit") && <div className="card muted text-sm">You can view but not edit attendance.</div>}
 
       <section className="card">

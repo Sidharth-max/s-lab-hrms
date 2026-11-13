@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Text } from "./Text";
 import { HandCoins } from "./icons";
-import { Button, Card, Field, H2, Segmented } from "./ui";
-import { DateField, MonthField } from "./pickers";
+import { Button, Card, Field, H2, Muted } from "./ui";
+import { DateField } from "./pickers";
 import { EmployeePicker, type PickEmployee } from "./EmployeePicker";
 import { api } from "@/lib/api";
 import { C } from "@/lib/theme";
@@ -29,9 +28,7 @@ export function GiveAdvanceForm({
 }) {
   const [employeeId, setEmployeeId] = useState(fixedId ?? "");
   const [amount, setAmountRaw] = useState("");
-  const [months, setMonths] = useState("1");
   const [givenOn, setGivenOn] = useState(istToday());
-  const [startMonth, setStartMonth] = useState(istToday().slice(0, 7));
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   useUnsavedGuard(!busy && (!!amount || !!note));
@@ -42,12 +39,10 @@ export function GiveAdvanceForm({
   return (
     <Card>
       <H2>Give advance</H2>
+      <Muted>The advance comes off the salary balance straight away.</Muted>
       {!fixedId && employees ? <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} /> : null}
       <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="e.g. 2000" />
       <DateField label="Given on" value={givenOn} onChange={setGivenOn} max={istToday()} />
-      <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Recover over</Text>
-      <Segmented options={[{ value: "1", label: "Full" }, { value: "2", label: "2 m" }, { value: "3", label: "3 m" }, { value: "6", label: "6 m" }, { value: "12", label: "12 m" }]} value={months} onChange={setMonths} />
-      <MonthField label="First recovery month" value={startMonth} onChange={setStartMonth} />
       <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. medical…" />
       <Button
         title="Save advance"
@@ -57,7 +52,7 @@ export function GiveAdvanceForm({
         onPress={async () => {
           setBusy(true);
           try {
-            const r = await api.action("giveAdvance", { employeeId, amount, recoveryMonths: months, givenOn, startMonth, note });
+            const r = await api.action("giveAdvance", { employeeId, amount, givenOn, note });
             setAmount("");
             setNote("");
             if (!fixedId) setEmployeeId("");

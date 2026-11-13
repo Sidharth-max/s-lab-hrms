@@ -90,6 +90,8 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
   const [statusReason, setStatusReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  // Bumped after a save so the "Mark attendance" form starts fresh (and no longer counts as unsaved).
+  const [markRound, setMarkRound] = useState(0);
 
   async function run(name: string, body: Record<string, unknown>, after?: () => void) {
     setBusy(name);
@@ -145,7 +147,7 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
 
       {data.editable ? (
         <>
-          <MarkAttendance key={`${data.hours?.open}-${data.hours?.close}`} hours={data.hours ?? { open: "09:00", close: "18:00" }} busy={busy === "markAttendance"} onSave={(body) => run("markAttendance", { employeeId, date, ...body })} />
+          <MarkAttendance key={`${data.hours?.open}-${data.hours?.close}-${markRound}`} hours={data.hours ?? { open: "09:00", close: "18:00" }} busy={busy === "markAttendance"} onSave={(body) => run("markAttendance", { employeeId, date, ...body }, () => setMarkRound((n) => n + 1))} />
           <Card>
             <H2>Set day status</H2>
             <Muted>For leave, absent or half day. This overrides scans and scheduled leave for this day. To record working times, use Mark attendance above.</Muted>

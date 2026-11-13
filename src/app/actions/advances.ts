@@ -6,9 +6,9 @@ import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { formatRs, parseRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
-import { employeeBalance, recoveredByAdvance } from "@/lib/services";
+import { hisaabOf } from "@/lib/ledger";
 import { safe, str, type ActionResult } from "@/lib/action";
-import { dateKeyToDb, dbToDateKey, isMonthKey, istDateKey } from "@/lib/time";
+import { dateKeyToDb, dbToDateKey, istDateKey } from "@/lib/time";
 
 export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("advances.manage");
@@ -19,14 +19,9 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
   if (amount == null || amount <= 0) return { error: "Enter the amount" };
   const givenOn = str(form, "givenOn") || istDateKey(new Date());
   if (!/^\d{4}-\d{2}-\d{2}$/.test(givenOn) || givenOn > istDateKey(new Date())) return { error: "Enter a valid date (not in the future)" };
-  const recoveryMonths = Number(str(form, "recoveryMonths") || "1");
-  if (!Number.isInteger(recoveryMonths) || recoveryMonths < 1 || recoveryMonths > 24) return { error: "Recovery months must be 1 to 24" };
-  const startMonth = str(form, "startMonth") || givenOn.slice(0, 7);
-  if (!isMonthKey(startMonth)) return { error: "Choose the first recovery month" };
-  const run = await db.payrollRun.findUnique({ where: { businessId_month: { businessId: actor.businessId, month: startMonth } } });
-  if (run?.status === "LOCKED") return { error: `Salary for ${startMonth} is already locked. Start recovery from a later month.` };
 
-  const { balance } = await employeeBalance(emp);
+  // The advance comes straight off the employee's running balance.
+  const { balance } = await hisaabOf(emp);
   const goesNegative = amount > balance;
   const selfApprove = can(actor, "approvals.decide");
   const needsApproval = goesNegative && !selfApprove;
@@ -39,8 +34,8 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
         employeeId: emp.id,
         amount,
         givenOn: dateKeyToDb(givenOn),
-        recoveryMonths,
-        startMonth,
+        recoveryMonths: 1,
+        startMonth: givenOn.slice(0, 7),
         note,
         status: needsApproval ? "PENDING_APPROVAL" : "ACTIVE",
         createdBy: actor.id,
@@ -60,7 +55,7 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
     }
     return a;
   });
-  await audit(actor.businessId, actor.id, "advance.create", "Advance", advance.id, { employeeId: emp.id, amount, recoveryMonths, startMonth, goesNegative });
+  await audit(actor.businessId, actor.id, "advance.create", "Advance", advance.id, { employeeId: emp.id, amount, givenOn, goesNegative });
   revalidatePath("/employees", "layout");
   revalidatePath("/advances");
   if (needsApproval) {
@@ -130,53 +125,32 @@ export const verifyApprovalOtp = safe(async (_p: ActionResult, form: FormData): 
   return { ok: true, message: "Approved by owner OTP" };
 });
 
-/**
- * Owner only: correct an advance (amount, date, recovery plan, note) or cancel it.
- * Money already recovered in locked salary months cannot be undone, so the amount can't go below it
- * and the start month is fixed once recovery has begun. Draft salary changes after "Recalculate".
- */
+/** Owner only: correct an advance (amount, date, note) or cancel it. The balance updates straight away. */
 export const editAdvance = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff();
   if (actor.role !== "OWNER") return { error: "Only the owner can change an advance" };
   const adv = await db.advance.findFirst({ where: { id: str(form, "advanceId"), businessId: actor.businessId }, include: { employee: true } });
   if (!adv) return { error: "Advance not found" };
-  if (adv.status !== "ACTIVE" && adv.status !== "CLEARED") return { error: "Only active or cleared advances can be changed" };
-  const recovered = (await recoveredByAdvance([adv.id])).get(adv.id) ?? 0;
+  if (adv.status !== "ACTIVE" && adv.status !== "CLEARED") return { error: "Only given advances can be changed" };
 
   if (str(form, "cancel") === "1") {
-    if (recovered > 0) return { error: `${formatRs(recovered)} is already recovered in locked salary. Reduce the amount instead.` };
     await db.advance.update({ where: { id: adv.id }, data: { status: "CANCELLED" } });
     await audit(actor.businessId, actor.id, "advance.cancel", "Advance", adv.id, { amount: adv.amount, employeeId: adv.employeeId });
-    revalidatePath("/employees", "layout");
-    revalidatePath("/advances");
-    return { ok: true, message: "Advance cancelled. Recalculate draft salary to update it." };
+    revalidatePath("/", "layout");
+    return { ok: true, message: "Advance cancelled. It no longer counts in the balance." };
   }
 
   const amount = parseRs(str(form, "amount"));
   if (amount == null || amount <= 0) return { error: "Enter the amount" };
-  if (amount < recovered) return { error: `Amount cannot be less than ${formatRs(recovered)} already recovered` };
   const givenOn = str(form, "givenOn") || dbToDateKey(adv.givenOn);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(givenOn) || givenOn > istDateKey(new Date())) return { error: "Enter a valid date (not in the future)" };
-  const recoveryMonths = Number(str(form, "recoveryMonths") || String(adv.recoveryMonths));
-  if (!Number.isInteger(recoveryMonths) || recoveryMonths < 1 || recoveryMonths > 24) return { error: "Recovery months must be 1 to 24" };
-  const startMonth = str(form, "startMonth") || adv.startMonth;
-  if (!isMonthKey(startMonth)) return { error: "Choose the first recovery month" };
-  if (startMonth !== adv.startMonth) {
-    if (recovered > 0) return { error: "Recovery has already started, so the start month cannot change" };
-    const run = await db.payrollRun.findUnique({ where: { businessId_month: { businessId: actor.businessId, month: startMonth } } });
-    if (run?.status === "LOCKED") return { error: `Salary for ${startMonth} is already locked. Choose a later month.` };
-  }
   const note = form.has("note") ? str(form, "note") || null : adv.note;
 
-  await db.advance.update({
-    where: { id: adv.id },
-    data: { amount, givenOn: dateKeyToDb(givenOn), recoveryMonths, startMonth, note, status: recovered >= amount ? "CLEARED" : "ACTIVE" },
-  });
+  await db.advance.update({ where: { id: adv.id }, data: { amount, givenOn: dateKeyToDb(givenOn), startMonth: givenOn.slice(0, 7), note, status: "ACTIVE" } });
   await audit(actor.businessId, actor.id, "advance.edit", "Advance", adv.id, {
-    before: { amount: adv.amount, givenOn: dbToDateKey(adv.givenOn), recoveryMonths: adv.recoveryMonths, startMonth: adv.startMonth },
-    after: { amount, givenOn, recoveryMonths, startMonth },
+    before: { amount: adv.amount, givenOn: dbToDateKey(adv.givenOn) },
+    after: { amount, givenOn },
   });
-  revalidatePath("/employees", "layout");
-  revalidatePath("/advances");
-  return { ok: true, message: "Advance updated. Recalculate draft salary to apply it." };
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Advance updated" };
 });

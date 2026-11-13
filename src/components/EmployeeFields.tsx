@@ -18,7 +18,6 @@ interface Values {
   esicNumber?: string | null;
   customWeeklyOff?: boolean;
   inHouse?: boolean;
-  holdSalary?: boolean;
   weeklyOffDays?: number[];
 }
 
@@ -39,6 +38,10 @@ export function EmployeeFields({
   const [customOff, setCustomOff] = useState(values.customWeeklyOff ?? false);
   const [pf, setPf] = useState(values.pfEnabled ?? false);
   const [esi, setEsi] = useState(values.esiEnabled ?? false);
+  const [wage, setWage] = useState(values.wage ?? "");
+  const [today] = useState(() => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10)); // India date
+  // Editing the salary: ask from which day the new salary applies (earlier days keep the old one).
+  const wageChanged = !isNew && (wage.trim() !== (values.wage ?? "") || wageType !== values.wageType);
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const businessOffText = businessWeeklyOff.length ? businessWeeklyOff.map((d) => DAYS[d]).join(", ") : "none";
   return (
@@ -105,22 +108,20 @@ export function EmployeeFields({
           </div>
           <div>
             <label className="label">{wageType === "MONTHLY" ? "Salary per month (₹)" : "Wage per day (₹)"}</label>
-            <input name="wage" className="input" inputMode="decimal" defaultValue={values.wage} required />
+            <input name="wage" className="input" inputMode="decimal" value={wage} onChange={(e) => setWage(e.target.value)} required />
           </div>
+          {wageChanged && (
+            <div className="@lg:col-span-2 rounded-lg border border-[var(--line)] bg-[var(--amber-soft)] p-3">
+              <label className="label">New salary applies from</label>
+              <DateInput name="wageFrom" defaultValue={today} />
+              <p className="muted mt-1 text-sm">Days before this keep the old salary. Days from this date use the new one. Nothing already earned is lost.</p>
+            </div>
+          )}
           <div>
             <label className="label">Basic % of wage (used for PF)</label>
             <input name="basicPercent" type="number" min={1} max={100} className="input" defaultValue={values.basicPercent ?? 100} />
           </div>
           <div className="flex flex-col justify-end gap-3 @lg:col-span-2">
-            {canSalary && (
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] p-3">
-                <input type="checkbox" name="holdSalary" defaultChecked={values.holdSalary ?? false} className="mt-0.5 h-5 w-5" />
-                <span>
-                  <span className="block font-medium">Hold salary, pay later together</span>
-                  <span className="muted block">Salary is still calculated every month, but kept as due. Pay several months (or the whole year) in one go from the employee&apos;s Salary tab. Advances are taken from the held amount.</span>
-                </span>
-              </label>
-            )}
             {canSalary ? (
               <div className="grid gap-3 @lg:grid-cols-2">
                 <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] p-3">

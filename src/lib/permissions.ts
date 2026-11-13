@@ -6,8 +6,8 @@ export const PERMISSIONS = {
   "attendance.edit": "Edit past attendance",
   "advances.manage": "Give advances",
   "approvals.decide": "Approve advances (when the balance goes negative), same as the owner",
-  "payroll.run": "Prepare monthly salary and add adjustments",
-  "payroll.lock": "Lock salary and record payments",
+  "payroll.run": "See salary balances and add extra pay or deductions",
+  "payroll.lock": "Pay salary (clear hisaab)",
   "devices.register": "Register and remove scanner devices",
   "settings.manage": "Change sites, holidays and attendance rules",
 } as const;

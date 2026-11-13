@@ -30,7 +30,7 @@ function istKey(iso: string) {
 }
 
 export default function HistoryScreen() {
-  const { data, error, refreshing, reload } = useLoad(() => api.get<{ items: Item[] }>("/api/m/audit"), [], ["attendance", "employee", "advance", "approval", "payroll", "settings", "device"]);
+  const { data, error, refreshing, reload } = useLoad(() => api.get<{ items: Item[] }>("/api/m/audit"), [], ["attendance", "employee", "advance", "approval", "salary", "settings", "device"]);
   const [area, setArea] = useState<Area | "all">("all");
   const sections = useMemo(() => {
     const today = istKey(new Date().toISOString());

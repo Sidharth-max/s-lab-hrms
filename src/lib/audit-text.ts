@@ -25,8 +25,8 @@ const PERM_SHORT: Record<string, string> = {
   "attendance.edit": "attendance",
   "advances.manage": "advances",
   "approvals.decide": "approvals",
-  "payroll.run": "prepare salary",
-  "payroll.lock": "lock salary and payments",
+  "payroll.run": "salary and extras",
+  "payroll.lock": "pay salary",
   "devices.register": "scanners",
   "settings.manage": "settings",
 };
@@ -36,7 +36,6 @@ const s = (v: unknown) => (typeof v === "string" ? v : v == null ? "" : String(v
 const n = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0));
 const date = (v: unknown) => (/^\d{4}-\d{2}-\d{2}/.test(s(v)) ? formatDateKey(s(v).slice(0, 10)) : s(v));
 const month = (v: unknown) => (/^\d{4}-\d{2}$/.test(s(v)) ? formatMonth(s(v)) : s(v));
-const plan = (months: unknown, start: unknown) => (n(months) <= 1 ? `recover in full from ${month(start)}` : `recover over ${n(months)} months from ${month(start)}`);
 const join = (...parts: (string | null | undefined | false)[]) => {
   const text = parts.filter(Boolean).join(" · ");
   return text ? text[0].toUpperCase() + text.slice(1) : null;
@@ -55,25 +54,21 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
 
   const advanceIds = ids((l) => (l.entity === "Advance" ? l.entityId : null));
   const punchIds = ids((l) => (l.entity === "AttendancePunch" ? l.entityId : null));
-  const lineIds = ids((l) => (l.entity === "PayrollLine" ? l.entityId : null));
   const approvalIds = ids((l) => (l.entity === "ApprovalRequest" ? l.entityId : null));
 
-  const [advances, punches, lines, approvals] = await Promise.all([
+  const [advances, punches, approvals] = await Promise.all([
     db.advance.findMany({ where: { id: { in: advanceIds }, businessId }, select: { id: true, employeeId: true, amount: true } }),
     db.attendancePunch.findMany({ where: { id: { in: punchIds } }, select: { id: true, employeeId: true, type: true, workDate: true } }),
-    db.payrollLine.findMany({ where: { id: { in: lineIds } }, select: { id: true, employeeId: true, run: { select: { month: true } } } }),
     db.approvalRequest.findMany({ where: { id: { in: approvalIds }, businessId }, select: { id: true, summary: true } }),
   ]);
   const advanceById = new Map(advances.map((a) => [a.id, a]));
   const punchById = new Map(punches.map((p) => [p.id, p]));
-  const lineById = new Map(lines.map((x) => [x.id, x]));
   const approvalById = new Map(approvals.map((a) => [a.id, a.summary]));
 
   const employeeIds = [
     ...ids((l, d) => (l.entity === "Employee" ? l.entityId : d.employeeId)),
     ...advances.map((a) => a.employeeId),
     ...punches.map((p) => p.employeeId),
-    ...lines.map((x) => x.employeeId),
   ];
   const userIds = [...ids((l) => l.actorId), ...ids((l) => (l.entity === "User" ? l.entityId : null))];
   const [employees, users, sites, devices] = await Promise.all([
@@ -128,7 +123,7 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
       }
 
       case "advance.create":
-        return r("advance", `Gave an advance of ${formatRs(n(d.amount))} to ${subject}`, join(plan(d.recoveryMonths, d.startMonth), d.goesNegative ? "balance went negative" : null));
+        return r("advance", `Gave an advance of ${formatRs(n(d.amount))} to ${subject}`, d.goesNegative ? "Balance went negative" : null);
       case "advance.edit": {
         const a = advanceById.get(s(l.entityId));
         const b = (d.before ?? {}) as Detail;
@@ -139,8 +134,6 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
           join(
             n(b.amount) !== n(af.amount) && `amount ${formatRs(n(b.amount))} → ${formatRs(n(af.amount))}`,
             s(b.givenOn) !== s(af.givenOn) && `date ${date(b.givenOn)} → ${date(af.givenOn)}`,
-            n(b.recoveryMonths) !== n(af.recoveryMonths) && `months ${n(b.recoveryMonths)} → ${n(af.recoveryMonths)}`,
-            s(b.startMonth) !== s(af.startMonth) && `start ${month(b.startMonth)} → ${month(af.startMonth)}`,
           ) ?? "note changed",
         );
       }
@@ -161,6 +154,21 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
         return r("attendance", `${subject} came back early from leave`, `Scanned in on ${date(d.back)}; leave now ends the day before (was until ${date(d.plannedTo)})`);
       case "leave.cancel":
         return r("attendance", `Cancelled the leave of ${subject}`, `${date(d.from)} to ${date(d.to)}`);
+      case "salary.pay":
+        return r("salary", `Paid salary of ${formatRs(n(d.amount))} to ${subject}`, join(s(d.mode), d.paidOn ? `on ${date(d.paidOn)}` : null, d.cleared ? "hisaab cleared" : null));
+      case "salary.void":
+        return r("salary", `Removed a salary payment of ${formatRs(n(d.amount))} to ${subject}`, d.paidOn ? `Was paid on ${date(d.paidOn)}` : null);
+      case "salary.adjustment": {
+        const amt = n(d.amount);
+        return r("salary", `${amt >= 0 ? "Extra pay" : "Deduction"} of ${formatRs(Math.abs(amt))} for ${subject}`, join(d.date ? date(d.date) : null, d.reason ? `Reason: ${s(d.reason)}` : null));
+      }
+      case "salary.adjustment.remove": {
+        const amt = n(d.amount);
+        return r("salary", `Removed ${amt >= 0 ? "extra pay" : "a deduction"} of ${formatRs(Math.abs(amt))} for ${subject}`, d.reason ? `Was: ${s(d.reason)}` : null);
+      }
+      case "employee.wage":
+        return r("salary", `Changed the salary of ${subject}`, join(d.from ? `from ${date(d.from)}` : null, d.before != null ? `was ${formatRs(n(d.before))}` : null, d.after != null ? `now ${formatRs(n(d.after))}` : null));
+      // Older month-wise salary entries (before the running hisaab).
       case "payroll.recalculate":
         return r("salary", `Calculated salary for ${month(d.month)}`);
       case "payroll.lock":
@@ -172,15 +180,9 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
         return r("salary", `${amt >= 0 ? "Extra payment" : "Deduction"} of ${formatRs(Math.abs(amt))} for ${subject} in ${month(d.month)}`, d.reason ? `Reason: ${s(d.reason)}` : null);
       }
       case "payroll.payall":
-        return r("salary", `Paid all salary due to ${subject}: ${formatRs(n(d.total))}`, join(`${Array.isArray(d.months) ? d.months.length : 0} month(s)`, s(d.mode)));
-      case "payroll.payment": {
-        const line = lineById.get(s(l.entityId));
-        return r(
-          "salary",
-          `Recorded salary payment of ${formatRs(n(d.after))} to ${line ? empName(line.employeeId) : "an employee"}${line ? ` for ${formatMonth(line.run.month)}` : ""}`,
-          join(s(d.mode), n(d.before) ? `was ${formatRs(n(d.before))}` : null),
-        );
-      }
+        return r("salary", `Paid all salary due to ${subject}: ${formatRs(n(d.total))}`, s(d.mode) || null);
+      case "payroll.payment":
+        return r("salary", `Recorded a salary payment of ${formatRs(n(d.after))}`, s(d.mode) || null);
 
       case "settings.update":
         return r("settings", "Changed business settings", "Name, scan rules, weekly schedule or PF / ESIC rates");

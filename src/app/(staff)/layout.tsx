@@ -19,7 +19,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
     { href: "/dashboard", label: "Today", icon: "home", primary: true },
     { href: "/employees", label: "Employees", icon: "employees", primary: true },
     { href: "/attendance", label: "Attendance", icon: "attendance", primary: true },
-    { href: "/payroll", label: "Salary", icon: "salary", primary: true },
+    { href: "/salary", label: "Salary", icon: "salary", primary: true },
     { href: "/advances", label: "Advances", icon: "advances" },
     { href: "/leaves", label: "Leave", icon: "leave" },
     { href: "/approvals", label: "Approvals", icon: "approvals", badge: pending || undefined },

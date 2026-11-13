@@ -58,7 +58,10 @@ function LeaveForm({ employeeId: fixedId, employees, onDone }: { employeeId?: st
           setBusy(true);
           try {
             const r = await api.action("scheduleLeave", { employeeId, fromDate: from, toDate: to, paid, reason });
+            // Start the form fresh so it no longer counts as unsaved.
             setReason("");
+            setFrom(today());
+            setTo(today());
             await onDone({ text: r.message ?? "Scheduled", ok: true });
           } catch (e) {
             await onDone({ text: (e as Error).message, ok: false });

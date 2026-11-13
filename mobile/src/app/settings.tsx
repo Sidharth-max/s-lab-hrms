@@ -65,8 +65,8 @@ function SettingsForm({
   const [hDate, setHDate] = useState("");
   const [hName, setHName] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  // The form is rebuilt after each save, so this snapshot is always the saved state.
-  const [saved] = useState(() => JSON.stringify({ name, days, nums }));
+  // Snapshot of the saved values. Updated after a successful save (some fields do not rebuild the form).
+  const [saved, setSaved] = useState(() => JSON.stringify({ name, days, nums }));
   useUnsavedGuard(!busy && (JSON.stringify({ name, days, nums }) !== saved || !!newSite.trim() || !!hName.trim()));
 
   async function run(key: string, action: string, body: Record<string, unknown>, after?: () => void) {
@@ -95,7 +95,8 @@ function SettingsForm({
       body[`off_${i}`] = d.off;
       body[`any_${i}`] = d.any;
     });
-    void run("settings", "updateSettings", body);
+    const snapshot = JSON.stringify({ name, days, nums });
+    void run("settings", "updateSettings", body, () => setSaved(snapshot));
   }
 
   const num = (k: string, label: string) => (

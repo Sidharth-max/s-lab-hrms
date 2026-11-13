@@ -9,7 +9,7 @@ import { useWide } from "@/lib/layout";
 import { PanePlaceholder, TwoPane } from "@/components/TwoPane";
 import ApprovalsScreen from "../approvals";
 import AdvancesScreen from "../advances";
-import PayrollScreen from "../payroll/index";
+import SalaryScreen from "../salary";
 import RegisterScreen from "../register";
 import LeavesScreen from "../leaves";
 import DevicesScreen from "../devices";
@@ -24,7 +24,7 @@ import { useDialog } from "@/components/dialog";
 const PANES: Record<string, React.ComponentType> = {
   "/approvals": ApprovalsScreen,
   "/advances": AdvancesScreen,
-  "/payroll": PayrollScreen,
+  "/salary": SalaryScreen,
   "/register": RegisterScreen,
   "/leaves": LeavesScreen,
   "/devices": DevicesScreen,
@@ -71,7 +71,7 @@ export default function More() {
         <Divider />
         <Item icon={HandCoins} label="Advances" onPress={go("/advances")} />
         <Divider />
-        <Item icon={IndianRupee} label="Salary" onPress={go("/payroll")} />
+        <Item icon={IndianRupee} label="Salary" onPress={go("/salary")} />
         <Divider />
         <Item icon={CalendarRange} label="Attendance register" onPress={go("/register")} />
         <Divider />

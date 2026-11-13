@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countDays, deriveMonth, nextPunch, type PunchInput } from "./attendance";
 import { parseRs, formatRs } from "./money";
-import { advanceDue, calculatePay, grossPay, statutory, type StatutoryRates } from "./payroll";
+import { dayFactor, dayRate, grossPay, payableDays, statutory, wageOn, type StatutoryRates } from "./payroll";
 import { istDateKey, istDateTime, monthDiff, addMonths, daysInMonth } from "./time";
 
 const rates: StatutoryRates = {
@@ -145,24 +145,15 @@ describe("payroll", () => {
   const monthly = { wageType: "MONTHLY" as const, monthlyWage: 1500000, dailyWage: 0, basicPercent: 100, pfEnabled: false, esiEnabled: false };
 
   it("pays monthly staff for weekly offs", () => {
-    const r = calculatePay({ month: "2026-11", daysInMonth: 30, counts, employee: monthly, rates, adjustments: 0, advances: [] });
-    expect(r.payableDays).toBe(28);
-    expect(r.gross).toBe(1400000); // 15000 * 28 / 30
-    expect(r.net).toBe(1400000);
+    const days = payableDays(monthly, counts);
+    expect(days).toBe(28);
+    expect(grossPay(monthly, days, 30)).toBe(1400000); // 15000 * 28 / 30
   });
 
   it("pays daily staff only for worked days", () => {
-    const r = calculatePay({
-      month: "2026-11",
-      daysInMonth: 30,
-      counts,
-      employee: { ...monthly, wageType: "DAILY", dailyWage: 60000 },
-      rates,
-      adjustments: 0,
-      advances: [],
-    });
-    expect(r.payableDays).toBe(24);
-    expect(r.gross).toBe(1440000);
+    const daily = { ...monthly, wageType: "DAILY" as const, dailyWage: 60000 };
+    expect(payableDays(daily, counts)).toBe(24);
+    expect(grossPay(daily, 24, 30)).toBe(1440000);
   });
 
   it("calculates PF with ceiling and ESIC rounded up", () => {
@@ -178,33 +169,36 @@ describe("payroll", () => {
   it("does nothing for PF/ESIC when switched off", () => {
     expect(statutory(monthly, 2000000, rates)).toEqual({ pfEmployee: 0, pfEmployer: 0, esiEmployee: 0, esiEmployer: 0 });
   });
+});
 
-  it("spreads an advance over instalments", () => {
-    const a = { id: "a", amount: 1000000, recoveryMonths: 4, startMonth: "2026-11", recoveredBefore: 0, givenOn: "2026-11-05" };
-    expect(advanceDue(a, "2026-11")).toBe(250000);
-    expect(advanceDue({ ...a, recoveredBefore: 250000 }, "2026-12")).toBe(250000);
-    // Last month takes everything left even if earlier months recovered less.
-    expect(advanceDue({ ...a, recoveredBefore: 500000 }, "2027-02")).toBe(500000);
-    expect(advanceDue(a, "2026-10")).toBe(0);
+describe("ledger", () => {
+  const rates = [
+    { effectiveFrom: "2026-01-10", wageType: "MONTHLY" as const, monthlyWage: 1500000, dailyWage: 0 },
+    { effectiveFrom: "2026-03-01", wageType: "MONTHLY" as const, monthlyWage: 1800000, dailyWage: 0 },
+  ];
+  it("uses the salary in effect on each day", () => {
+    expect(wageOn(rates, "2026-02-28")!.monthlyWage).toBe(1500000);
+    expect(wageOn(rates, "2026-03-01")!.monthlyWage).toBe(1800000);
+    expect(wageOn(rates, "2026-12-31")!.monthlyWage).toBe(1800000);
+    // Before the first change (e.g. joining date moved earlier) the first rate applies.
+    expect(wageOn(rates, "2025-12-01")!.monthlyWage).toBe(1500000);
+    expect(wageOn([], "2026-01-01")).toBeNull();
   });
-
-  it("rolls an advance forward when salary is not enough", () => {
-    const r = calculatePay({
-      month: "2026-11",
-      daysInMonth: 30,
-      counts,
-      employee: monthly,
-      rates,
-      adjustments: 0,
-      advances: [{ id: "a", amount: 2000000, recoveryMonths: 1, startMonth: "2026-11", recoveredBefore: 0, givenOn: "2026-11-01" }],
-    });
-    expect(r.advanceRecovered).toBe(1400000);
-    expect(r.net).toBe(0);
+  it("splits a month's salary over that month's days", () => {
+    expect(dayRate(rates[0], 28) * 28).toBeCloseTo(1500000);
+    expect(dayRate(rates[0], 31) * 31).toBeCloseTo(1500000);
+    expect(dayRate({ ...rates[0], wageType: "DAILY", dailyWage: 60000 }, 31)).toBe(60000);
   });
-
-  it("applies adjustments before deductions", () => {
-    const r = calculatePay({ month: "2026-11", daysInMonth: 30, counts, employee: monthly, rates, adjustments: -50000, advances: [] });
-    expect(r.net).toBe(1350000);
+  it("pays offs and holidays to monthly staff only", () => {
+    expect(dayFactor("PRESENT", "DAILY")).toBe(1);
+    expect(dayFactor("HALF_DAY", "MONTHLY")).toBe(0.5);
+    expect(dayFactor("PAID_LEAVE", "DAILY")).toBe(1);
+    expect(dayFactor("WEEKLY_OFF", "MONTHLY")).toBe(1);
+    expect(dayFactor("HOLIDAY", "DAILY")).toBe(0);
+    expect(dayFactor("ABSENT", "MONTHLY")).toBe(0);
+    expect(dayFactor("UNPAID_LEAVE", "MONTHLY")).toBe(0);
+    expect(dayFactor("FUTURE", "MONTHLY")).toBe(0);
+    expect(dayFactor("NOT_EMPLOYED", "MONTHLY")).toBe(0);
   });
 });
 

@@ -172,29 +172,58 @@ check(l2.to === addDays(today, 4) && l2.days === 4 && !l2.paid, "leave should en
 r = await call("POST", "/api/m/action/cancelLeave", { leaveId: leave2 });
 check(r.data.ok, "cancel leave failed: " + JSON.stringify(r.data));
 
-step("advance and salary");
-r = await call("POST", "/api/m/action/giveAdvance", { employeeId: empId, amount: "100", recoveryMonths: "1" });
+step("salary hisaab: advance, extra, pay, undo");
+const hisaab = async () => (await call("GET", `/api/m/employees/${empId}`)).data.hisaab;
+const h0 = await hisaab();
+check(h0 && typeof h0.balance === "number" && h0.balance === h0.earned + h0.extras - h0.advances - h0.payments, "hisaab sum wrong: " + JSON.stringify(h0));
+r = await call("POST", "/api/m/action/giveAdvance", { employeeId: empId, amount: "100" });
 check(r.data.ok, "advance failed: " + JSON.stringify(r.data));
 r = await call("GET", "/api/m/advances");
 check(r.data.advances.some((a) => a.employeeId === empId), "advance missing");
-const month = today.slice(0, 7);
-r = await call("POST", "/api/m/action/recalcPayroll", { month });
-check(r.data.ok, "recalc failed: " + JSON.stringify(r.data));
-r = await call("GET", `/api/m/payroll/${month}`);
-const line = r.data.lines.find((l) => l.employeeId === empId);
-check(line && line.gross === 60000 && line.advance === 10000, "salary line wrong: " + JSON.stringify(line));
+let h = await hisaab();
+check(h.balance === h0.balance - 10000 && h.advances === h0.advances + 10000, "advance must come off the balance at once: " + JSON.stringify(h));
+r = await call("POST", "/api/m/action/addAdjustment", { employeeId: empId, kind: "add", amount: "50", reason: "qa bonus" });
+check(r.data.ok, "extra pay failed: " + JSON.stringify(r.data));
+h = await hisaab();
+check(h.balance === h0.balance - 5000, "extra pay must add to the balance: " + JSON.stringify(h));
+// Advance more than earned: the balance can go below zero (employee owes).
+r = await call("POST", "/api/m/action/paySalary", { employeeId: empId, amount: String((h.balance + 100000) / 100), mode: "UPI" });
+check(r.data.ok, "pay failed: " + JSON.stringify(r.data));
+h = await hisaab();
+check(h.balance === -100000 && h.entries.some((e) => e.kind === "payment"), "overpaid balance should be -1000: " + JSON.stringify(h));
+const payId = h.entries.find((e) => e.kind === "payment").id;
+r = await call("POST", "/api/m/action/voidPayment", { paymentId: payId });
+check(r.data.ok, "remove payment failed: " + JSON.stringify(r.data));
+h = await hisaab();
+check(h.balance === h0.balance - 5000 && !h.entries.some((e) => e.kind === "payment"), "removing the payment should restore the balance: " + JSON.stringify(h));
+r = await call("GET", "/api/m/salary");
+check(r.data.rows.find((x) => x.employeeId === empId)?.balance === h.balance, "salary list must match the hisaab: " + JSON.stringify(r.data.rows));
+
+step("old attendance stays editable (no locking)");
+r = await call("POST", "/api/m/action/markAttendance", { employeeId: empId, date: "2026-10-05", inTime: "09:00", outTime: "18:00" });
+check(r.data.ok, "editing an old month must work: " + JSON.stringify(r.data));
+const h2 = await hisaab();
+check(h2.gross === h.gross + 60000, "a present day in October should add one day's wage: " + JSON.stringify({ before: h.gross, after: h2.gross }));
+
+step("salary change applies from a date");
+r = await call("POST", "/api/m/action/updateEmployee", { id: empId, name: "Api Worker", phone: "9123400001", siteId, joinedOn: "2026-10-01", wageType: "DAILY", wage: "700", esiEnabled: true, wageFrom: "2026-10-06" });
+check(r.data.ok, "salary change failed: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/employees/${empId}`);
+check(r.data.wages.length === 2 && r.data.wages[0].from === "2026-10-06" && r.data.wages[0].wage === 70000, "salary history wrong: " + JSON.stringify(r.data.wages));
+// 5 October was before the change, so it keeps the old ₹600.
+check(r.data.hisaab.months.find((m) => m.month === "2026-10")?.gross === 60000, "days before the change keep the old salary: " + JSON.stringify(r.data.hisaab.months));
 
 step("owner edits and cancels an advance");
 const advId = (await call("GET", "/api/m/advances")).data.advances.find((a) => a.employeeId === empId).id;
-r = await call("POST", "/api/m/action/editAdvance", { advanceId: advId, amount: "250", recoveryMonths: "1" });
+const before = (await hisaab()).balance;
+r = await call("POST", "/api/m/action/editAdvance", { advanceId: advId, amount: "250" });
 check(r.data.ok, "edit advance failed: " + JSON.stringify(r.data));
 r = await call("GET", `/api/m/advances/${advId}`);
 check(r.data.advance.amount === 25000 && r.data.canEdit, "advance not updated: " + JSON.stringify(r.data));
+check((await hisaab()).balance === before - 15000, "edited advance should change the balance");
 r = await call("POST", "/api/m/action/editAdvance", { advanceId: advId, cancel: "1" });
 check(r.data.ok, "cancel advance failed: " + JSON.stringify(r.data));
-r = await call("POST", "/api/m/action/recalcPayroll", { month });
-r = await call("GET", `/api/m/payroll/${month}`);
-check(r.data.lines.find((l) => l.employeeId === empId).advance === 0, "cancelled advance must not be recovered");
+check((await hisaab()).balance === before + 10000, "cancelled advance must not count");
 
 step("unknown action and logout");
 check((await call("POST", "/api/m/action/deleteEverything", {})).status === 404, "unknown action should 404");

@@ -23,7 +23,7 @@ export interface EmployeeValues {
   esicNumber?: string;
   customWeeklyOff: boolean;
   inHouse?: boolean;
-  holdSalary?: boolean;
+  wageFrom?: string; // editing: day the new salary starts
   weeklyOffDays: number[];
 }
 
@@ -47,6 +47,8 @@ export function EmployeeForm({
   const [error, setError] = useState<string | null>(null);
   // Warn on back while there are unsaved changes (not while saving: the screen closes after a save).
   useUnsavedGuard(!busy && JSON.stringify(v) !== JSON.stringify(initial));
+  const [wageFrom, setWageFrom] = useState(() => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10));
+  const wageChanged = !isNew && (Number(v.wage) !== Number(initial.wage) || v.wageType !== initial.wageType);
   const set = <K extends keyof EmployeeValues>(k: K, val: EmployeeValues[K]) => setV((o) => ({ ...o, [k]: val }));
 
   return (
@@ -83,16 +85,15 @@ export function EmployeeForm({
             <Segmented options={[{ value: "MONTHLY", label: "Monthly salary" }, { value: "DAILY", label: "Daily wage" }]} value={v.wageType} onChange={(t) => set("wageType", t)} />
           </View>
           <Field label={v.wageType === "MONTHLY" ? "Salary per month (₹)" : "Wage per day (₹)"} value={v.wage} onChangeText={(t) => set("wage", t)} keyboardType="decimal-pad" />
+          {wageChanged ? (
+            <View style={{ gap: 6, borderWidth: 1, borderColor: C.amberLine, backgroundColor: C.amberSoft, borderRadius: 12, padding: 12 }}>
+              <DateField label="New salary applies from" value={wageFrom} onChange={setWageFrom} min={v.joinedOn} />
+              <Text style={{ fontSize: 13, color: C.muted, lineHeight: 18 }}>Days before this keep the old salary. Days from this date use the new one. Nothing already earned is lost.</Text>
+            </View>
+          ) : null}
           <Field label="Basic % of wage (used for PF)" value={v.basicPercent} onChangeText={(t) => set("basicPercent", t)} keyboardType="number-pad" maxLength={3} />
           {canSalary ? (
             <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: "row", gap: 12, alignItems: "center", borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>Hold salary, pay later together</Text>
-                  <Text style={{ fontSize: 13, color: C.muted, lineHeight: 18 }}>Salary is still calculated every month, but kept as due. Pay several months (or the whole year) in one go from the employee&apos;s Salary tab. Advances are taken from the held amount.</Text>
-                </View>
-                <Toggle value={!!v.holdSalary} onValueChange={(b) => set("holdSalary", b)} label="Hold salary" />
-              </View>
               <View style={{ gap: 10, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>PF deduction</Text>
@@ -144,7 +145,7 @@ export function EmployeeForm({
         loading={busy}
         onPress={async () => {
           setBusy(true);
-          setError(await onSubmit(v));
+          setError(await onSubmit(wageChanged ? { ...v, wageFrom } : v));
           setBusy(false);
         }}
       />
@@ -161,7 +162,7 @@ export function employeeBody(v: EmployeeValues, canSalary: boolean, isNew: boole
     siteId: v.siteId,
     joinedOn: v.joinedOn,
     ...(isNew || canSalary
-      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "", holdSalary: canSalary && !!v.holdSalary }
+      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "", wageFrom: v.wageFrom ?? "" }
       : {}),
     weeklyOffMode: v.customWeeklyOff ? "custom" : "business",
     inHouse: !!v.inHouse,

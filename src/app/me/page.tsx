@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import { Tabs } from "@/components/Tabs";
@@ -6,7 +5,8 @@ import { getActor } from "@/lib/auth";
 import { countDays, STATUS_SHORT } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
-import { monthAttendance, outstandingAdvances } from "@/lib/services";
+import { monthAttendance } from "@/lib/services";
+import { hisaabOf } from "@/lib/ledger";
 import { dbToDateKey, formatDateKey, formatMonth, istMonthKey } from "@/lib/time";
 
 // Employee portal: view only.
@@ -17,18 +17,19 @@ export default async function MePage() {
   const emp = await db.employee.findUnique({ where: { userId: actor.id }, include: { business: true, site: true } });
   if (!emp) redirect("/login");
   const month = istMonthKey(new Date());
-  const [{ days }, advances, lines] = await Promise.all([
-    monthAttendance(emp.businessId, month, [emp]),
-    outstandingAdvances(emp.id),
-    db.payrollLine.findMany({ where: { employeeId: emp.id, run: { status: "LOCKED" } }, include: { run: true }, orderBy: { run: { month: "desc" } }, take: 24 }),
-  ]);
+  const [{ days }, h] = await Promise.all([monthAttendance(emp.businessId, month, [emp]), hisaabOf(emp)]);
   const list = days.get(emp.id)!;
   const c = countDays(list);
-  const open = advances.filter((a) => a.remaining > 0);
+  const KIND: Record<string, string> = { advance: "Advance taken", payment: "Salary received", extra: "Extra pay", deduction: "Deduction" };
 
   const salary = (
     <section className="card">
       <h2 className="mb-2 font-semibold">My salary</h2>
+      <div className="mb-3">
+        <div className="text-xs text-[var(--muted)]">{h.balance >= 0 ? "Salary due to me" : "I owe (advance more than salary)"}</div>
+        <div className={`text-2xl font-semibold tabular-nums ${h.balance < 0 ? "text-[var(--red)]" : ""}`}>{formatRs(Math.abs(h.balance))}</div>
+        <p className="muted text-sm">Earned {formatRs(h.earned + h.extras)} since {formatDateKey(h.since)} · advances {formatRs(h.advances)} · received {formatRs(h.payments)}</p>
+      </div>
       <div className="grid grid-cols-1 gap-2 text-sm min-[420px]:grid-cols-2">
         <div><span className="muted">{"Type"}:</span> {emp.wageType === "MONTHLY" ? "Monthly" : "Daily"}</div>
         <div>
@@ -57,34 +58,15 @@ export default async function MePage() {
       </div>
     </section>
   );
-  const advance = (
+  const money = (
     <section className="card">
-      <h2 className="mb-2 font-semibold">Advance</h2>
-      {open.length === 0 ? <p className="muted">No advance to repay.</p> : (
-        <table className="table table-cards">
-          <thead><tr><th>Given</th><th>Amount</th><th>Left to repay</th></tr></thead>
-          <tbody>
-            {open.map((a) => (
-              <tr key={a.id}>
-                <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
-                <td data-label={"Amount"}>{formatRs(a.amount)}</td>
-                <td data-label={"Left to repay"} className="font-semibold">{formatRs(a.remaining)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-  const payslips = (
-    <section className="card">
-      <h2 className="mb-2 font-semibold">Payslips</h2>
-      {lines.length === 0 ? <p className="muted">No payslips yet.</p> : (
-        <ul className="flex flex-col gap-1">
-          {lines.map((l) => (
-            <li key={l.id} className="flex justify-between">
-              <Link className="link" href={`/me/payslip/${l.id}`}>{formatMonth(l.run.month)}</Link>
-              <span className="font-semibold">{formatRs(l.net)}</span>
+      <h2 className="mb-2 font-semibold">Money taken and received</h2>
+      {h.entries.filter((e) => !e.pending).length === 0 ? <p className="muted">Nothing yet.</p> : (
+        <ul className="flex flex-col">
+          {h.entries.filter((e) => !e.pending).map((e) => (
+            <li key={`${e.kind}-${e.id}`} className="flex justify-between gap-3 border-b border-[var(--line)] py-2 text-sm last:border-0">
+              <span>{KIND[e.kind]} <span className="muted">· {formatDateKey(e.date)}</span></span>
+              <span className="font-semibold tabular-nums">{e.kind === "extra" ? "+" : "−"} {formatRs(e.amount)}</span>
             </li>
           ))}
         </ul>
@@ -107,8 +89,7 @@ export default async function MePage() {
         tabs={[
           { id: "salary", label: "Salary", content: salary },
           { id: "attendance", label: "Attendance", content: attendance },
-          { id: "advance", label: "Advance", content: advance },
-          { id: "payslips", label: "Payslips", content: payslips },
+          { id: "money", label: "Advances & payments", content: money },
         ]}
       />
     </main>

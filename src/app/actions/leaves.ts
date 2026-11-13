@@ -15,12 +15,6 @@ const DAY = 86400000;
 const isDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 const prevDay = (d: string) => dbToDateKey(new Date(dateKeyToDb(d).getTime() - DAY));
 
-/** First locked salary month touched by a date range, if any. */
-async function lockedMonthIn(businessId: string, from: string, to: string) {
-  const run = await db.payrollRun.findFirst({ where: { businessId, status: "LOCKED", month: { gte: from.slice(0, 7), lte: to.slice(0, 7) } }, orderBy: { month: "asc" } });
-  return run?.month ?? null;
-}
-
 async function loadPlan(id: string, businessId: string) {
   const plan = await db.leavePlan.findFirst({ where: { id, businessId }, include: { employee: true } });
   if (!plan) throw new Error("Leave not found");
@@ -38,8 +32,6 @@ export const scheduleLeave = safe(async (_p: ActionResult, form: FormData): Prom
   if (to < from) return { error: "The last day must be on or after the first day" };
   if ((dateKeyToDb(to).getTime() - dateKeyToDb(from).getTime()) / DAY > 366) return { error: "A leave can be at most one year" };
   if (from < dbToDateKey(emp.joinedOn)) return { error: "The leave starts before the joining date" };
-  const locked = await lockedMonthIn(actor.businessId, from, to);
-  if (locked) return { error: `Salary for ${locked} is already locked. Choose dates after it.` };
   const overlap = await db.leavePlan.findFirst({ where: { employeeId: emp.id, status: "ACTIVE", fromDate: { lte: dateKeyToDb(to) }, toDate: { gte: dateKeyToDb(from) } } });
   if (overlap) return { error: `Overlaps a leave from ${dbToDateKey(overlap.fromDate)} to ${dbToDateKey(overlap.toDate)}` };
   const paid = str(form, "paid") !== "0";
@@ -63,8 +55,6 @@ export const endLeave = safe(async (_p: ActionResult, form: FormData): Promise<A
   const from = dbToDateKey(plan.fromDate);
   const to = dbToDateKey(plan.toDate);
   if (back > to) return { error: "That day is after the leave ends anyway" };
-  const locked = await lockedMonthIn(actor.businessId, back, to);
-  if (locked) return { error: `Salary for ${locked} is already locked` };
   if (back <= from) {
     await db.leavePlan.update({ where: { id: plan.id }, data: { status: "CANCELLED", plannedTo: plan.toDate } });
   } else {
@@ -80,8 +70,6 @@ export const cancelLeave = safe(async (_p: ActionResult, form: FormData): Promis
   const plan = await loadPlan(str(form, "leaveId"), actor.businessId);
   if (!canSeeSite(actor, plan.employee.siteId)) return { error: "Not allowed for this site" };
   if (plan.status !== "ACTIVE") return { error: "Already cancelled" };
-  const locked = await lockedMonthIn(actor.businessId, dbToDateKey(plan.fromDate), dbToDateKey(plan.toDate));
-  if (locked) return { error: `Salary for ${locked} is already locked. Use "End leave" instead.` };
   await db.leavePlan.update({ where: { id: plan.id }, data: { status: "CANCELLED" } });
   await audit(actor.businessId, actor.id, "leave.cancel", "LeavePlan", plan.id, { employeeId: plan.employeeId, from: dbToDateKey(plan.fromDate), to: dbToDateKey(plan.toDate) });
   revalidatePath("/", "layout");

@@ -10,7 +10,8 @@ import { decodeImage, faceProvider, storedFaceIds } from "@/lib/face";
 import { parseRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
-import { dateKeyToDb } from "@/lib/time";
+import { dateKeyToDb, dbToDateKey, istDateKey } from "@/lib/time";
+import { setWageFrom } from "@/lib/ledger";
 import { nextEmployeeCode } from "@/lib/services";
 
 function parseWeeklyOff(form: FormData) {
@@ -48,7 +49,6 @@ function parsePay(form: FormData) {
       basicPercent,
       pfEnabled,
       esiEnabled,
-      holdSalary: form.get("holdSalary") === "on",
       uanNumber: pfEnabled ? uanNumber : null,
       esicNumber: esiEnabled ? esicNumber : null,
     } as const,
@@ -74,11 +74,15 @@ export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData):
   const pay = parsePay(form);
   if ("error" in pay) return { error: pay.error };
   // Without salary permission a manager can add the person but PF/ESIC stay off.
-  const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false, uanNumber: null, esicNumber: null, holdSalary: false };
+  const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false, uanNumber: null, esicNumber: null };
   if (await db.employee.findFirst({ where: { businessId: actor.businessId, code } })) return { error: "This employee code is already used" };
 
-  const emp = await db.employee.create({
-    data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...payData, ...parseWeeklyOff(form) },
+  const emp = await db.$transaction(async (tx) => {
+    const e = await tx.employee.create({
+      data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...payData, ...parseWeeklyOff(form) },
+    });
+    await setWageFrom(e.id, joinedOn, { wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage }, actor.id, tx);
+    return e;
   });
   await audit(actor.businessId, actor.id, "employee.create", "Employee", emp.id, { name, code });
   revalidatePath("/employees", "layout");
@@ -107,11 +111,20 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   if (!site || !canSeeSite(actor, site.id)) return { error: "Choose a site" };
 
   const data: Prisma.EmployeeUpdateInput = { name, phone, site: { connect: { id: siteId } }, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...parseWeeklyOff(form) };
+  // A new salary applies from a chosen day; days before it keep the old salary.
+  let wageChange: { from: string; rate: { wageType: "MONTHLY" | "DAILY"; monthlyWage: number; dailyWage: number } } | null = null;
   if (form.has("wage")) {
     if (!can(actor, "salary.edit")) return { error: "You cannot change salary" };
     const pay = parsePay(form);
     if ("error" in pay) return { error: pay.error };
     Object.assign(data, pay.data);
+    const rate = { wageType: pay.data.wageType, monthlyWage: pay.data.monthlyWage, dailyWage: pay.data.dailyWage };
+    if (rate.wageType !== emp.wageType || rate.monthlyWage !== emp.monthlyWage || rate.dailyWage !== emp.dailyWage) {
+      let from = str(form, "wageFrom") || istDateKey(new Date());
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return { error: "Choose the day the new salary starts" };
+      if (from < joinedOn) from = joinedOn;
+      wageChange = { from, rate };
+    }
   }
   if (emp.userId && phone !== emp.phone) {
     if (!phone) return { error: "Turn off web login before removing the mobile number" };
@@ -121,7 +134,20 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   await db.$transaction(async (tx) => {
     await tx.employee.update({ where: { id: emp.id }, data });
     if (emp.userId && phone) await tx.user.update({ where: { id: emp.userId }, data: { phone, name } });
+    if (wageChange) {
+      // Keep the old salary for the days before the change (older records may have no history yet).
+      if ((await tx.wageChange.count({ where: { employeeId: emp.id } })) === 0) {
+        await setWageFrom(emp.id, dbToDateKey(emp.joinedOn), { wageType: emp.wageType, monthlyWage: emp.monthlyWage, dailyWage: emp.dailyWage }, null, tx);
+      }
+      // The new salary is the current one, so any change planned after its start is replaced.
+      await tx.wageChange.deleteMany({ where: { employeeId: emp.id, effectiveFrom: { gt: dateKeyToDb(wageChange.from) } } });
+      await setWageFrom(emp.id, wageChange.from, wageChange.rate, actor.id, tx);
+    }
   });
+  if (wageChange) {
+    const wage = (r: { wageType: string; monthlyWage: number; dailyWage: number }) => (r.wageType === "MONTHLY" ? r.monthlyWage : r.dailyWage);
+    await audit(actor.businessId, actor.id, "employee.wage", "Employee", emp.id, { from: wageChange.from, before: wage(emp), after: wage(wageChange.rate), wageType: wageChange.rate.wageType });
+  }
   await audit(actor.businessId, actor.id, "employee.update", "Employee", emp.id, {
     before: { name: emp.name, wageType: emp.wageType, monthlyWage: emp.monthlyWage, dailyWage: emp.dailyWage, pf: emp.pfEnabled, esi: emp.esiEnabled },
   });

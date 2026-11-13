@@ -2,15 +2,15 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil, RotateCcw } from "@/components/icons";
-import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row, Screen, Tabs, Segmented } from "@/components/ui";
+import { CalendarCheck, Camera, HandCoins, Pencil, RotateCcw } from "@/components/icons";
+import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row, Screen, Tabs } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
-import { GiveAdvanceForm } from "@/components/GiveAdvanceForm";
+import { HisaabSection, type Hisaab, type HisaabCan } from "@/components/HisaabSection";
 import { LeaveSection } from "@/components/LeaveSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { dateLabel, monthLabel, rs } from "@/lib/format";
+import { dateLabel, rs } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
@@ -19,14 +19,12 @@ interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
     wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
-    face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean; holdSalary: boolean;
+    face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean;
   };
-  balance: { earned: number; outstanding: number; balance: number };
   today: { status: string; label: string } | null;
-  due: { total: number; months: { month: string; due: number }[] };
-  pendingAdvances: number;
-  advances: { id: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string; note: string | null }[];
-  salary: { id: string; month: string; locked: boolean; payableDays: number; gross: number; net: number; paid: number }[];
+  hisaab: Hisaab;
+  wages: { from: string; wageType: "MONTHLY" | "DAILY"; wage: number }[];
+  can: HisaabCan;
 }
 
 interface Register {
@@ -35,7 +33,7 @@ interface Register {
   rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number }[];
 }
 
-type Tab = "overview" | "attendance" | "advance" | "salary" | "account";
+type Tab = "overview" | "attendance" | "hisaab" | "account";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function istToday() {
@@ -76,13 +74,12 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
  * One employee. Used as its own screen, and (embedded) as the right-hand panel next to the
  * employee list on wide screens such as an open foldable.
  */
-export function EmployeeDetailView({ id, created, embedded }: { id: string; created?: string; embedded?: boolean }) {
+export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: string; created?: string; embedded?: boolean; initialTab?: "hisaab" }) {
   const dialog = useDialog();
-  const { me, can } = useAuth();
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "payroll", "attendance"]);
-  const [tab, setTab] = useState<Tab>("overview"); // a new employee lands on Overview, where the face photo button is first
+  const { can } = useAuth();
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "salary", "attendance"]);
+  const [tab, setTab] = useState<Tab>(initialTab ?? "overview"); // a new employee lands on Overview, where the face photo button is first
   const [leftOn, setLeftOn] = useState(istToday());
-  const [payMode, setPayMode] = useState<"CASH" | "BANK" | "UPI" | "CHEQUE">("CASH");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -104,7 +101,6 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
   if (!data) return <Loading />;
   const e = data.employee;
   const manage = can("employees.manage");
-  const isOwner = me?.user.role === "OWNER";
   const weeklyOff = e.customWeeklyOff ? (e.weeklyOffDays.length ? e.weeklyOffDays.map((d) => DAYS[d]).join(", ") : "None") : "Same as business";
 
   return (
@@ -143,7 +139,6 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
         </View>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           {e.inHouse ? <Badge label="In-house" /> : null}
-          {e.holdSalary ? <Badge label="Salary on hold" tone="amber" /> : null}
           {e.face ? <Badge label="Face enrolled" tone="green" dot /> : e.inHouse ? null : <Badge label="No face" tone="red" dot />}
           <Badge label={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
           {e.pfEnabled ? <Badge label="PF" /> : null}
@@ -159,7 +154,9 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
             }}
           />
         ) : null}
-        <Row label="Balance this month" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
+        <Pressable onPress={() => setTab("hisaab")} accessibilityRole="button">
+          <Row label={data.hisaab.balance < 0 ? "Employee owes" : "Salary balance"} value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.hisaab.balance < 0 ? C.red : C.text }}>{data.hisaab.balance === 0 ? "Clear" : rs(Math.abs(data.hisaab.balance))}</Text>} />
+        </Pressable>
       </Card>
 
       {created ? <Notice tone="green" text="Employee added. Now take the face photos." /> : null}
@@ -169,8 +166,7 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
         options={[
           { value: "overview", label: "Info" },
           { value: "attendance", label: "Attendance" },
-          { value: "advance", label: "Advance" },
-          { value: "salary", label: "Salary" },
+          { value: "hisaab", label: "Hisaab" },
           ...(manage ? [{ value: "account" as Tab, label: "Access" }] : []),
         ]}
         value={tab}
@@ -196,7 +192,7 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
           </Card>
           <Card>
             <Button title="Attendance today" variant="secondary" icon={<CalendarCheck size={18} color={C.text} />} onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: e.id, date: istToday() } })} />
-            {can("advances.manage") && e.active ? <Button title="Give advance" variant="secondary" icon={<HandCoins size={18} color={C.text} />} onPress={() => setTab("advance")} /> : null}
+            {can("advances.manage") && e.active ? <Button title="Give advance" variant="secondary" icon={<HandCoins size={18} color={C.text} />} onPress={() => setTab("hisaab")} /> : null}
           </Card>
           <Card>
             <H2>Details</H2>
@@ -221,75 +217,14 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
         </>
       ) : null}
 
-      {tab === "advance" ? (
-        <>
-          <Card>
-            <H2>Advance balance</H2>
-            <Row label="Earned this month" value={rs(data.balance.earned)} />
-            <Row label="Advance to recover" value={rs(data.balance.outstanding)} />
-            <Row label="Balance" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
-            {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for approval.`} /> : null}
-          </Card>
-          {data.advances.length ? (
-            <Card style={{ padding: 0, gap: 0 }}>
-              {data.advances.map((a, i) => (
-                <Pressable key={a.id} onPress={() => router.push({ pathname: "/advance/[id]", params: { id: a.id } })} style={({ pressed }) => [{ padding: 14, gap: 2, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }, pressed && { backgroundColor: C.soft }]}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                    <Text style={{ fontWeight: "600", color: C.text }}>{dateLabel(a.givenOn)} · {rs(a.amount)}</Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Text style={{ fontWeight: "700", color: C.text }}>{rs(a.remaining)} left</Text>
-                      <ChevronRight size={16} color={C.muted} />
-                    </View>
-                  </View>
-                  <Muted>Recovered {rs(a.recovered)} · {a.recoveryMonths === 1 ? "Full" : `${a.recoveryMonths} months`} from {monthLabel(a.startMonth)}{isOwner ? " · tap to edit" : ""}</Muted>
-                </Pressable>
-              ))}
-            </Card>
-          ) : null}
-          {can("advances.manage") && e.active ? <GiveAdvanceForm employeeId={e.id} onDone={async (m) => { setMsg(m); await reload(); }} /> : null}
-        </>
-      ) : null}
-
-      {tab === "salary" && (data.due.total > 0 || e.holdSalary) ? (
-        <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <H2>Salary due</H2>
-            {e.holdSalary ? <Badge label="Salary on hold" tone="amber" /> : null}
-          </View>
-          <Text style={{ fontSize: 26, fontWeight: "700", color: C.text, letterSpacing: -0.5 }}>{rs(data.due.total)}</Text>
-          {data.due.months.length ? (
-            <Muted>{data.due.months.map((m) => `${monthLabel(m.month)} ${rs(m.due)}`).join(" · ")}</Muted>
-          ) : (
-            <Muted>Nothing due yet. Months count here once their salary is approved and locked.</Muted>
-          )}
-          {can("payroll.lock") && data.due.total > 0 ? (
-            <>
-              <Segmented options={[{ value: "CASH", label: "Cash" }, { value: "BANK", label: "Bank" }, { value: "UPI", label: "UPI" }, { value: "CHEQUE", label: "Cheque" }]} value={payMode} onChange={setPayMode} />
-              <Button
-                title={`Pay all due (${rs(data.due.total)})`}
-                loading={busy === "payAllDue"}
-                onPress={async () => {
-                  if (await dialog.confirm({ title: `Pay ${rs(data.due.total)} to ${e.name}?`, message: `Marks ${data.due.months.length} month(s) as paid today by ${payMode.toLowerCase()}.`, confirmText: "Pay all" })) void run("payAllDue", { employeeId: e.id, mode: payMode });
-                }}
-              />
-            </>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {tab === "salary" ? (
-        <Card style={{ gap: 0 }}>
-          {data.salary.length === 0 ? <Muted>No salary prepared yet.</Muted> : null}
-          {data.salary.map((s, i) => (
-            <Pressable key={s.id} onPress={() => router.push({ pathname: "/payslip/[lineId]", params: { lineId: s.id } })} style={{ paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: C.line, gap: 2 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontWeight: "600", color: C.text }}>{monthLabel(s.month)}</Text>
-                <Text style={{ fontWeight: "700", color: C.text }}>{rs(s.net)}</Text>
-              </View>
-              <Muted>{s.payableDays} days · gross {rs(s.gross)} · paid {s.paid ? rs(s.paid) : "—"}{s.locked ? "" : " · draft"} · payslip</Muted>
-            </Pressable>
-          ))}
-        </Card>
+      {tab === "hisaab" ? (
+        <HisaabSection
+          employee={{ id: e.id, name: e.name, active: e.active }}
+          h={data.hisaab}
+          wages={data.wages}
+          can={data.can}
+          onDone={async (m) => { setMsg(m); await reload(); }}
+        />
       ) : null}
 
       {tab === "account" && manage ? (
@@ -309,7 +244,7 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
               loading={busy === "setEmployeeLeft"}
               onPress={async () => {
                 if (!e.active) return void run("setEmployeeLeft", { id: e.id, leftOn: "" });
-                if (await dialog.confirm({ title: "Archive this employee?", message: `Last working day ${dateLabel(leftOn)}. Their face will be deleted and planned leave ends. Attendance and salary history are kept.${data.balance.outstanding > 0 ? ` Note: ${rs(data.balance.outstanding)} advance is still to be recovered.` : ""}`, confirmText: "Archive", danger: true })) void run("setEmployeeLeft", { id: e.id, leftOn });
+                if (await dialog.confirm({ title: "Archive this employee?", message: `Last working day ${dateLabel(leftOn)}. Their face will be deleted and planned leave ends. Attendance and salary history are kept.${data.hisaab.balance > 0 ? ` Salary still to pay: ${rs(data.hisaab.balance)}.` : data.hisaab.balance < 0 ? ` They still owe ${rs(-data.hisaab.balance)}.` : ""}`, confirmText: "Archive", danger: true })) void run("setEmployeeLeft", { id: e.id, leftOn });
               }}
             />
           </Card>

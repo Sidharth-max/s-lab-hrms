@@ -132,18 +132,23 @@ step("manager cannot open settings");
 await page.goto(`${BASE}/settings`);
 await page.waitForURL("**/dashboard?denied=1");
 
-step("owner prepares and locks October salary");
+step("owner sees the salary hisaab and adds extra pay");
 await page.click("button[aria-label^='Log out']");
 await login(OWNER);
 await page.waitForURL("**/dashboard");
-await page.goto(`${BASE}/payroll/2026-10`);
-await page.click("button:has-text('Calculate salary')");
-await page.waitForSelector("text=Salary calculated");
-await page.click("button:has-text('Approve and lock')");
-// Our confirm dialog (not the browser's).
-await page.click("[role=alertdialog] button >> nth=1");
-await page.waitForSelector("[role=status]:has-text('Salary locked')");
-await shot("05-payroll");
+await page.goto(`${BASE}/payroll`);
+await page.waitForURL("**/salary");
+await page.waitForSelector("text=Total to pay");
+await page.click("a:has-text('Ramesh Kumar')");
+await page.waitForSelector("h2:has-text('Hisaab')");
+const extra = page.locator("details:has(summary:has-text('Add extra pay'))");
+await extra.locator("summary").click();
+await extra.locator("input[name=amount]").fill("500");
+await extra.locator("input[name=reason]").fill("qa bonus");
+await extra.locator("button:has-text('Save')").click();
+await page.waitForSelector("[role=status]:has-text('Extra pay added')");
+await page.waitForSelector("text=qa bonus");
+await shot("05-salary");
 
 step("phone menu opens and has no language switch");
 await page.click("button[aria-label=More]");

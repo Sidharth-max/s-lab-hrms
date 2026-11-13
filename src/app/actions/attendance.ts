@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { endLeaveOnReturn } from "@/lib/leave-return";
 import { canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
-import { addMonths, dateKeyToDb, istDateKey, istDateTime } from "@/lib/time";
+import { dateKeyToDb, istDateKey, istDateTime } from "@/lib/time";
 
 const STATUSES = ["PRESENT", "HALF_DAY", "ABSENT", "PAID_LEAVE", "UNPAID_LEAVE"] as const;
 
@@ -16,10 +16,6 @@ async function checkEditable(businessId: string, employeeId: string, date: strin
   if (date > istDateKey(new Date())) throw new Error("Cannot edit a future date");
   const emp = await db.employee.findFirst({ where: { id: employeeId, businessId } });
   if (!emp || !canSeeSite(actor, emp.siteId)) throw new Error("Employee not found");
-  const run = await db.payrollRun.findUnique({ where: { businessId_month: { businessId, month: date.slice(0, 7) } } });
-  if (run?.status === "LOCKED") {
-    throw new Error(`Salary for ${date.slice(0, 7)} is locked. Add an adjustment in ${addMonths(date.slice(0, 7), 1)} instead, or ask the owner to reopen it.`);
-  }
   return emp;
 }
 

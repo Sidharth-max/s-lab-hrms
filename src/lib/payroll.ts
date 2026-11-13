@@ -1,7 +1,6 @@
 // Salary calculation. Pure functions, all money in paise.
 
 import type { DayCounts } from "./attendance";
-import { monthDiff } from "./time";
 
 export interface StatutoryRates {
   pfEmployeeBps: number;
@@ -18,32 +17,6 @@ export interface EmployeePay {
   basicPercent: number;
   pfEnabled: boolean;
   esiEnabled: boolean;
-}
-
-export interface AdvanceInput {
-  id: string;
-  amount: number;
-  recoveryMonths: number;
-  startMonth: string;
-  recoveredBefore: number; // recovered in locked salary months
-  givenOn: string;
-}
-
-export interface PayResult {
-  rate: number;
-  daysInMonth: number;
-  payableDays: number;
-  presentDays: number;
-  paidOffDays: number;
-  gross: number;
-  adjustments: number;
-  pfEmployee: number;
-  pfEmployer: number;
-  esiEmployee: number;
-  esiEmployer: number;
-  advanceRecovered: number;
-  recoveries: { advanceId: string; amount: number }[];
-  net: number;
 }
 
 /** Monthly staff are paid for weekly offs and holidays; daily-wage staff only for days worked and paid leave. */
@@ -76,54 +49,40 @@ export function statutory(emp: EmployeePay, gross: number, rates: StatutoryRates
   return { pfEmployee, pfEmployer, esiEmployee, esiEmployer };
 }
 
-/** Instalment due this month for one advance: spread the remaining balance over the months left. */
-export function advanceDue(a: AdvanceInput, month: string): number {
-  const remaining = a.amount - a.recoveredBefore;
-  if (remaining <= 0 || month < a.startMonth) return 0;
-  const monthsLeft = Math.max(1, a.recoveryMonths - monthDiff(a.startMonth, month));
-  const due = Math.ceil(remaining / monthsLeft / 100) * 100; // whole rupees
-  return Math.min(due, remaining);
+// ---------- Running ledger (no salary months) ----------
+
+export interface WageRate {
+  effectiveFrom: string; // YYYY-MM-DD
+  wageType: "MONTHLY" | "DAILY";
+  monthlyWage: number;
+  dailyWage: number;
 }
 
-export function calculatePay(input: {
-  month: string;
-  daysInMonth: number;
-  counts: DayCounts;
-  employee: EmployeePay;
-  rates: StatutoryRates;
-  adjustments: number;
-  advances: AdvanceInput[];
-}): PayResult {
-  const { employee: emp, counts } = input;
-  const payable = payableDays(emp, counts);
-  const gross = grossPay(emp, payable, input.daysInMonth);
-  const st = statutory(emp, gross, input.rates);
-  const beforeAdvances = gross + input.adjustments - st.pfEmployee - st.esiEmployee;
-
-  // Recover advances oldest first, never more than the salary available; the rest rolls to next month.
-  let available = Math.max(0, beforeAdvances);
-  const recoveries: { advanceId: string; amount: number }[] = [];
-  const ordered = [...input.advances].sort((a, b) => (a.givenOn < b.givenOn ? -1 : a.givenOn > b.givenOn ? 1 : 0));
-  for (const a of ordered) {
-    const take = Math.min(advanceDue(a, input.month), available);
-    if (take > 0) {
-      recoveries.push({ advanceId: a.id, amount: take });
-      available -= take;
-    }
+/** Share of a day's pay earned for a day status. Weekly offs and holidays are paid to monthly staff only. */
+export function dayFactor(status: string, wageType: "MONTHLY" | "DAILY"): number {
+  switch (status) {
+    case "PRESENT":
+    case "PAID_LEAVE":
+      return 1;
+    case "HALF_DAY":
+      return 0.5;
+    case "WEEKLY_OFF":
+    case "HOLIDAY":
+      return wageType === "MONTHLY" ? 1 : 0;
+    default:
+      return 0;
   }
-  const advanceRecovered = recoveries.reduce((s, r) => s + r.amount, 0);
+}
 
-  return {
-    rate: emp.wageType === "MONTHLY" ? emp.monthlyWage : emp.dailyWage,
-    daysInMonth: input.daysInMonth,
-    payableDays: payable,
-    presentDays: counts.present,
-    paidOffDays: emp.wageType === "MONTHLY" ? counts.paidOff : 0,
-    gross,
-    adjustments: input.adjustments,
-    ...st,
-    advanceRecovered,
-    recoveries,
-    net: beforeAdvances - advanceRecovered,
-  };
+/** The salary in effect on a day: the latest change on or before it (before the first change, the first one). */
+export function wageOn(rates: WageRate[], date: string): WageRate | null {
+  if (rates.length === 0) return null;
+  let pick = rates[0];
+  for (const r of rates) if (r.effectiveFrom <= date) pick = r;
+  return pick;
+}
+
+/** One day's pay at full attendance: a month's salary is split over that month's days (28 to 31). */
+export function dayRate(rate: WageRate, daysInMonth: number): number {
+  return rate.wageType === "MONTHLY" ? rate.monthlyWage / daysInMonth : rate.dailyWage;
 }

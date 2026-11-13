@@ -2,7 +2,6 @@ import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
 import { removeFace, setEmployeeLeft, setEmployeeLogin } from "@/app/actions/employees";
-import { giveAdvance } from "@/app/actions/advances";
 import { ActionForm } from "@/components/ActionForm";
 import { Avatar } from "@/components/Avatar";
 import { CalendarRange, Pencil } from "@/components/icons";
@@ -13,12 +12,13 @@ import { statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
-import { employeeBalance, outstandingAdvances, salaryDue, todayStatus } from "@/lib/services";
-import { payAllDue } from "@/app/actions/payroll";
+import { todayStatus } from "@/lib/services";
+import { hisaabOf } from "@/lib/ledger";
+import { balanceText, HisaabPanel } from "@/components/HisaabPanel";
 import { listLeaves } from "@/lib/leaves";
 import { LeavePanel } from "@/components/LeavePanel";
-import { dbToDateKey, formatDateKey, formatMonth, istDateKey, istMonthKey } from "@/lib/time";
-import { DateInput, MonthInput, Select } from "@/components/controls";
+import { dbToDateKey, formatDateKey, istDateKey, istMonthKey } from "@/lib/time";
+import { DateInput } from "@/components/controls";
 
 export default async function EmployeePage({ params, searchParams }: PageProps<"/employees/[id]">) {
   const actor = await requireStaff();
@@ -26,18 +26,15 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
-  const [advances, pendingAdvances, balance, lines, today, leaves, due] = await Promise.all([
-    outstandingAdvances(emp.id),
-    db.advance.findMany({ where: { employeeId: emp.id, status: "PENDING_APPROVAL" } }),
-    employeeBalance(emp),
-    db.payrollLine.findMany({ where: { employeeId: emp.id }, include: { run: true }, orderBy: { run: { month: "desc" } }, take: 12 }),
+  const [h, wageRows, today, leaves] = await Promise.all([
+    hisaabOf(emp),
+    db.wageChange.findMany({ where: { employeeId: emp.id }, orderBy: { effectiveFrom: "desc" } }),
     emp.active ? todayStatus(emp) : Promise.resolve(null),
     listLeaves(actor, { employeeId: emp.id }),
-    salaryDue(emp.id),
   ]);
   const manage = can(actor, "employees.manage");
   const thisMonth = istMonthKey(new Date());
-  const open = advances.filter((a) => a.remaining > 0);
+  const wages = wageRows.map((w) => ({ from: dbToDateKey(w.effectiveFrom), text: w.wageType === "MONTHLY" ? `${formatRs(w.monthlyWage)} / month` : `${formatRs(w.dailyWage)} / day` }));
 
   const face = (
     <section className="card flex flex-col gap-3">
@@ -61,59 +58,14 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     </section>
   );
 
-  const advance = (
-    <section className="card flex flex-col gap-3">
-      <h2 className="font-semibold">Advance balance</h2>
-      <div className="grid grid-cols-3 gap-2 text-sm">
-        <div><div className="muted">Earned this month</div><div className="text-lg font-semibold">{formatRs(balance.earned)}</div></div>
-        <div><div className="muted">Advance to recover</div><div className="text-lg font-semibold">{formatRs(balance.outstanding)}</div></div>
-        <div><div className="muted">Balance</div><div className={`text-lg font-semibold ${balance.balance < 0 ? "text-[var(--red)]" : ""}`}>{formatRs(balance.balance)}</div></div>
-      </div>
-      {open.length > 0 && (
-        <table className="table table-cards">
-          <thead><tr><th>Given</th><th>Amount</th><th>Recovered</th><th>Plan</th></tr></thead>
-          <tbody>
-            {open.map((a) => (
-              <tr key={a.id}>
-                <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
-                <td data-label={"Amount"}>{formatRs(a.amount)}</td>
-                <td data-label={"Recovered"}>{formatRs(a.recovered)}</td>
-                <td data-label={"Plan"}>
-                  {a.recoveryMonths === 1 ? "Full" : `${a.recoveryMonths} months`} {"from"} {formatMonth(a.startMonth)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {pendingAdvances.length > 0 && (
-        <p className="text-sm text-[var(--red)]">
-          {`${pendingAdvances.length} advance(s) waiting for approval.`}{" "}
-          <Link className="underline" href="/approvals">Open approvals</Link>
-        </p>
-      )}
-      {can(actor, "advances.manage") && emp.active && (
-        <details className="rounded-lg border border-[var(--line)] p-3" open={!!sp.advance}>
-          <summary className="cursor-pointer font-medium">Give advance</summary>
-          <ActionForm action={giveAdvance} className="mt-3 grid gap-3 @md:grid-cols-2" submitLabel={"Save advance"} resetOnSuccess>
-            <input type="hidden" name="employeeId" value={emp.id} />
-            <div><label className="label">Amount (₹)</label><input name="amount" className="input" inputMode="decimal" required /></div>
-            <div><label className="label">Date</label><DateInput name="givenOn" defaultValue={istDateKey(new Date())} max={istDateKey(new Date())} /></div>
-            <div>
-              <label className="label">Recover over</label>
-              <Select
-                name="recoveryMonths"
-                defaultValue="1"
-                ariaLabel="Recover over"
-                options={[{ value: "1", label: "Full, this month end" }, ...[2, 3, 4, 6].map((n) => ({ value: String(n), label: `${n} months` })), { value: "12", label: "12 months (1 year)" }]}
-              />
-            </div>
-            <div><label className="label">First recovery month</label><MonthInput name="startMonth" defaultValue={thisMonth} /></div>
-            <div className="@md:col-span-2"><label className="label">Note (optional)</label><input name="note" className="input" /></div>
-          </ActionForm>
-        </details>
-      )}
-    </section>
+  const hisaab = (
+    <HisaabPanel
+      h={h}
+      employee={{ id: emp.id, name: emp.name, active: emp.active }}
+      wages={wages}
+      openAdvance={!!sp.advance}
+      can={{ pay: can(actor, "payroll.lock"), extras: can(actor, "payroll.run"), advance: can(actor, "advances.manage"), owner: actor.role === "OWNER" }}
+    />
   );
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -147,51 +99,6 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     </section>
   );
 
-  const salary = (
-    <div className="flex flex-col gap-4">
-    {(due.total > 0 || emp.holdSalary) && (
-      <section className="card flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold">Salary due</h2>
-          {emp.holdSalary && <span className="badge badge-amber">Salary on hold</span>}
-        </div>
-        <div className="text-2xl font-semibold tracking-tight">{formatRs(due.total)}</div>
-        <p className="muted">
-          {due.months.length ? due.months.map((m) => `${formatMonth(m.month)} ${formatRs(m.due)}`).join(" · ") : "Nothing due yet. Months count here once their salary is approved and locked."}
-        </p>
-        {can(actor, "payroll.lock") && due.total > 0 && (
-          <ActionForm action={payAllDue} className="flex flex-wrap items-end gap-2" submitLabel={`Pay all due (${formatRs(due.total)})`} confirm={`Pay ${formatRs(due.total)} to ${emp.name}? This marks ${due.months.length} month(s) as paid.`}>
-            <input type="hidden" name="employeeId" value={emp.id} />
-            <div className="w-40"><label className="label">Paid by</label><Select name="mode" defaultValue="CASH" ariaLabel="Payment mode" options={[{ value: "CASH", label: "Cash" }, { value: "BANK", label: "Bank transfer" }, { value: "UPI", label: "UPI" }, { value: "CHEQUE", label: "Cheque" }]} /></div>
-            <div className="w-44"><label className="label">Paid on</label><DateInput name="paidOn" defaultValue={istDateKey(new Date())} max={istDateKey(new Date())} /></div>
-            <div className="w-44"><label className="label">Reference (optional)</label><input name="ref" className="input" /></div>
-          </ActionForm>
-        )}
-      </section>
-    )}
-    <section className="card overflow-x-auto">
-      <h2 className="mb-3 font-semibold">Salary history</h2>
-      <table className="table table-cards">
-        <thead><tr><th>Month</th><th>Days</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Paid</th><th /></tr></thead>
-        <tbody>
-          {lines.map((l) => (
-            <tr key={l.id}>
-              <td className="card-title font-medium">{formatMonth(l.run.month)} {l.run.status === "DRAFT" && <span className="badge badge-neutral">draft</span>}</td>
-              <td data-label={"Days"}>{l.payableDays}</td>
-              <td data-label={"Gross"}>{formatRs(l.gross)}</td>
-              <td data-label={"Deductions"}>{formatRs(l.pfEmployee + l.esiEmployee + l.advanceRecovered)}</td>
-              <td data-label={"Net"} className="font-semibold">{formatRs(l.net)}</td>
-              <td data-label={"Paid"}>{l.paidAmount ? formatRs(l.paidAmount) : "—"}</td>
-              <td><Link className="link" href={`/payslip/${l.id}`}>Payslip</Link></td>
-            </tr>
-          ))}
-          {lines.length === 0 && <tr><td colSpan={7} className="muted">No salary prepared yet.</td></tr>}
-        </tbody>
-      </table>
-    </section>
-    </div>
-  );
-
   const account = manage ? (
     <div className="flex flex-col gap-4">
       <section className="card flex flex-col gap-3">
@@ -217,7 +124,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           action={setEmployeeLeft}
           submitLabel={emp.active ? "Archive employee" : "Restore employee"}
           submitClass={emp.active ? "btn-danger" : "btn-primary"}
-          confirm={emp.active ? `Archive this employee? Their face will be deleted and planned leave ends. Attendance and salary history are kept.${balance.outstanding > 0 ? ` Note: ${formatRs(balance.outstanding)} advance is still to be recovered.` : ""}` : undefined}
+          confirm={emp.active ? `Archive this employee? Their face will be deleted and planned leave ends. Attendance and salary history are kept.${h.balance !== 0 ? ` Hisaab: ${balanceText(h.balance)}.` : ""}` : undefined}
           className="flex flex-col gap-3"
         >
           <input type="hidden" name="id" value={emp.id} />
@@ -231,9 +138,8 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
 
   const tabs = [
     { id: "details", label: "Overview", content: details },
+    { id: "hisaab", label: "Hisaab", content: hisaab },
     { id: "face", label: "Face", content: face },
-    { id: "advance", label: "Advance", content: advance },
-    { id: "salary", label: "Salary", content: salary },
     { id: "leave", label: "Leave", content: <LeavePanel rows={leaves} employeeId={emp.id} canEdit={can(actor, "attendance.edit") && emp.active} /> },
     ...(account ? [{ id: "account", label: "Access & archive", content: account }] : []),
   ];
@@ -250,7 +156,6 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
                 <h1 className="h1 truncate">{emp.name}</h1>
                 {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
                 {emp.inHouse && <span className="badge badge-neutral">In-house</span>}
-                {emp.holdSalary && <span className="badge badge-amber">Salary on hold</span>}
                 {today && (
                   <span className={statusBadgeClass(today.status)}>
                     Today: {today.label}
@@ -273,9 +178,9 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
         <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
           {[
             ["Face", emp.faceId ? "Enrolled" : emp.inHouse ? "Not needed (in-house)" : "Not enrolled", emp.faceId || emp.inHouse ? "" : "text-[var(--red)]"],
-            ["Earned this month", formatRs(balance.earned), ""],
-            ["Advance to recover", formatRs(balance.outstanding), ""],
-            ["Balance", formatRs(balance.balance), balance.balance < 0 ? "text-[var(--red)]" : ""],
+            ["Salary earned", formatRs(h.earned + h.extras), ""],
+            ["Advances and paid", formatRs(h.advances + h.payments), ""],
+            [h.balance < 0 ? "Employee owes" : "Balance to pay", formatRs(Math.abs(h.balance)), h.balance < 0 ? "text-[var(--red)]" : ""],
           ].map(([k, v, cls]) => (
             <div key={k} className="card !p-3">
               <div className="text-xs text-[var(--muted)]">{k}</div>
@@ -290,7 +195,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           {"Employee added. Now enroll the face in the Face tab."}
         </div>
       )}
-      <Tabs tabs={tabs} initial={sp.advance ? "advance" : sp.created ? "face" : undefined} />
+      <Tabs tabs={tabs} initial={sp.advance || sp.tab === "hisaab" ? "hisaab" : sp.created ? "face" : undefined} />
     </div>
   );
 }
