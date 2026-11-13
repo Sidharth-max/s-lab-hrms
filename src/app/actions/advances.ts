@@ -14,7 +14,7 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
   const actor = await assertStaff("advances.manage");
   const emp = await db.employee.findFirst({ where: { id: str(form, "employeeId"), businessId: actor.businessId } });
   if (!emp || !canSeeSite(actor, emp.siteId)) return { error: "Employee not found" };
-  if (!emp.active) return { error: "Employee has left" };
+  if (!emp.active) return { error: "This employee is archived" };
   const amount = parseRs(str(form, "amount"));
   if (amount == null || amount <= 0) return { error: "Enter the amount" };
   const givenOn = str(form, "givenOn") || istDateKey(new Date());

@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
-import { removeFace, setEmployeeLeft, setEmployeeLogin, updateEmployee } from "@/app/actions/employees";
+import { removeFace, setEmployeeLeft, setEmployeeLogin } from "@/app/actions/employees";
 import { giveAdvance } from "@/app/actions/advances";
 import { ActionForm } from "@/components/ActionForm";
-import { EmployeeFields } from "@/components/EmployeeFields";
+import { Avatar } from "@/components/Avatar";
+import { CalendarRange, Pencil } from "lucide-react";
 import { FaceEnroll } from "@/components/FaceEnroll";
 import { Tabs } from "@/components/Tabs";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatRs, rsInput } from "@/lib/money";
+import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
-import { siteWhere } from "@/lib/scope";
-import { employeeBalance, outstandingAdvances } from "@/lib/services";
+import { employeeBalance, outstandingAdvances, todayStatus } from "@/lib/services";
 import { dbToDateKey, formatDateKey, formatMonth, istDateKey, istMonthKey } from "@/lib/time";
 import { DateInput, MonthInput, Select } from "@/components/controls";
 
@@ -22,13 +22,12 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
-  const [business, sites, advances, pendingAdvances, balance, lines] = await Promise.all([
-    db.business.findUniqueOrThrow({ where: { id: actor.businessId } }),
-    db.site.findMany({ where: siteWhere(actor), orderBy: { name: "asc" } }),
+  const [advances, pendingAdvances, balance, lines, today] = await Promise.all([
     outstandingAdvances(emp.id),
     db.advance.findMany({ where: { employeeId: emp.id, status: "PENDING_APPROVAL" } }),
     employeeBalance(emp),
     db.payrollLine.findMany({ where: { employeeId: emp.id }, include: { run: true }, orderBy: { run: { month: "desc" } }, take: 12 }),
+    emp.active ? todayStatus(emp) : Promise.resolve(null),
   ]);
   const manage = can(actor, "employees.manage");
   const thisMonth = istMonthKey(new Date());
@@ -111,39 +110,32 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     </section>
   );
 
-  const details = manage ? (
-    <section className="card">
-      <h2 className="mb-3 font-semibold">Details and salary structure</h2>
-      <ActionForm action={updateEmployee} className="flex flex-col gap-4">
-        <input type="hidden" name="id" value={emp.id} />
-        <EmployeeFields
-          sites={sites}
-          isNew={false}
-          canSalary={can(actor, "salary.edit")}
-          businessWeeklyOff={business.weeklyOffDays}
-          values={{
-            name: emp.name,
-            code: emp.code,
-            phone: emp.phone,
-            siteId: emp.siteId,
-            joinedOn: dbToDateKey(emp.joinedOn),
-            wageType: emp.wageType,
-            wage: rsInput(emp.wageType === "MONTHLY" ? emp.monthlyWage : emp.dailyWage),
-            basicPercent: emp.basicPercent,
-            pfEnabled: emp.pfEnabled,
-            esiEnabled: emp.esiEnabled,
-            customWeeklyOff: emp.customWeeklyOff,
-            weeklyOffDays: emp.weeklyOffDays,
-          }}
-        />
-      </ActionForm>
-    </section>
-  ) : (
-    <section className="card grid gap-2 text-sm">
-      <div><span className="muted">{"Site"}:</span> {emp.site.name}</div>
-      <div><span className="muted">{"Mobile"}:</span> {emp.phone ?? "—"}</div>
-      <div><span className="muted">{"Pay"}:</span> {emp.wageType === "MONTHLY" ? `${formatRs(emp.monthlyWage)} ${"/ month"}` : `${formatRs(emp.dailyWage)} ${"/ day"}`}</div>
-      <div><span className="muted">PF / ESIC:</span> {emp.pfEnabled ? "PF" : "—"} {emp.esiEnabled ? "ESIC" : ""}</div>
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const pay = emp.wageType === "MONTHLY" ? `${formatRs(emp.monthlyWage)} / month` : `${formatRs(emp.dailyWage)} / day`;
+  const facts: [string, string][] = [
+    ["Employee code", emp.code],
+    ["Site", emp.site.name],
+    ["Mobile", emp.phone ?? "—"],
+    ["Joined", formatDateKey(dbToDateKey(emp.joinedOn))],
+    ["Pay", pay],
+    ["Basic for PF", `${emp.basicPercent}%`],
+    ["PF / ESIC", [emp.pfEnabled ? "PF" : null, emp.esiEnabled ? "ESIC" : null].filter(Boolean).join(" + ") || "Off"],
+    ["Weekly off", emp.customWeeklyOff ? (emp.weeklyOffDays.map((d) => DAYS[d]).join(", ") || "None") : "Same as business"],
+  ];
+  const details = (
+    <section className="card flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-semibold">Details</h2>
+        {manage && <Link href={`/employees/${emp.id}/edit`} className="btn-secondary !h-8"><Pencil size={14} aria-hidden />Edit</Link>}
+      </div>
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm @md:grid-cols-2">
+        {facts.map(([k, v]) => (
+          <div key={k} className="flex items-baseline justify-between gap-3 border-b border-[var(--line)] pb-2 last:border-0">
+            <dt className="text-[var(--muted)]">{k}</dt>
+            <dd className="text-right font-medium">{v}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 
@@ -185,12 +177,17 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
         </ActionForm>
       </section>
       <section className="card flex flex-col gap-3">
-        <h2 className="font-semibold">{emp.active ? "Employee left" : "Rejoin"}</h2>
+        <h2 className="font-semibold">{emp.active ? "Archive employee" : "Archived"}</h2>
+        <p className="muted">
+          {emp.active
+            ? "When someone stops working here, archive them. Their face is deleted so they cannot scan; attendance, salary and advance history stay."
+            : `Archived on ${emp.leftOn ? formatDateKey(dbToDateKey(emp.leftOn)) : ""}. Restore to make them active again (enroll the face again after).`}
+        </p>
         <ActionForm
           action={setEmployeeLeft}
-          submitLabel={emp.active ? "Mark as left" : "Make active again"}
-          submitClass={emp.active ? "btn-danger" : "btn-secondary"}
-          confirm={emp.active ? "Mark as left? Their face will be deleted. Attendance and salary history are kept." : undefined}
+          submitLabel={emp.active ? "Archive employee" : "Restore employee"}
+          submitClass={emp.active ? "btn-danger" : "btn-primary"}
+          confirm={emp.active ? "Archive this employee? Their face will be deleted. Attendance and salary history are kept." : undefined}
           className="flex flex-col gap-3"
         >
           <input type="hidden" name="id" value={emp.id} />
@@ -203,29 +200,59 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   ) : null;
 
   const tabs = [
+    { id: "details", label: "Overview", content: details },
     { id: "face", label: "Face", content: face },
     { id: "advance", label: "Advance", content: advance },
-    { id: "details", label: "Details", content: details },
     { id: "salary", label: "Salary", content: salary },
-    ...(account ? [{ id: "account", label: "Login / Left", content: account }] : []),
+    ...(account ? [{ id: "account", label: "Access & archive", content: account }] : []),
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <BackLink href="/employees" label="Employees" className="fold:hidden" />
-          <h1 className="h1">{emp.name} <span className="text-base font-normal text-[var(--muted)]">{emp.code}</span></h1>
-          {!emp.active && <span className="badge badge-neutral">{"Left on"} {emp.leftOn ? formatDateKey(dbToDateKey(emp.leftOn)) : ""}</span>}
+      <div className="flex flex-col gap-3">
+        <BackLink href="/employees" label="Employees" className="fold:hidden" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={emp.name} size={48} muted={!emp.active} />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="h1 truncate">{emp.name}</h1>
+                {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
+                {today && (
+                  <span className={`badge ${today.status === "PRESENT" || today.status === "HALF_DAY" ? "badge-green" : today.status === "ABSENT" || today.status === "UNPAID_LEAVE" ? "badge-red" : "badge-neutral"}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />Today: {today.label}
+                  </span>
+                )}
+              </div>
+              <p className="muted">{emp.code} · {emp.site.name} · {pay}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {manage && <Link className="btn-primary" href={`/employees/${emp.id}/edit`}><Pencil size={15} aria-hidden />Edit</Link>}
+            <Link className="btn-secondary" href={`/attendance/register?month=${thisMonth}&employee=${emp.id}`}><CalendarRange size={15} aria-hidden />Attendance</Link>
+          </div>
         </div>
-        <Link className="btn-secondary" href={`/attendance/register?month=${thisMonth}&employee=${emp.id}`}>Attendance register</Link>
+        <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
+          {[
+            ["Face", emp.faceId ? "Enrolled" : "Not enrolled", emp.faceId ? "" : "text-[var(--red)]"],
+            ["Earned this month", formatRs(balance.earned), ""],
+            ["Advance to recover", formatRs(balance.outstanding), ""],
+            ["Balance", formatRs(balance.balance), balance.balance < 0 ? "text-[var(--red)]" : ""],
+          ].map(([k, v, cls]) => (
+            <div key={k} className="card !p-3">
+              <div className="text-xs text-[var(--muted)]">{k}</div>
+              <div className={`mt-0.5 text-base font-semibold tracking-tight ${cls}`}>{v}</div>
+            </div>
+          ))}
+        </div>
       </div>
+      {sp.saved && <div className="notice-green">Changes saved.</div>}
       {sp.created && (
         <div className="notice-green">
           {"Employee added. Now enroll the face in the Face tab."}
         </div>
       )}
-      <Tabs tabs={tabs} initial={sp.advance ? "advance" : undefined} />
+      <Tabs tabs={tabs} initial={sp.advance ? "advance" : sp.created ? "face" : undefined} />
     </div>
   );
 }

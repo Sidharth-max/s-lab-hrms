@@ -1,6 +1,6 @@
 import "server-only";
 import type { Business, Employee, Prisma } from "@prisma/client";
-import { countDays, deriveMonth, type DayResult } from "./attendance";
+import { countDays, deriveMonth, STATUS_LABEL, type DayResult } from "./attendance";
 import { db } from "./db";
 import { calculatePay, payableDays, grossPay, type AdvanceInput } from "./payroll";
 import { effectiveWeeklyOff, parseDayRules } from "./day-rules";
@@ -199,4 +199,14 @@ export async function nextEmployeeCode(businessId: string, tx: Tx = db): Promise
     return n ? Math.max(m, Number(n[1])) : m;
   }, 0);
   return `E${String(max + 1).padStart(3, "0")}`;
+}
+
+/** Today's attendance for one employee, e.g. { status: "HALF_DAY", label: "Half day" }. */
+export async function todayStatus(employee: Employee, tx: Tx = db) {
+  const today = istDateKey(new Date());
+  const { days } = await monthAttendance(employee.businessId, today.slice(0, 7), [employee], tx);
+  const d = days.get(employee.id)?.find((x) => x.date === today);
+  if (!d || d.status === "NOT_EMPLOYED" || d.status === "FUTURE") return null;
+  // Absent so far today simply means they have not scanned in yet.
+  return { status: d.status, label: d.status === "ABSENT" ? "Not in yet" : STATUS_LABEL[d.status] };
 }

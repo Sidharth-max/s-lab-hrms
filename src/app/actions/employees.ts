@@ -119,6 +119,13 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   return { ok: true, message: "Saved" };
 });
 
+/** Website edit page: save, then go back to the employee. */
+export async function updateEmployeeAndReturn(prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const r = await updateEmployee(prev, form);
+  if (r?.ok) redirect(`/employees/${str(form, "id")}?saved=1`);
+  return r;
+}
+
 export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
   const emp = await loadEmployee(str(form, "id"), actor.businessId);
@@ -127,9 +134,9 @@ export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Pr
     await db.employee.update({ where: { id: emp.id }, data: { leftOn: null, active: true } });
     await audit(actor.businessId, actor.id, "employee.rejoin", "Employee", emp.id);
     revalidatePath("/employees", "layout");
-    return { ok: true, message: "Employee is active again" };
+    return { ok: true, message: "Employee restored from the archive" };
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(leftOn)) return { error: "Enter the leaving date" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(leftOn)) return { error: "Enter the last working day" };
   await db.$transaction(async (tx) => {
     await tx.employee.update({ where: { id: emp.id }, data: { leftOn: dateKeyToDb(leftOn), active: false, faceId: null, faceIds: [], faceEnrolledAt: null } });
     if (emp.userId) await tx.user.update({ where: { id: emp.userId }, data: { active: false } });
@@ -139,13 +146,13 @@ export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Pr
   if (faces.length) await faceProvider().remove(actor.businessId, faces).catch((e) => console.error("Face delete failed", e));
   await audit(actor.businessId, actor.id, "employee.left", "Employee", emp.id, { leftOn });
   revalidatePath("/employees", "layout");
-  return { ok: true, message: "Marked as left. Face removed." };
+  return { ok: true, message: "Employee archived. Face removed; attendance and salary history are kept." };
 });
 
 export const enrollFace = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
   const emp = await loadEmployee(str(form, "id"), actor.businessId);
-  if (!emp.active) return { error: "Employee has left" };
+  if (!emp.active) return { error: "This employee is archived. Restore them first." };
   if (form.get("consent") !== "on") return { error: "Confirm the employee was told how the face is used" };
   // Up to 5 photos of the same person (straight, a little left, a little right) make recognition more reliable.
   const raw = form.getAll("image").filter((v) => typeof v === "string" && v);

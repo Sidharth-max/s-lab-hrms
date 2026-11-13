@@ -111,10 +111,21 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
         const active = o.value === value;
         return (
           <Pressable key={o.value} onPress={() => onChange(o.value)} style={[styles.segmentItem, active && styles.segmentActive]}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.segmentText, active && { color: C.white }]}>{o.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.text }]}>{o.label}</Text>
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** Round initials avatar. */
+export function Avatar({ name, size = 40, muted }: { name: string; size?: number; muted?: boolean }) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const text = ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "?";
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: muted ? C.soft : C.head, alignItems: "center", justifyContent: "center" }}>
+      <Text style={{ color: muted ? C.muted : C.white, fontWeight: "700", fontSize: Math.round(size * 0.38) }}>{text}</Text>
     </View>
   );
 }
@@ -176,7 +187,7 @@ export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: st
   );
 }
 
-export function Badge({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "red" | "green" }) {
+export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green"; dot?: boolean }) {
   const map = {
     neutral: { bg: C.soft, fg: C.text, border: C.line },
     red: { bg: C.redSoft, fg: C.red, border: "#fecaca" },
@@ -184,6 +195,7 @@ export function Badge({ label, tone = "neutral" }: { label: string; tone?: "neut
   }[tone];
   return (
     <View style={[styles.badge, { backgroundColor: map.bg, borderColor: map.border }]}>
+      {dot ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: map.fg }} /> : null}
       <Text style={[styles.badgeText, { color: map.fg }]}>{label}</Text>
     </View>
   );
@@ -248,7 +260,7 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   inner: { flex: 1, gap: 12 },
   padded: { padding: 16 },
-  card: { backgroundColor: C.card, borderColor: C.line, borderWidth: 1, borderRadius: R.lg, padding: 16, gap: 10 },
+  card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 14, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
   h1: { fontSize: 22, fontWeight: "700", color: C.text, letterSpacing: -0.3 },
   h2: { fontSize: 16, fontWeight: "600", color: C.text },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
@@ -258,11 +270,11 @@ export const styles = StyleSheet.create({
   hint: { fontSize: 12, color: C.muted },
   input: { minHeight: 44, borderWidth: 1, borderColor: C.line, borderRadius: R.md, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
   // Full width with equal parts, so five tabs still fit on a narrow phone.
-  segment: { flexDirection: "row", borderWidth: 1, borderColor: C.line, borderRadius: R.md, overflow: "hidden", alignSelf: "stretch", backgroundColor: C.white },
-  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 10, backgroundColor: C.white, alignItems: "center", justifyContent: "center" },
-  segmentActive: { backgroundColor: C.text },
-  segmentText: { fontSize: 13, fontWeight: "600", color: C.text },
-  badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: "flex-start" },
+  segment: { flexDirection: "row", borderRadius: 10, padding: 3, gap: 2, alignSelf: "stretch", backgroundColor: "#efefef" },
+  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 8, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  segmentActive: { backgroundColor: C.white, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  segmentText: { fontSize: 13, fontWeight: "600", color: C.muted },
+  badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5 },
   badgeText: { fontSize: 12, fontWeight: "600" },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 4 },
   rowLabel: { fontSize: 14, color: C.muted },

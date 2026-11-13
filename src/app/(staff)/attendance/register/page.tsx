@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Avatar } from "@/components/Avatar";
 import { requireStaff } from "@/lib/auth";
 import { countDays, STATUS_SHORT, type DerivedStatus } from "@/lib/attendance";
 import { db } from "@/lib/db";
@@ -41,7 +42,48 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
         </div>
       </div>
       <p className="muted">P present · H half day · A absent · PL paid leave · UL unpaid leave · WO weekly off · HO holiday · * edited · ! no out punch. Tap a day to edit.</p>
-      <div className="card overflow-x-auto !p-0">
+      {/* Phones: one card per employee with a month calendar. Wider screens: the full table. */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {employees.map((e) => {
+          const list = days.get(e.id)!;
+          const c = countDays(list);
+          const lead = new Date(`${month}-01T00:00:00Z`).getUTCDay();
+          return (
+            <section key={e.id} className="card flex flex-col gap-3">
+              <Link href={`/employees/${e.id}`} className="flex items-center gap-3">
+                <Avatar name={e.name} size={34} />
+                <span className="min-w-0 flex-1 truncate font-medium">{e.name} <span className="font-normal text-[var(--muted)]">{e.code}</span></span>
+                <ChevronRight size={16} className="text-[var(--muted)]" aria-hidden />
+              </Link>
+              <div className="flex flex-wrap gap-2">
+                <span className="badge badge-green">Present {c.present}</span>
+                <span className="badge badge-red">Absent {c.absent}</span>
+                <span className="badge badge-neutral">Leave {c.paidLeave + c.unpaidLeave}</span>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
+                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <span key={i} className="font-medium text-[var(--muted)]">{d}</span>)}
+                {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} />)}
+                {list.map((d) => {
+                  const short = STATUS_SHORT[d.status];
+                  const body = (
+                    <>
+                      <span className="block text-[10px] text-[var(--muted)]">{Number(d.date.slice(8))}</span>
+                      <span className="block font-semibold">{short}{d.overridden ? "*" : ""}{d.missingOut && !d.overridden ? "!" : ""}</span>
+                    </>
+                  );
+                  return short ? (
+                    <Link key={d.date} href={`/attendance/${e.id}/${d.date}`} className={`rounded-md border border-[var(--line)] py-1 ${COLOR[d.status] ?? ""}`}>{body}</Link>
+                  ) : (
+                    <span key={d.date} className="rounded-md border border-[var(--line)] py-1 text-neutral-300">{body}</span>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+        {employees.length === 0 && <div className="card muted">No employees.</div>}
+      </div>
+      <div className="card hidden overflow-x-auto !p-0 md:block">
         <table className="table text-xs">
           <thead>
             <tr>

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { apiError, json, staff } from "@/lib/api";
 import { canSeeSite } from "@/lib/permissions";
-import { employeeBalance, outstandingAdvances } from "@/lib/services";
+import { employeeBalance, outstandingAdvances, todayStatus } from "@/lib/services";
 import { dbToDateKey } from "@/lib/time";
 
 export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id]">) {
@@ -9,11 +9,12 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
     const { id } = await ctx.params;
     const e = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
     if (!e || !canSeeSite(actor, e.siteId)) return apiError("Employee not found", 404);
-    const [advances, pending, balance, lines] = await Promise.all([
+    const [advances, pending, balance, lines, today] = await Promise.all([
       outstandingAdvances(e.id),
       db.advance.count({ where: { employeeId: e.id, status: "PENDING_APPROVAL" } }),
       employeeBalance(e),
       db.payrollLine.findMany({ where: { employeeId: e.id }, include: { run: true }, orderBy: { run: { month: "desc" } }, take: 12 }),
+      e.active ? todayStatus(e) : Promise.resolve(null),
     ]);
     return json({
       employee: {
@@ -38,6 +39,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
         webLogin: !!e.user?.active,
       },
       balance,
+      today,
       pendingAdvances: pending,
       advances: advances
         .filter((a) => a.remaining > 0)

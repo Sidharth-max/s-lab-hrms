@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ChevronRight, Plus, Search } from "lucide-react";
+import { Avatar } from "./Avatar";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -19,7 +20,7 @@ export interface EmployeeRow {
 export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: boolean }) {
   const path = usePathname();
   const [q, setQ] = useState("");
-  const [showLeft, setShowLeft] = useState(false);
+  const [showLeft, setShowLeft] = useState(false); // true = archived
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     return rows.filter(
@@ -35,35 +36,36 @@ export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: bo
         <h1 className="h1">Employees</h1>
         {canAdd && <Link href="/employees/new" className="btn-primary"><Plus size={16} strokeWidth={2} aria-hidden />Add</Link>}
       </div>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={"Search name, code or mobile"} className="input" />
-      <div className="inline-flex self-start overflow-hidden rounded-lg border border-[var(--line)] text-sm">
-        {[false, true].map((left) => (
-          <button
-            key={String(left)}
-            type="button"
-            onClick={() => setShowLeft(left)}
-            className={`px-3 py-1.5 ${showLeft === left ? "bg-[var(--brand)] text-white" : "bg-white"}`}
-          >
-            {left ? "Left" : "Working"}
+      <div className="relative">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" aria-hidden />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={"Search name, code or mobile"} className="input !pl-9" />
+      </div>
+      <div className="segmented self-start" role="tablist">
+        {[false, true].map((archived) => (
+          <button key={String(archived)} type="button" role="tab" aria-selected={showLeft === archived} onClick={() => setShowLeft(archived)} data-active={showLeft === archived}>
+            {archived ? "Archived" : "Active"}
+            <span className="ml-1.5 text-[var(--muted)]">{rows.filter((r) => r.active !== archived).length}</span>
           </button>
         ))}
       </div>
-      <ul className="card flex flex-col !p-0">
+      <ul className="card flex flex-col !p-1">
         {list.map((r) => {
-          const active = path === `/employees/${r.id}`;
+          const active = path === `/employees/${r.id}` || path.startsWith(`/employees/${r.id}/`);
           return (
-            <li key={r.id} className="border-b border-[var(--line)] last:border-0">
-              <Link href={`/employees/${r.id}`} className={`flex items-center justify-between gap-2 px-4 py-3 ${active ? "bg-[var(--soft)]" : "hover:bg-gray-50"}`}>
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{r.name} <span className="muted">{r.code}</span></div>
-                  <div className="muted truncate">{r.site} · {r.wage}</div>
+            <li key={r.id}>
+              <Link href={`/employees/${r.id}`} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition ${active ? "bg-[var(--soft)]" : "hover:bg-[var(--soft)]"}`}>
+                <Avatar name={r.name} size={34} muted={!r.active} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{r.name} <span className="font-normal text-[var(--muted)]">{r.code}</span></div>
+                  <div className="truncate text-xs text-[var(--muted)]">{r.site} · {r.wage}</div>
                 </div>
-                {!r.face && r.active && <span className="badge badge-neutral shrink-0">No face</span>}
+                {!r.face && r.active && <span className="badge badge-red shrink-0">No face</span>}
+                <ChevronRight size={16} className="shrink-0 text-[var(--muted)]" aria-hidden />
               </Link>
             </li>
           );
         })}
-        {list.length === 0 && <li className="muted px-4 py-3">No employees found.</li>}
+        {list.length === 0 && <li className="muted px-3 py-3">{showLeft ? "No archived employees." : "No employees found."}</li>}
       </ul>
     </div>
   );

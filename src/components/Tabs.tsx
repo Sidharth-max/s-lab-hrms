@@ -16,7 +16,7 @@ export function Tabs({
   const [active, setActive] = useState(initial && tabs.some((t) => t.id === initial) ? initial : tabs[0]?.id);
   return (
     <div className="@container">
-      <div className="no-print -mx-1 mb-3 flex gap-1 overflow-x-auto px-1 py-1 @4xl:hidden" role="tablist">
+      <div className="no-print mb-4 flex gap-5 overflow-x-auto border-b border-[var(--line)] @4xl:hidden" role="tablist">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -24,7 +24,7 @@ export function Tabs({
             role="tab"
             aria-selected={active === t.id}
             onClick={() => setActive(t.id)}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${active === t.id ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white"}`}
+            className={`-mb-px whitespace-nowrap border-b-2 pb-2.5 pt-1 text-sm font-medium transition ${active === t.id ? "border-[var(--text)] text-[var(--text)]" : "border-transparent text-[var(--muted)] hover:text-[var(--text)]"}`}
           >
             {t.label}
           </button>

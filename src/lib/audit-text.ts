@@ -104,9 +104,9 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
       case "employee.update":
         return r("employee", `Edited details of ${subject}`);
       case "employee.left":
-        return r("employee", `Marked ${subject} as left`, `Last day ${date(d.leftOn)}. Face removed.`);
+        return r("employee", `Archived ${subject}`, `Last working day ${date(d.leftOn)}. Face removed.`);
       case "employee.rejoin":
-        return r("employee", `Made ${subject} active again`);
+        return r("employee", `Restored ${subject} from the archive`);
       case "employee.login.on":
         return r("employee", `Turned on web login for ${subject}`);
       case "employee.login.off":

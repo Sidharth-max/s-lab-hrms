@@ -2,8 +2,9 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, Text, View } from "react-native";
 import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "lucide-react-native";
-import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
+import { Avatar, Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
+import { MonthGrid } from "@/components/MonthGrid";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
@@ -18,6 +19,7 @@ interface Detail {
     face: boolean; faceEnrolledAt: string | null; webLogin: boolean;
   };
   balance: { earned: number; outstanding: number; balance: number };
+  today: { status: string; label: string } | null;
   pendingAdvances: number;
   advances: { id: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string; note: string | null }[];
   salary: { id: string; month: string; locked: boolean; payableDays: number; gross: number; net: number; paid: number }[];
@@ -36,14 +38,6 @@ function istToday() {
   return new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
 }
 
-function dayColors(status: string) {
-  if (status === "PRESENT") return { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" };
-  if (status === "HALF_DAY") return { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" };
-  if (status === "ABSENT" || status === "UNPAID_LEAVE") return { bg: C.redSoft, fg: C.red, border: "#fecaca" };
-  if (status === "FUTURE" || status === "NOT_EMPLOYED") return { bg: C.white, fg: "#c4c4c4", border: C.line };
-  return { bg: C.soft, fg: C.text, border: C.line };
-}
-
 /** One person's month as a calendar. Tap a day to see or fix it. */
 function MonthCalendar({ employeeId }: { employeeId: string }) {
   const [month, setMonth] = useState<string | null>(null);
@@ -55,10 +49,6 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
   if (!data && error) return <Notice tone="red" text={error} />;
   if (!data) return <Loading />;
   const row = data.rows[0];
-  const first = new Date(`${data.month}-01T00:00:00`).getDay();
-  const cells: ({ date: string; status: string; short: string; manual: boolean; missingOut: boolean } | null)[] = [...Array(first).fill(null), ...(row?.days ?? [])];
-  while (cells.length % 7) cells.push(null);
-  const weeks = Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7));
   return (
     <Card>
       <MonthField value={data.month} onChange={setMonth} max={data.current} />
@@ -69,32 +59,7 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
             <Badge label={`Absent ${row.absent}`} tone="red" />
             <Badge label={`Leave ${row.leave}`} />
           </View>
-          <View style={{ gap: 4 }}>
-            <View style={{ flexDirection: "row", gap: 4 }}>
-              {DAYS.map((d) => <Text key={d} style={{ flex: 1, textAlign: "center", fontSize: 11, color: C.muted, fontWeight: "600" }}>{d}</Text>)}
-            </View>
-            {weeks.map((w, i) => (
-              <View key={i} style={{ flexDirection: "row", gap: 4 }}>
-                {w.map((d, j) => {
-                  if (!d) return <View key={j} style={{ flex: 1, aspectRatio: 1 }} />;
-                  const col = dayColors(d.status);
-                  const tappable = d.status !== "FUTURE" && d.status !== "NOT_EMPLOYED";
-                  return (
-                    <Pressable
-                      key={j}
-                      disabled={!tappable}
-                      onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId, date: d.date } })}
-                      accessibilityLabel={`${dateLabel(d.date)}: ${d.short || d.status}`}
-                      style={{ flex: 1, aspectRatio: 1, borderRadius: 8, borderWidth: 1, borderColor: col.border, backgroundColor: col.bg, alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Text style={{ fontSize: 12, color: C.muted }}>{Number(d.date.slice(8))}</Text>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: col.fg }}>{d.short}{d.manual ? "*" : ""}{d.missingOut ? "!" : ""}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
+          <MonthGrid employeeId={employeeId} month={data.month} days={row.days} />
           <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch</Muted>
         </>
       )}
@@ -147,7 +112,7 @@ export default function EmployeeDetail() {
   const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
   const { me, can } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "payroll", "attendance"]);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("overview"); // a new employee lands on Overview, where the face photo button is first
   const [leftOn, setLeftOn] = useState(istToday());
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -190,15 +155,25 @@ export default function EmployeeDetail() {
       />
 
       <Card>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-          <View style={{ flexShrink: 1, gap: 2 }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>{e.name}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Avatar name={e.name} size={52} muted={!e.active} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ fontSize: 19, fontWeight: "700", color: C.text, letterSpacing: -0.3 }}>{e.name}</Text>
             <Muted>{e.code} · {e.site}{e.phone ? ` · ${e.phone}` : ""}</Muted>
+            <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+              {e.active ? <Badge label="Active" tone="neutral" /> : <Badge label={`Archived${e.leftOn ? ` · ${dateLabel(e.leftOn)}` : ""}`} />}
+              {data.today ? (
+                <Badge
+                  label={`Today: ${data.today.label}`}
+                  tone={data.today.status === "PRESENT" || data.today.status === "HALF_DAY" ? "green" : data.today.status === "ABSENT" || data.today.status === "UNPAID_LEAVE" ? "red" : "neutral"}
+                  dot
+                />
+              ) : null}
+            </View>
           </View>
-          {e.active ? <Badge label="Working" tone="green" /> : <Badge label={`Left ${e.leftOn ? dateLabel(e.leftOn) : ""}`} tone="red" />}
         </View>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <Badge label={e.face ? "Face enrolled" : "No face"} tone={e.face ? "green" : "red"} />
+          <Badge label={e.face ? "Face enrolled" : "No face"} tone={e.face ? "green" : "red"} dot />
           <Badge label={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
           {e.pfEnabled ? <Badge label="PF" /> : null}
           {e.esiEnabled ? <Badge label="ESIC" /> : null}
@@ -211,11 +186,11 @@ export default function EmployeeDetail() {
 
       <Segmented
         options={[
-          { value: "overview", label: "Overview" },
+          { value: "overview", label: "Info" },
           { value: "attendance", label: "Attendance" },
           { value: "advance", label: "Advance" },
           { value: "salary", label: "Salary" },
-          ...(manage ? [{ value: "account" as Tab, label: "Login" }] : []),
+          ...(manage ? [{ value: "account" as Tab, label: "Access" }] : []),
         ]}
         value={tab}
         onChange={setTab}
@@ -309,15 +284,16 @@ export default function EmployeeDetail() {
             <Button title={e.webLogin ? "Turn off web login" : "Turn on web login"} variant="secondary" loading={busy === "setEmployeeLogin"} onPress={() => run("setEmployeeLogin", { id: e.id, enable: e.webLogin ? "0" : "1" })} />
           </Card>
           <Card>
-            <H2>{e.active ? "Employee left" : "Rejoin"}</H2>
+            <H2>{e.active ? "Archive employee" : "Archived"}</H2>
+            <Muted>{e.active ? "When someone stops working here, archive them. Their face is deleted so they cannot scan; attendance, salary and advance history stay." : `Archived${e.leftOn ? ` on ${dateLabel(e.leftOn)}` : ""}. Restore to make them active again, then take the face photos again.`}</Muted>
             {e.active ? <DateField label="Last working day" value={leftOn} onChange={setLeftOn} min={e.joinedOn} /> : null}
             <Button
-              title={e.active ? "Mark as left" : "Make active again"}
-              variant={e.active ? "danger" : "secondary"}
+              title={e.active ? "Archive employee" : "Restore employee"}
+              variant={e.active ? "danger" : "primary"}
               loading={busy === "setEmployeeLeft"}
               onPress={async () => {
                 if (!e.active) return void run("setEmployeeLeft", { id: e.id, leftOn: "" });
-                if (await dialog.confirm({ title: "Mark as left?", message: `Left on ${dateLabel(leftOn)}. Their face will be deleted. Attendance and salary history are kept.`, confirmText: "Mark as left", danger: true })) void run("setEmployeeLeft", { id: e.id, leftOn });
+                if (await dialog.confirm({ title: "Archive this employee?", message: `Last working day ${dateLabel(leftOn)}. Their face will be deleted. Attendance and salary history are kept.`, confirmText: "Archive", danger: true })) void run("setEmployeeLeft", { id: e.id, leftOn });
               }}
             />
           </Card>

@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { ChevronRight, Plus, Search } from "lucide-react-native";
-import { Badge, ErrorView, Fab, Loading, Muted, Segmented } from "@/components/ui";
+import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { rs } from "@/lib/format";
@@ -33,39 +33,42 @@ export default function Employees() {
       data={list}
       keyExtractor={(e) => e.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
-      contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 96 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
       ListHeaderComponent={
-        <View style={{ gap: 10, marginBottom: 4 }}>
+        <View style={{ gap: 10, marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 8, backgroundColor: C.white, paddingHorizontal: 12 }}>
             <Search size={18} color={C.muted} />
             <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or mobile" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
           </View>
           <Segmented
             options={[
-              { value: "working", label: `Working (${data.employees.filter((e) => e.active).length})` },
-              { value: "left", label: `Left (${data.employees.filter((e) => !e.active).length})` },
+              { value: "working", label: `Active · ${data.employees.filter((e) => e.active).length}` },
+              { value: "left", label: `Archived · ${data.employees.filter((e) => !e.active).length}` },
             ]}
             value={show}
             onChange={setShow}
           />
         </View>
       }
-      ListEmptyComponent={<Muted>No employees found.</Muted>}
-      renderItem={({ item: e }) => (
+      ListEmptyComponent={<Muted>{show === "left" ? "No archived employees." : "No employees found."}</Muted>}
+      renderItem={({ item: e, index }) => (
         <Pressable
           onPress={() => router.push({ pathname: "/employee/[id]", params: { id: e.id } })}
-          style={({ pressed }) => [{ backgroundColor: pressed ? C.soft : C.white, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 14, gap: 4 }]}
+          style={({ pressed }) => [
+            { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: pressed ? C.soft : C.white, borderColor: "#ebebeb", borderLeftWidth: 1, borderRightWidth: 1, borderTopWidth: 1 },
+            index === 0 && { borderTopLeftRadius: 14, borderTopRightRadius: 14 },
+            index === list.length - 1 && { borderBottomWidth: 1, borderBottomLeftRadius: 14, borderBottomRightRadius: 14 },
+          ]}
         >
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
+          <Avatar name={e.name} size={40} muted={!e.active} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }} numberOfLines={1}>
               {e.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{e.code}</Text>
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {!e.face && e.active ? <Badge label="No face" tone="red" /> : null}
-              <ChevronRight size={18} color={C.muted} />
-            </View>
+            <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={1}>{e.site} · {rs(e.wage)} {e.wageType === "MONTHLY" ? "/ month" : "/ day"}</Text>
           </View>
-          <Muted>{e.site} · {rs(e.wage)} {e.wageType === "MONTHLY" ? "/ month" : "/ day"}</Muted>
+          {!e.face && e.active ? <Badge label="No face" tone="red" dot /> : null}
+          <ChevronRight size={18} color={C.muted} />
         </Pressable>
       )}
     />

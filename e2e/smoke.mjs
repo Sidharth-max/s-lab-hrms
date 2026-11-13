@@ -75,8 +75,18 @@ await page.click("button:has-text('Save advance')");
 await page.waitForSelector("text=Advance saved");
 await shot("02-employee");
 
+step("edit employee from the Edit button");
+await page.goto(empUrl);
+await page.click("a:has-text('Edit') >> nth=0");
+await page.waitForURL(/\/edit$/);
+await page.fill("input[name=name]", "Ramesh Kumar Sharma");
+await page.click("button:has-text('Save changes')");
+await page.waitForSelector("text=Changes saved");
+await page.waitForSelector("h1:has-text('Ramesh Kumar Sharma')");
+await page.goto(empUrl);
+
 step("turn on employee web login");
-await page.click("button[role=tab]:has-text('Login / Left')");
+await page.click("button[role=tab]:has-text('Access & archive')");
 await page.click("button:has-text('Turn on web login')");
 await page.waitForSelector("text=Web login turned on");
 
