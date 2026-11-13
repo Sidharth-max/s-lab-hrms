@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { View } from "react-native";
 import { HandCoins } from "./icons";
 import { Button, Card, Field, H2, Muted } from "./ui";
 import { DateField } from "./pickers";
 import { EmployeePicker, type PickEmployee } from "./EmployeePicker";
 import { api } from "@/lib/api";
+import { rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useUnsavedGuard } from "@/lib/unsaved";
 
@@ -20,11 +22,14 @@ export function GiveAdvanceForm({
   employees,
   onDone,
   onDirty,
+  bare,
 }: {
   employeeId?: string;
   employees?: PickEmployee[];
   onDone: (m: { text: string; ok: boolean }) => Promise<void> | void;
   onDirty?: (dirty: boolean) => void;
+  /** Inside a sheet: no card frame and no heading (the sheet has its own title). */
+  bare?: boolean;
 }) {
   const [employeeId, setEmployeeId] = useState(fixedId ?? "");
   const [amount, setAmountRaw] = useState("");
@@ -36,17 +41,19 @@ export function GiveAdvanceForm({
     setAmountRaw(t);
     onDirty?.(!!t);
   };
+  const Frame = bare ? View : Card;
+  const n = Number(amount);
   return (
-    <Card>
-      <H2>Give advance</H2>
+    <Frame style={bare ? { gap: 12 } : undefined}>
+      {bare ? null : <H2>Give advance</H2>}
       <Muted>The advance comes off the salary balance straight away.</Muted>
       {!fixedId && employees ? <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} /> : null}
       <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="e.g. 2000" />
       <DateField label="Given on" value={givenOn} onChange={setGivenOn} max={istToday()} />
       <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. medical…" />
       <Button
-        title="Save advance"
-        icon={<HandCoins size={18} color={C.white} />}
+        title={n > 0 ? `Give ${rs(Math.round(n * 100))} advance` : "Give advance"}
+        icon={<HandCoins size={18} color={C.headText} />}
         loading={busy}
         disabled={!amount || !employeeId}
         onPress={async () => {
@@ -64,6 +71,6 @@ export function GiveAdvanceForm({
           }
         }}
       />
-    </Card>
+    </Frame>
   );
 }

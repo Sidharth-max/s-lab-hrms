@@ -25,8 +25,11 @@ const config: ExpoConfig = {
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     // REQUEST_INSTALL_PACKAGES: the app downloads its own update and opens the installer.
-    permissions: ["android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES"],
-    predictiveBackGestureEnabled: false,
+    // VIBRATE: haptic feedback (expo-haptics also declares it; listed so it can never be dropped).
+    permissions: ["android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.VIBRATE"],
+    // Android 13+ predictive back: sets android:enableOnBackInvokedCallback="true". The system shows
+    // the back preview (back-to-home on Today, the previous screen inside the stack) while swiping.
+    predictiveBackGestureEnabled: true,
   },
   plugins: [
     "expo-router",

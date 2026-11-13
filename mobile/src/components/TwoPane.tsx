@@ -1,13 +1,19 @@
 import { View } from "react-native";
 import { Text } from "./Text";
-import { LIST_PANE } from "@/lib/layout";
+import { useWindowLayout, RAIL_WIDTH } from "@/lib/layout";
 import { C } from "@/lib/theme";
 
-/** List on the left, details on the right (open foldable / tablet). */
-export function TwoPane({ left, right, leftWidth = LIST_PANE }: { left: React.ReactNode; right: React.ReactNode; leftWidth?: number }) {
+/**
+ * List-detail canonical layout for an open foldable / tablet (both panes on screen at once).
+ * Pane split follows Samsung's ratios: 50:50 on a foldable (the crease falls between the panes),
+ * 42:58 for 600–959 dp, 38:62 from 960 dp. Only rendered when useWindowLayout().twoPane is true.
+ */
+export function TwoPane({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
+  const { width, listFraction, rail } = useWindowLayout();
+  const content = width - (rail ? RAIL_WIDTH : 0);
   return (
     <View style={{ flex: 1, flexDirection: "row", backgroundColor: C.bg }}>
-      <View style={{ width: leftWidth, borderRightWidth: 1, borderRightColor: C.line }}>{left}</View>
+      <View style={{ width: Math.round(content * listFraction), borderRightWidth: 1, borderRightColor: C.hairline }}>{left}</View>
       <View style={{ flex: 1 }}>{right}</View>
     </View>
   );
@@ -16,9 +22,9 @@ export function TwoPane({ left, right, leftWidth = LIST_PANE }: { left: React.Re
 /** Shown on the right until something is chosen on the left. */
 export function PanePlaceholder({ icon, text }: { icon?: React.ReactNode; text: string }) {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: 24 }}>
-      {icon}
-      <Text style={{ color: C.muted, fontSize: 15, textAlign: "center" }}>{text}</Text>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
+      <View style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: C.brandSoft, alignItems: "center", justifyContent: "center" }}>{icon}</View>
+      <Text style={{ color: C.muted, fontSize: 15, textAlign: "center", maxWidth: 280 }}>{text}</Text>
     </View>
   );
 }

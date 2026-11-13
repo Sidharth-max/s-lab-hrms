@@ -1,34 +1,34 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Shared open/close state for the "More" bottom sheet. The More tab in the
- * bottom bar opens it (like the website's mobile nav); any menu row closes it.
- * A module-level store keeps this trivial: no context, one subscriber (the
- * layout that renders the sheet) plus readers of the open flag (tab icon).
+ * Open / closed state of the two bottom overlays that belong to the navigation bar:
+ * the "More" menu sheet and the Search sheet. A module-level store: any screen can open them,
+ * the tab layout renders them. Both close with Back, a tap outside or a drag down.
  */
-
-let open = false;
+type Overlay = "more" | "search" | null;
+let open: Overlay = null;
 const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((l) => l());
 
-function emit() {
-  for (const l of listeners) l();
-}
-
-export function openMore() {
-  if (!open) {
-    open = true;
+export function openOverlay(o: Exclude<Overlay, null>) {
+  if (open !== o) {
+    open = o;
     emit();
   }
 }
 
-export function closeMore() {
+export function closeOverlay() {
   if (open) {
-    open = false;
+    open = null;
     emit();
   }
 }
 
-export function useMoreOpen() {
+export const openMore = () => openOverlay("more");
+export const openSearch = () => openOverlay("search");
+export const closeMore = closeOverlay;
+
+export function useOverlay() {
   return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);

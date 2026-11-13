@@ -3,15 +3,16 @@ import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
 import { CalendarCheck, Camera, HandCoins, Pencil, RotateCcw } from "@/components/icons";
-import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row, Screen, Tabs } from "@/components/ui";
+import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, refreshProps, Row, Screen, Tabs } from "@/components/ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
-import { HisaabSection, type Hisaab, type HisaabCan } from "@/components/HisaabSection";
+import { HisaabSection, LedgerActions, LedgerSheets, type Hisaab, type HisaabCan, type LedgerForm } from "@/components/HisaabSection";
 import { LeaveSection } from "@/components/LeaveSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, rs } from "@/lib/format";
-import { C, statusTone } from "@/lib/theme";
+import { C, shadow, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
 
@@ -33,7 +34,7 @@ interface Register {
   rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number }[];
 }
 
-type Tab = "overview" | "attendance" | "hisaab" | "account";
+type Tab = "overview" | "attendance" | "ledger" | "account";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function istToday() {
@@ -74,7 +75,7 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
  * One employee. Used as its own screen, and (embedded) as the right-hand panel next to the
  * employee list on wide screens such as an open foldable.
  */
-export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: string; created?: string; embedded?: boolean; initialTab?: "hisaab" }) {
+export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: string; created?: string; embedded?: boolean; initialTab?: "ledger" }) {
   const dialog = useDialog();
   const { can } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "salary", "attendance"]);
@@ -82,6 +83,8 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
   const [leftOn, setLeftOn] = useState(istToday());
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [form, setForm] = useState<LedgerForm>(null);
+  const insets = useSafeAreaInsets();
 
   async function run(name: string, body: Record<string, unknown>) {
     setBusy(name);
@@ -103,11 +106,13 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
   const manage = can("employees.manage");
   const weeklyOff = e.customWeeklyOff ? (e.weeklyOffDays.length ? e.weeklyOffDays.map((d) => DAYS[d]).join(", ") : "None") : "Same as business";
 
+  const showActions = tab === "ledger" && (data.can.pay && data.hisaab.balance > 0 || data.can.advance && e.active || data.can.extras);
   return (
-    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
+    <View style={{ flex: 1 }}>
+    <Screen refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} bottomSpace={showActions ? 90 : 0}>
       {embedded ? null : <Stack.Screen
         options={{
-          title: "Employee",
+          title: e.name,
           headerRight: manage
             ? () => (
                 <Pressable onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} hitSlop={10} accessibilityLabel="Edit employee" style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8 }}>
@@ -154,8 +159,8 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
             }}
           />
         ) : null}
-        <Pressable onPress={() => setTab("hisaab")} accessibilityRole="button">
-          <Row label={data.hisaab.balance < 0 ? "Employee owes" : "Salary balance"} value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.hisaab.balance < 0 ? C.red : C.text }}>{data.hisaab.balance === 0 ? "Clear" : rs(Math.abs(data.hisaab.balance))}</Text>} />
+        <Pressable onPress={() => setTab("ledger")} accessibilityRole="button">
+          <Row label={data.hisaab.balance < 0 ? "Employee owes" : "Salary to pay"} value={<Text style={{ fontSize: 16, fontWeight: "700", color: data.hisaab.balance < 0 ? C.ink.red : data.hisaab.balance === 0 ? C.muted : C.ink.green, fontVariant: ["tabular-nums"] }}>{data.hisaab.balance === 0 ? "Settled" : rs(Math.abs(data.hisaab.balance))}</Text>} />
         </Pressable>
       </Card>
 
@@ -166,7 +171,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
         options={[
           { value: "overview", label: "Info" },
           { value: "attendance", label: "Attendance" },
-          { value: "hisaab", label: "Hisaab" },
+          { value: "ledger", label: "Ledger" },
           ...(manage ? [{ value: "account" as Tab, label: "Access" }] : []),
         ]}
         value={tab}
@@ -191,8 +196,8 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
             ) : null}
           </Card>
           <Card>
-            <Button title="Attendance today" variant="secondary" icon={<CalendarCheck size={18} color={C.text} />} onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: e.id, date: istToday() } })} />
-            {can("advances.manage") && e.active ? <Button title="Give advance" variant="secondary" icon={<HandCoins size={18} color={C.text} />} onPress={() => setTab("hisaab")} /> : null}
+            <Button title="Attendance today" variant="secondary" icon={<CalendarCheck size={18} color={C.ink.teal} />} onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: e.id, date: istToday(), name: e.name } })} />
+            {can("advances.manage") && e.active ? <Button title={`Give advance to ${e.name.split(" ")[0]}`} variant="secondary" icon={<HandCoins size={18} color={C.ink.orange} />} onPress={() => setForm("advance")} /> : null}
           </Card>
           <Card>
             <H2>Details</H2>
@@ -217,7 +222,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
         </>
       ) : null}
 
-      {tab === "hisaab" ? (
+      {tab === "ledger" ? (
         <HisaabSection
           employee={{ id: e.id, name: e.name, active: e.active }}
           h={data.hisaab}
@@ -251,5 +256,12 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
         </>
       ) : null}
     </Screen>
+    {showActions ? (
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.hairline, ...shadow(3) }}>
+        <LedgerActions h={data.hisaab} can={data.can} active={e.active} name={e.name} onOpen={setForm} />
+      </View>
+    ) : null}
+    <LedgerSheets employee={{ id: e.id, name: e.name }} h={data.hisaab} form={form} setForm={setForm} onDone={async (m) => { setMsg(m); await reload(); }} />
+    </View>
   );
 }
