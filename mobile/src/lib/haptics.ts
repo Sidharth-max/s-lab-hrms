@@ -1,20 +1,38 @@
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 
-// Phone haptics. On Android this uses the system's own haptic effects (the same feel as the
-// keyboard and system switches), with no vibration permission needed.
+// Haptic feedback for the whole app.
+//
+// Why there was "no haptics" before: Android used performAndroidHapticsAsync, which goes through
+// View.performHapticFeedback(). Android silently drops those when the phone's "Touch feedback"
+// setting is off, and several constants we used (CONFIRM, REJECT, SEGMENT_TICK, TOGGLE_ON/OFF)
+// only exist on Android 11 / 14+ and are ignored by many One UI builds. So on most phones nothing
+// happened. impactAsync / notificationAsync / selectionAsync drive the Vibrator directly with short
+// waveforms (expo-haptics declares the VIBRATE permission), which works on every Android phone.
 
-const android = Platform.OS === "android";
-const ios = Platform.OS === "ios";
 const run = (p: Promise<void>) => void p.catch(() => {});
+const native = Platform.OS === "android" || Platform.OS === "ios";
+
+let last = 0;
+/** Ignore bursts (e.g. a list re-render firing several taps): at most one buzz per 40 ms. */
+function gate() {
+  const now = Date.now();
+  if (now - last < 40) return false;
+  last = now;
+  return true;
+}
 
 export const haptic = {
-  /** Button press. */
-  tap: () => (android ? run(Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Virtual_Key)) : ios ? run(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)) : undefined),
-  /** Choosing a tab or option. */
-  select: () => (android ? run(Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Tick)) : ios ? run(Haptics.selectionAsync()) : undefined),
-  toggle: (on: boolean) => (android ? run(Haptics.performAndroidHapticsAsync(on ? Haptics.AndroidHaptics.Toggle_On : Haptics.AndroidHaptics.Toggle_Off)) : ios ? run(Haptics.selectionAsync()) : undefined),
-  success: () => (android ? run(Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm)) : ios ? run(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)) : undefined),
-  error: () => (android ? run(Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject)) : ios ? run(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)) : undefined),
-  warning: () => (android ? run(Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Long_Press)) : ios ? run(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)) : undefined),
+  /** Light tick: buttons, list rows, tab presses. */
+  tap: () => native && gate() && run(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
+  /** Choosing an option, date or tab. */
+  select: () => native && gate() && run(Haptics.selectionAsync()),
+  /** Opening a sheet or menu. */
+  open: () => native && gate() && run(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
+  toggle: (on: boolean) => native && gate() && run(Haptics.impactAsync(on ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light)),
+  success: () => native && gate() && run(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
+  error: () => native && gate() && run(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)),
+  warning: () => native && gate() && run(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
+  /** Pull-to-refresh crossed the trigger point / a step in a guided flow was done. */
+  heavy: () => native && gate() && run(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),
 };

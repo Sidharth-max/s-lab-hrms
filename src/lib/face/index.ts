@@ -11,8 +11,16 @@ export type SearchResult =
   | { ok: true; employeeId: string; similarity: number }
   | { ok: false; reason: "no_face" | "no_match" | "ambiguous" | "error"; message: string };
 
+export interface FaceBox {
+  /** 0..1 of the image width / height, from the top left. */
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 export type PoseResult =
-  | { ok: true; yaw: number; pitch: number }
+  | { ok: true; yaw: number; pitch: number; roll: number; box: FaceBox; brightness: number | null; sharpness: number | null; faces: number }
   /** no_face: nobody in the picture. unavailable: the check cannot run (test mode, or AWS permission missing). */
   | { ok: false; reason: "no_face" | "unavailable" };
 

@@ -72,7 +72,7 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
               const dead = a.status === "CANCELLED" || a.status === "REJECTED";
               return (
                 <tr key={a.id} className={dead ? "bg-[var(--soft)]/60 text-[var(--muted)] [&_a]:!text-[var(--muted)]" : ""}>
-                  <td className="card-title"><Link className="font-medium hover:underline" href={`/employees/${a.employeeId}?tab=hisaab`}>{a.employee.name}</Link></td>
+                  <td className="card-title"><Link className="font-medium hover:underline" href={`/employees/${a.employeeId}?tab=ledger`}>{a.employee.name}</Link></td>
                   <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
                   <td data-label={"Amount"} className={dead ? "line-through" : ""}>{formatRs(a.amount)}</td>
                   <td data-label={"Note"}>{a.note ?? "—"}</td>

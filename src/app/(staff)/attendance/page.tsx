@@ -10,7 +10,7 @@ import { employedInMonthWhere, monthAttendance } from "@/lib/services";
 import { parseShow, showWhere } from "@/lib/show-filter";
 import { ShowTabs } from "@/components/ShowTabs";
 import { formatDateKey, formatIstTime, istDateKey } from "@/lib/time";
-import { DateInput } from "@/components/controls";
+import { DateJump } from "@/components/DateJump";
 
 function minsToText(m: number) {
   return m ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : "—";
@@ -38,17 +38,14 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h1 className="h1">{"Attendance"} · {formatDateKey(date)}</h1>
         <div className="flex flex-wrap gap-2">
-          <form className="flex gap-2">
-            {show !== "active" && <input type="hidden" name="show" value={show} />}
-            <DateInput name="date" defaultValue={date} max={today} className="w-44" />
-            <button className="btn-secondary">Go</button>
-          </form>
+          {/* Picking a date shows that day at once (no "Go" button). */}
+          <DateJump value={date} max={today} today={today} />
           <Link href={`/attendance/register?month=${date.slice(0, 7)}`} className="btn-secondary">Monthly register</Link>
         </div>
       </div>
       {can(actor, "attendance.edit") && (
         <p className="muted">
-          To add or change attendance for an earlier day: choose the date above, press Go, then press <b>Edit</b> next to the person. You can also open an employee and use the Attendance register.
+          To add or change attendance for an earlier day: choose the date above, then press <b>Edit</b> next to the person. You can also open an employee and use the Attendance register.
         </p>
       )}
       <ShowTabs show={show} params={{ date: date === today ? undefined : date }} />
@@ -72,8 +69,8 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
                     {d.missingOut && !d.overridden && <span className="badge badge-red ml-1">no out punch</span>}
                   </span>
                 </td>
-                <td data-label={"In"}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
-                <td data-label={"Out"}>{d.outAt ? formatIstTime(d.outAt) : "—"}</td>
+                <td data-label={"In"} className={d.inAt ? "ink-teal font-semibold" : ""}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
+                <td data-label={"Out"} className={d.outAt ? "ink-blue font-semibold" : ""}>{d.outAt ? formatIstTime(d.outAt) : "—"}</td>
                 <td data-label={"Worked"}>{minsToText(d.workedMins)}</td>
                 <td><Link className="btn-secondary !h-9" href={`/attendance/${e.id}/${date}`}><Pencil size={14} aria-hidden />Edit</Link></td>
               </tr>

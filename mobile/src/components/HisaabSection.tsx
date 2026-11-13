@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "./Text";
-import { ChevronDown, ChevronRight, HandCoins, IndianRupee, Plus } from "./icons";
+import { ArrowDownLeft, ArrowUpRight, Cash, ChevronDown, ChevronRight, Coins, Minus, Plus, type IconType } from "./icons";
 import { Badge, Button, Card, Field, H2, Muted, Notice, Row, Segmented } from "./ui";
 import { DateField } from "./pickers";
 import { GiveAdvanceForm } from "./GiveAdvanceForm";
+import { Sheet } from "./Sheet";
 import { useDialog } from "./dialog";
 import { api } from "@/lib/api";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
-import { C } from "@/lib/theme";
+import { C, shadow, type Ink } from "@/lib/theme";
 import { useUnsavedGuard } from "@/lib/unsaved";
+import { Animated, CountUp, enterAt, PressScale } from "@/lib/motion";
+
+// The salary ledger of one employee (was called "Hisaab" on screen; renamed "Ledger").
+// One running balance, no salary months:
+//   earned since joining + extra pay − deductions − advances given − salary paid = balance.
 
 export interface Hisaab {
   since: string;
@@ -32,11 +38,13 @@ export interface HisaabCan { pay: boolean; extras: boolean; advance: boolean; ow
 
 const MODES = [{ value: "CASH", label: "Cash" }, { value: "BANK", label: "Bank" }, { value: "UPI", label: "UPI" }, { value: "CHEQUE", label: "Cheque" }] as const;
 type Mode = (typeof MODES)[number]["value"];
-const KIND = {
-  advance: { label: "Advance given", sign: "−" },
-  payment: { label: "Salary paid", sign: "−" },
-  extra: { label: "Extra pay", sign: "+" },
-  deduction: { label: "Deduction", sign: "−" },
+
+/** Colour (text ink) and words for each kind of money movement. Same inks on the website. */
+const KIND: Record<Hisaab["entries"][number]["kind"], { label: string; sign: string; ink: Ink; icon: IconType }> = {
+  advance: { label: "Advance given", sign: "−", ink: "orange", icon: ArrowDownLeft },
+  payment: { label: "Salary paid", sign: "−", ink: "blue", icon: ArrowUpRight },
+  extra: { label: "Extra pay", sign: "+", ink: "pink", icon: Plus },
+  deduction: { label: "Deduction", sign: "−", ink: "red", icon: Minus },
 };
 
 function istToday() {
@@ -48,153 +56,192 @@ function rupees(paise: number) {
   return String(Math.round(paise) / 100);
 }
 
-/** Pay salary. The amount starts at the full balance, which clears the hisaab. */
-function PayForm({ employeeId, name, balance, onDone }: { employeeId: string; name: string; balance: number; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
+const firstName = (n: string) => n.trim().split(/\s+/)[0] ?? n;
+
+/**
+ * Pay salary, as a bottom sheet. The amount starts at the full balance, which clears the ledger.
+ * The button says exactly what happens ("Pay ₹12,400 to Ramesh") instead of a generic "Pay salary".
+ */
+export function PaySheet({ visible, employeeId, name, balance, onClose, onDone }: { visible: boolean; employeeId: string; name: string; balance: number; onClose: () => void; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
   const dialog = useDialog();
   const [amount, setAmount] = useState(rupees(balance));
   const [paidOn, setPaidOn] = useState(istToday());
   const [mode, setMode] = useState<Mode>("CASH");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  useUnsavedGuard(!busy && (amount !== rupees(balance) || !!note));
-  const full = Math.round(Number(amount) * 100) === balance;
+  const paise = Math.round(Number(amount) * 100);
+  const full = paise === balance;
+  const left = balance - paise;
+  const who = firstName(name);
   return (
-    <Card>
-      <H2>Pay salary</H2>
-      <Muted>Paying the full balance clears the hisaab. You can also pay part; the rest stays as balance.</Muted>
-      <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-      <DateField label="Paid on" value={paidOn} onChange={setPaidOn} max={istToday()} />
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title={`Pay ${who}`}
+      footer={
+        <Button
+          title={paise > 0 ? `Pay ${rs(paise)} to ${who}` : "Enter an amount"}
+          icon={<Cash size={19} color={C.headText} />}
+          loading={busy}
+          disabled={!(paise > 0)}
+          onPress={async () => {
+            const modeLabel = MODES.find((m) => m.value === mode)?.label.toLowerCase();
+            if (!(await dialog.confirm({ title: `Pay ${rs(paise)} to ${name}?`, message: `By ${modeLabel} on ${dateLabel(paidOn)}. ${full ? "Their ledger will be clear after this." : left > 0 ? `${rs(left)} stays due.` : `This is ${rs(-left)} more than due; it is kept as an advance.`}`, confirmText: `Pay ${rs(paise)}` }))) return;
+            setBusy(true);
+            try {
+              const r = await api.action("paySalary", { employeeId, amount, paidOn, mode, note, clear: full ? "1" : "" });
+              await onDone({ text: r.message ?? `Paid ${rs(paise)} to ${name}`, ok: true });
+            } catch (e) {
+              await onDone({ text: (e as Error).message, ok: false });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      }
+    >
+      <View style={{ backgroundColor: C.tint.green, borderRadius: 18, padding: 14, gap: 2 }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: C.ink.green }}>Due to {who}</Text>
+        <Text style={{ fontSize: 26, fontWeight: "700", color: C.ink.green, fontVariant: ["tabular-nums"] }}>{rs(balance)}</Text>
+      </View>
+      <Field label="Amount to pay now (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" hint={full ? "Full amount: clears the ledger." : paise > 0 && left > 0 ? `${rs(left)} will stay due.` : undefined} />
       <Segmented options={MODES.map((m) => ({ value: m.value, label: m.label }))} value={mode} onChange={setMode} />
+      <DateField label="Paid on" value={paidOn} onChange={setPaidOn} max={istToday()} />
       <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. Salary till Diwali" />
-      <Button
-        title={full ? `Pay ${rs(balance)} and clear` : "Save payment"}
-        icon={<IndianRupee size={18} color={C.white} />}
-        loading={busy}
-        disabled={!(Number(amount) > 0)}
-        onPress={async () => {
-          if (!(await dialog.confirm({ title: `Pay ₹${amount} to ${name}?`, message: full ? "The hisaab will be clear after this." : `Balance left after this: ${rs(balance - Math.round(Number(amount) * 100))}.`, confirmText: "Save payment" }))) return;
-          setBusy(true);
-          try {
-            const r = await api.action("paySalary", { employeeId, amount, paidOn, mode, note, clear: full ? "1" : "" });
-            setNote("");
-            await onDone({ text: r.message ?? "Saved", ok: true });
-          } catch (e) {
-            await onDone({ text: (e as Error).message, ok: false });
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
-    </Card>
+    </Sheet>
   );
 }
 
-/** Extra pay (bonus, overtime) or a deduction (damage, fine). */
-function ExtraForm({ employeeId, onDone }: { employeeId: string; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
+/** Extra pay (bonus, overtime) or a deduction (damage, fine), as a bottom sheet. */
+function ExtraSheet({ visible, employeeId, onClose, onDone }: { visible: boolean; employeeId: string; onClose: () => void; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
   const [kind, setKind] = useState<"add" | "deduct">("add");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(istToday());
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  useUnsavedGuard(!busy && (!!amount || !!reason));
+  useUnsavedGuard(visible && !busy && (!!amount || !!reason));
+  const n = Math.round(Number(amount) * 100);
   return (
-    <Card>
-      <H2>Extra pay or deduction</H2>
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title="Extra pay or deduction"
+      footer={
+        <Button
+          title={n > 0 ? (kind === "add" ? `Add ${rs(n)} extra pay` : `Deduct ${rs(n)}`) : "Save"}
+          variant={kind === "add" ? "primary" : "danger"}
+          loading={busy}
+          disabled={!(n > 0) || reason.trim().length < 3}
+          onPress={async () => {
+            setBusy(true);
+            try {
+              const r = await api.action("addAdjustment", { employeeId, kind, amount, date, reason });
+              setAmount("");
+              setReason("");
+              await onDone({ text: r.message ?? "Saved", ok: true });
+            } catch (e) {
+              await onDone({ text: (e as Error).message, ok: false });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      }
+    >
       <Segmented options={[{ value: "add", label: "Extra pay" }, { value: "deduct", label: "Deduction" }]} value={kind} onChange={setKind} />
       <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
       <DateField label="Date" value={date} onChange={setDate} max={istToday()} />
       <Field label="Reason" value={reason} onChangeText={setReason} placeholder={kind === "add" ? "e.g. Diwali bonus" : "e.g. broken tool"} />
-      <Button
-        title="Save"
-        variant="secondary"
-        icon={<Plus size={18} color={C.text} />}
-        loading={busy}
-        disabled={!(Number(amount) > 0) || reason.trim().length < 3}
-        onPress={async () => {
-          setBusy(true);
-          try {
-            const r = await api.action("addAdjustment", { employeeId, kind, amount, date, reason });
-            setAmount("");
-            setReason("");
-            await onDone({ text: r.message ?? "Saved", ok: true });
-          } catch (e) {
-            await onDone({ text: (e as Error).message, ok: false });
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
-    </Card>
+    </Sheet>
   );
 }
 
-/**
- * One running salary balance for an employee (no salary months):
- * earned since joining + extra pay − deductions − advances − salary paid.
- */
-export function HisaabSection({
-  employee,
-  h,
-  wages,
-  can,
-  onDone,
-}: {
-  employee: { id: string; name: string; active: boolean };
-  h: Hisaab;
-  wages: { from: string; wageType: "MONTHLY" | "DAILY"; wage: number }[];
-  can: HisaabCan;
-  onDone: (m: { text: string; ok: boolean }) => Promise<void>;
-}) {
-  const dialog = useDialog();
-  const [form, setForm] = useState<"pay" | "advance" | "extra" | null>(null);
-  const [showMonths, setShowMonths] = useState(false);
+export type LedgerForm = "pay" | "advance" | "extra" | null;
+
+/** Pay / advance / extra buttons. Rendered in a bar at the bottom of the screen (thumb zone). */
+export function LedgerActions({ h, can, active, name, onOpen }: { h: Hisaab; can: HisaabCan; active: boolean; name: string; onOpen: (f: LedgerForm) => void }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      {can.pay && h.balance > 0 ? (
+        <View style={{ flex: 1.4 }}>
+          <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color={C.headText} />} onPress={() => onOpen("pay")} />
+        </View>
+      ) : null}
+      {can.advance && active ? (
+        <View style={{ flex: 1 }}>
+          <Button title="Advance" variant="secondary" icon={<Coins size={18} color={C.ink.orange} />} onPress={() => onOpen("advance")} />
+        </View>
+      ) : null}
+      {can.extras ? (
+        <PressScale onPress={() => onOpen("extra")} accessibilityRole="button" accessibilityLabel="Extra pay or deduction" style={{ width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: C.line, backgroundColor: C.card, alignItems: "center", justifyContent: "center" }}>
+          <Plus size={20} color={C.ink.pink} />
+        </PressScale>
+      ) : null}
+    </View>
+  );
+}
+
+/** The sheets opened by LedgerActions. */
+export function LedgerSheets({ employee, h, form, setForm, onDone }: { employee: { id: string; name: string }; h: Hisaab; form: LedgerForm; setForm: (f: LedgerForm) => void; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
   const done = async (m: { text: string; ok: boolean }) => {
     if (m.ok) setForm(null);
     await onDone(m);
   };
   return (
     <>
-      <Card>
-        <Muted>{h.balance >= 0 ? "Balance to pay" : "Employee owes"}</Muted>
-        <Text style={{ fontSize: 30, fontWeight: "700", color: h.balance < 0 ? C.red : C.text, letterSpacing: -0.6 }}>{rs(Math.abs(h.balance))}</Text>
-        {h.balance === 0 ? <Badge label="Hisaab clear" tone="green" /> : null}
-        {h.balance < 0 ? <Muted>Advance is more than the salary earned. It comes off future salary by itself.</Muted> : null}
-        <Row label={`Salary earned since ${dateLabel(h.since)}`} value={rs(h.gross)} />
-        {h.pf + h.esi > 0 ? <Row label="PF and ESIC" value={`− ${rs(h.pf + h.esi)}`} /> : null}
-        {h.extras !== 0 ? <Row label={h.extras > 0 ? "Extra pay − deductions" : "Deductions − extra pay"} value={`${h.extras > 0 ? "+" : "−"} ${rs(Math.abs(h.extras))}`} /> : null}
-        <Row label="Advances given" value={`− ${rs(h.advances)}`} />
-        <Row label="Salary paid" value={`− ${rs(h.payments)}`} />
-        <Row label="Balance" value={`${h.balance < 0 ? "− " : ""}${rs(Math.abs(h.balance))}`} strong />
+      {form === "pay" ? <PaySheet visible employeeId={employee.id} name={employee.name} balance={h.balance} onClose={() => setForm(null)} onDone={done} /> : null}
+      {form === "advance" ? (
+        <Sheet visible onClose={() => setForm(null)} title={`Give advance to ${firstName(employee.name)}`}>
+          <GiveAdvanceForm bare employeeId={employee.id} onDone={done} />
+        </Sheet>
+      ) : null}
+      {form === "extra" ? <ExtraSheet visible employeeId={employee.id} onClose={() => setForm(null)} onDone={done} /> : null}
+    </>
+  );
+}
+
+export function HisaabSection({ h, wages, can, onDone }: { employee: { id: string; name: string; active: boolean }; h: Hisaab; wages: { from: string; wageType: "MONTHLY" | "DAILY"; wage: number }[]; can: HisaabCan; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
+  const dialog = useDialog();
+  const [showMonths, setShowMonths] = useState(false);
+  const owes = h.balance < 0;
+  return (
+    <>
+      <Card style={{ gap: 6, ...shadow(2) }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: owes ? C.ink.red : C.ink.green }}>{owes ? "Employee owes you" : h.balance === 0 ? "Ledger" : "To pay now"}</Text>
+        <CountUp value={Math.abs(h.balance)} format={(n) => rs(Math.round(n))} style={{ fontSize: 34, fontWeight: "700", color: owes ? C.ink.red : h.balance === 0 ? C.text : C.ink.green, letterSpacing: -1 }} />
+        {h.balance === 0 ? <Badge label="All settled" tone="green" dot /> : null}
+        {owes ? <Muted>Advance is more than the salary earned. It comes off future salary by itself.</Muted> : null}
+        <View style={{ height: 1, backgroundColor: C.hairline, marginVertical: 6 }} />
+        <Row label={`Earned since ${dateLabel(h.since)}`} value={`+ ${rs(h.gross)}`} ink="violet" />
+        {h.pf + h.esi > 0 ? <Row label="PF and ESIC" value={`− ${rs(h.pf + h.esi)}`} ink="red" /> : null}
+        {h.extras !== 0 ? <Row label={h.extras > 0 ? "Extra pay − deductions" : "Deductions − extra pay"} value={`${h.extras > 0 ? "+" : "−"} ${rs(Math.abs(h.extras))}`} ink={h.extras > 0 ? "pink" : "red"} /> : null}
+        <Row label="Advance given" value={`− ${rs(h.advances)}`} ink="orange" />
+        <Row label="Salary paid" value={`− ${rs(h.payments)}`} ink="blue" />
+        <Row label="Balance" value={<Text style={{ fontSize: 16, fontWeight: "700", color: owes ? C.ink.red : C.ink.green, fontVariant: ["tabular-nums"] }}>{owes ? "− " : ""}{rs(Math.abs(h.balance))}</Text>} />
         {h.lastPaidOn ? <Muted>Last paid {dateLabel(h.lastPaidOn)}</Muted> : null}
         {h.pendingAdvances > 0 ? <Notice text={`${rs(h.pendingAdvances)} advance is waiting for approval and is not counted yet.`} /> : null}
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          {can.pay && h.balance > 0 ? <View style={{ flexGrow: 1 }}><Button title="Pay salary" icon={<IndianRupee size={18} color={form === "pay" ? C.text : C.white} />} variant={form === "pay" ? "secondary" : "primary"} onPress={() => setForm(form === "pay" ? null : "pay")} /></View> : null}
-          {can.advance && employee.active ? <View style={{ flexGrow: 1 }}><Button title="Give advance" variant="secondary" icon={<HandCoins size={18} color={C.text} />} onPress={() => setForm(form === "advance" ? null : "advance")} /></View> : null}
-          {can.extras ? <View style={{ flexGrow: 1 }}><Button title="Extra / deduction" variant="secondary" icon={<Plus size={18} color={C.text} />} onPress={() => setForm(form === "extra" ? null : "extra")} /></View> : null}
-        </View>
       </Card>
 
-      {form === "pay" ? <PayForm employeeId={employee.id} name={employee.name} balance={h.balance} onDone={done} /> : null}
-      {form === "advance" ? <GiveAdvanceForm employeeId={employee.id} onDone={done} /> : null}
-      {form === "extra" ? <ExtraForm employeeId={employee.id} onDone={done} /> : null}
-
       <Card style={{ gap: 0 }}>
-        <H2>Money given and taken</H2>
+        <H2>Money in and out</H2>
         {h.entries.length === 0 ? <Muted style={{ marginTop: 6 }}>No advances, payments or extras yet.</Muted> : null}
         {h.entries.map((x, i) => {
           const k = KIND[x.kind];
           const removable = can.owner && x.kind !== "advance";
           return (
-            <View key={`${x.kind}-${x.id}`} style={{ paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: C.line, marginTop: i ? 0 : 8, gap: 2, opacity: x.pending ? 0.6 : 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <Text style={{ fontWeight: "600", color: C.text, flex: 1 }}>{k.label}{x.pending ? " · waiting for approval" : ""}</Text>
-                <Text style={{ fontWeight: "700", color: x.kind === "extra" ? C.green : x.kind === "deduction" ? C.red : C.text }}>{k.sign} {rs(x.amount)}</Text>
+            <Animated.View key={`${x.kind}-${x.id}`} entering={enterAt(i)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, borderTopWidth: i ? 1 : 0, borderTopColor: C.hairline, marginTop: i ? 0 : 8, opacity: x.pending ? 0.6 : 1 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 13, backgroundColor: C.tint[k.ink], alignItems: "center", justifyContent: "center" }}>
+                <k.icon size={18} color={C.ink[k.ink]} />
               </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <Muted style={{ flex: 1 }}>{[dateLabel(x.date), x.mode ? x.mode.toLowerCase() : null, x.ref, x.note].filter(Boolean).join(" · ")}</Muted>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ fontWeight: "600", color: C.ink[k.ink], fontSize: 15 }}>{k.label}{x.pending ? " · waiting for approval" : ""}</Text>
+                <Muted style={{ fontSize: 13 }}>{[dateLabel(x.date), x.mode ? x.mode.toLowerCase() : null, x.ref, x.note].filter(Boolean).join(" · ")}</Muted>
+              </View>
+              <View style={{ alignItems: "flex-end", gap: 2 }}>
+                <Text style={{ fontWeight: "700", color: C.ink[k.ink], fontVariant: ["tabular-nums"] }}>{k.sign} {rs(x.amount)}</Text>
                 {removable ? (
                   <Pressable
-                    hitSlop={8}
+                    hitSlop={10}
                     accessibilityLabel={`Remove ${k.label}`}
                     onPress={async () => {
                       if (!(await dialog.confirm({ title: `Remove this ${k.label.toLowerCase()}?`, message: `${rs(x.amount)} on ${dateLabel(x.date)}. The balance changes back.`, confirmText: "Remove", danger: true }))) return;
@@ -206,27 +253,25 @@ export function HisaabSection({
                       }
                     }}
                   >
-                    <Text style={{ color: C.red, fontWeight: "600", fontSize: 13 }}>Remove</Text>
+                    <Text style={{ color: C.muted, fontWeight: "600", fontSize: 12, textDecorationLine: "underline" }}>Remove</Text>
                   </Pressable>
                 ) : null}
               </View>
-            </View>
+            </Animated.View>
           );
         })}
       </Card>
 
       <Card style={{ gap: 0 }}>
-        <Pressable onPress={() => setShowMonths((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }} accessibilityRole="button">
-          <H2>How salary earned is worked out</H2>
+        <Pressable onPress={() => setShowMonths((v) => !v)} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }} accessibilityRole="button" accessibilityState={{ expanded: showMonths }}>
+          <H2>How earnings are worked out</H2>
           {showMonths ? <ChevronDown size={18} color={C.muted} /> : <ChevronRight size={18} color={C.muted} />}
         </Pressable>
         {showMonths ? (
           <View style={{ gap: 6, marginTop: 8 }}>
             <Muted>Every day since joining counts at that day&apos;s salary. A month&apos;s salary is split over that month&apos;s days, so a full month gives the full salary. Present and paid leave count fully, half day half, absent and unpaid leave nothing. Weekly offs and holidays are paid to monthly staff. Edit attendance on any date and this updates by itself.</Muted>
             {wages.length ? <Muted>{wages.map((w) => `From ${dateLabel(w.from)}: ${rs(w.wage)} ${w.wageType === "MONTHLY" ? "/ month" : "/ day"}`).join("\n")}</Muted> : null}
-            {h.months.map((m) => (
-              <Row key={m.month} label={`${monthLabel(m.month)} · ${m.payableDays} days`} value={rs(m.net)} />
-            ))}
+            {h.months.map((m) => <Row key={m.month} label={`${monthLabel(m.month)} · ${m.payableDays} days`} value={rs(m.net)} ink="violet" />)}
             {h.months.length === 0 ? <Muted>Nothing earned yet.</Muted> : null}
           </View>
         ) : null}

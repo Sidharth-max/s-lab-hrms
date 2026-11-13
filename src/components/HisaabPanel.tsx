@@ -14,16 +14,16 @@ const MODES = [
   { value: "CHEQUE", label: "Cheque" },
 ];
 const KIND: Record<string, { label: string; sign: string; cls: string }> = {
-  advance: { label: "Advance given", sign: "−", cls: "" },
-  payment: { label: "Salary paid", sign: "−", cls: "" },
-  extra: { label: "Extra pay", sign: "+", cls: "text-[var(--green-ink)]" },
-  deduction: { label: "Deduction", sign: "−", cls: "text-[var(--red)]" },
+  advance: { label: "Advance given", sign: "−", cls: "ink-orange" },
+  payment: { label: "Salary paid", sign: "−", cls: "ink-blue" },
+  extra: { label: "Extra pay", sign: "+", cls: "ink-pink" },
+  deduction: { label: "Deduction", sign: "−", cls: "ink-red" },
 };
 
 export function balanceText(balance: number) {
   if (balance > 0) return `${formatRs(balance)} to pay`;
   if (balance < 0) return `${formatRs(-balance)} owed by employee`;
-  return "Hisaab clear";
+  return "Settled";
 }
 
 /**
@@ -45,35 +45,35 @@ export function HisaabPanel({
 }) {
   const today = istDateKey(new Date());
   const rows: [string, string, string][] = [
-    [`Salary earned (${formatDateKey(h.since)} to ${formatDateKey(h.upTo)})`, formatRs(h.gross), ""],
-    ...(h.pf + h.esi > 0 ? ([["PF and ESIC (employee share)", `− ${formatRs(h.pf + h.esi)}`, ""]] as [string, string, string][]) : []),
-    ...(h.extras !== 0 ? ([[h.extras > 0 ? "Extra pay minus deductions" : "Deductions minus extra pay", `${h.extras > 0 ? "+" : "−"} ${formatRs(Math.abs(h.extras))}`, ""]] as [string, string, string][]) : []),
-    ["Advances given", `− ${formatRs(h.advances)}`, ""],
-    ["Salary paid", `− ${formatRs(h.payments)}`, ""],
+    [`Salary earned (${formatDateKey(h.since)} to ${formatDateKey(h.upTo)})`, formatRs(h.gross), "ink-violet"],
+    ...(h.pf + h.esi > 0 ? ([["PF and ESIC (employee share)", `− ${formatRs(h.pf + h.esi)}`, "ink-red"]] as [string, string, string][]) : []),
+    ...(h.extras !== 0 ? ([[h.extras > 0 ? "Extra pay minus deductions" : "Deductions minus extra pay", `${h.extras > 0 ? "+" : "−"} ${formatRs(Math.abs(h.extras))}`, h.extras > 0 ? "ink-pink" : "ink-red"]] as [string, string, string][]) : []),
+    ["Advance given", `− ${formatRs(h.advances)}`, "ink-orange"],
+    ["Salary paid", `− ${formatRs(h.payments)}`, "ink-blue"],
   ];
   return (
     <div className="flex flex-col gap-4">
       <section className="card flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-semibold">Hisaab</h2>
+          <h2 className="font-semibold">Salary ledger</h2>
           {h.lastPaidOn && <span className="muted text-sm">Last paid {formatDateKey(h.lastPaidOn)}</span>}
         </div>
         <div>
-          <div className="text-xs text-[var(--muted)]">{h.balance >= 0 ? "Balance to pay" : "Employee owes"}</div>
-          <div className={`text-3xl font-semibold tracking-tight tabular-nums ${h.balance < 0 ? "text-[var(--red)]" : ""}`}>{formatRs(Math.abs(h.balance))}</div>
-          {h.balance === 0 && <p className="muted text-sm">Hisaab is clear. Nothing to pay.</p>}
+          <div className={`text-sm font-semibold ${h.balance < 0 ? "ink-red" : "ink-green"}`}>{h.balance > 0 ? "To pay now" : h.balance < 0 ? "Employee owes you" : "Ledger"}</div>
+          <div className={`text-4xl font-bold tracking-tight tabular-nums ${h.balance < 0 ? "ink-red" : h.balance > 0 ? "ink-green" : ""}`}>{formatRs(Math.abs(h.balance))}</div>
+          {h.balance === 0 && <p className="muted text-sm">All settled. Nothing to pay.</p>}
           {h.balance < 0 && <p className="muted text-sm">Advance is more than the salary earned. It comes off future salary by itself.</p>}
         </div>
         <dl className="flex flex-col text-sm">
-          {rows.map(([k, v]) => (
+          {rows.map(([k, v, ink]) => (
             <div key={k} className="flex items-baseline justify-between gap-3 border-b border-[var(--line)] py-2 last:border-0">
-              <dt className="text-[var(--muted)]">{k}</dt>
-              <dd className="font-medium tabular-nums">{v}</dd>
+              <dt className={`font-medium ${ink}`}>{k}</dt>
+              <dd className={`font-semibold tabular-nums ${ink}`}>{v}</dd>
             </div>
           ))}
           <div className="flex items-baseline justify-between gap-3 pt-2">
             <dt className="font-semibold">Balance</dt>
-            <dd className={`font-semibold tabular-nums ${h.balance < 0 ? "text-[var(--red)]" : ""}`}>{h.balance < 0 ? "− " : ""}{formatRs(Math.abs(h.balance))}</dd>
+            <dd className={`text-base font-bold tabular-nums ${h.balance < 0 ? "ink-red" : "ink-green"}`}>{h.balance < 0 ? "− " : ""}{formatRs(Math.abs(h.balance))}</dd>
           </div>
         </dl>
         {h.pendingAdvances > 0 && (
@@ -84,9 +84,9 @@ export function HisaabPanel({
 
         {can.pay && h.balance > 0 && (
           <details className="rounded-lg border border-[var(--line)] p-3" open>
-            <summary className="cursor-pointer font-medium">Pay salary</summary>
-            <p className="muted mt-2 text-sm">Paying the full balance clears the hisaab. You can also pay part of it; the rest stays as balance.</p>
-            <ActionForm action={paySalary} className="mt-3 grid gap-3 @md:grid-cols-2" submitLabel="Save payment" confirm={`Save salary payment for ${employee.name}?`} resetOnSuccess>
+            <summary className="cursor-pointer font-semibold">Pay {formatRs(h.balance)} to {employee.name}</summary>
+            <p className="muted mt-2 text-sm">The full amount settles the ledger. You can also pay part of it; the rest stays due.</p>
+            <ActionForm action={paySalary} className="mt-3 grid gap-3 @md:grid-cols-2" submitLabel={`Pay ${employee.name.split(" ")[0]}`} confirm={`Pay this amount to ${employee.name} now? It is recorded as salary paid.`} resetOnSuccess>
               <input type="hidden" name="employeeId" value={employee.id} />
               <div><label className="label">Amount (₹)</label><input name="amount" className="input" inputMode="decimal" defaultValue={rsInput(h.balance)} required /></div>
               <div><label className="label">Paid on</label><DateInput name="paidOn" defaultValue={today} max={today} /></div>
@@ -98,7 +98,7 @@ export function HisaabPanel({
         )}
         {can.advance && employee.active && (
           <details className="rounded-lg border border-[var(--line)] p-3" open={openAdvance}>
-            <summary className="cursor-pointer font-medium">Give advance</summary>
+            <summary className="cursor-pointer font-semibold ink-orange">Give advance to {employee.name.split(" ")[0]}</summary>
             <p className="muted mt-2 text-sm">The advance comes off the balance straight away.</p>
             <ActionForm action={giveAdvance} className="mt-3 grid gap-3 @md:grid-cols-2" submitLabel="Save advance" resetOnSuccess>
               <input type="hidden" name="employeeId" value={employee.id} />
@@ -110,7 +110,7 @@ export function HisaabPanel({
         )}
         {can.extras && (
           <details className="rounded-lg border border-[var(--line)] p-3">
-            <summary className="cursor-pointer font-medium">Add extra pay or deduction</summary>
+            <summary className="cursor-pointer font-semibold ink-pink">Add extra pay or deduction</summary>
             <ActionForm action={addAdjustment} className="mt-3 grid gap-3 @md:grid-cols-2" submitLabel="Save" resetOnSuccess>
               <input type="hidden" name="employeeId" value={employee.id} />
               <div><label className="label">Type</label><Select name="kind" defaultValue="add" ariaLabel="Type" options={[{ value: "add", label: "Extra pay (bonus, overtime)" }, { value: "deduct", label: "Deduction (damage, fine)" }]} /></div>
@@ -123,7 +123,7 @@ export function HisaabPanel({
       </section>
 
       <section className="card flex flex-col gap-3">
-        <h2 className="font-semibold">Money given and taken</h2>
+        <h2 className="font-semibold">Money in and out</h2>
         {h.entries.length === 0 ? (
           <p className="muted">No advances, payments or extras yet.</p>
         ) : (
@@ -135,7 +135,7 @@ export function HisaabPanel({
                 <li key={`${e.kind}-${e.id}`} className={`flex items-start justify-between gap-3 border-b border-[var(--line)] py-2.5 text-sm last:border-0 ${e.pending ? "opacity-60" : ""}`}>
                   <div className="min-w-0">
                     <div className="font-medium">
-                      {k.label}
+                      <span className={k.cls}>{k.label}</span>
                       {e.pending && <span className="badge badge-amber ml-2">Waiting for approval</span>}
                     </div>
                     <div className="muted text-xs">
@@ -167,7 +167,7 @@ export function HisaabPanel({
 
       <section className="card flex flex-col gap-3">
         <details>
-          <summary className="cursor-pointer font-semibold">How the salary earned is worked out</summary>
+          <summary className="cursor-pointer font-semibold">How earnings are worked out</summary>
           <p className="muted mt-2 text-sm">
             Every day since joining counts at that day&apos;s salary. A month&apos;s salary is split over the days in that month, so a full month always gives the full salary.
             Present and paid leave count fully, half day counts half, absent and unpaid leave count nothing. Weekly offs and holidays are paid to monthly staff.

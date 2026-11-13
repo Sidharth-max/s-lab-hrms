@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { LiveProfileRefresher, LiveProvider } from "@/lib/live";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { DialogProvider } from "@/components/dialog";
@@ -12,6 +12,66 @@ import { FONT } from "@/components/Text";
 import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import { C, isDark, setThemePref, themePref } from "@/lib/theme";
+import { nameOf } from "@/lib/names";
+
+/** Header title for a screen about one person: the name we already know, never the raw id. */
+function personTitle(params: object | undefined, idKey: string, fallback: string) {
+  const p = (params ?? {}) as Record<string, string | undefined>;
+  return nameOf(p[idKey], p.name) ?? fallback;
+}
+
+/**
+ * Routes are split with Stack.Protected:
+ *  - signed out: login and the face scanner;
+ *  - signed in: the tabs and every screen opened from them.
+ * When the sign-in state changes, the routes of the other group are removed from the history.
+ * That fixes "Back logs me out" and "two swipes to close the app": before, the login (or scanner)
+ * screen stayed underneath the tabs, so Back from Today showed it, and a second Back closed the app.
+ */
+function RootStack() {
+  const { ready, me } = useAuth();
+  if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  const signedIn = !!me;
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: C.bg },
+        headerTintColor: C.text,
+        headerTitleStyle: { fontFamily: FONT.semibold, fontSize: 17 },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: C.bg },
+        // Platform default transition: on Android 14+ with predictive back enabled (app.config.ts)
+        // the native stack shows the system's predictive back animation while the user swipes.
+        animation: "default",
+        gestureEnabled: true,
+      }}
+    >
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="scanner" options={{ headerShown: false, orientation: "default" }} />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="employee/[id]" options={({ route }) => ({ title: personTitle(route.params, "id", "Employee") })} />
+        <Stack.Screen name="employee/edit/[id]" options={{ title: "Edit employee" }} />
+        <Stack.Screen name="employee/new" options={{ title: "Add employee" }} />
+        <Stack.Screen name="attendance/[employeeId]/[date]" options={({ route }) => ({ title: personTitle(route.params, "employeeId", "Attendance") })} />
+        <Stack.Screen name="advance/[id]" options={{ title: "Advance" }} />
+        <Stack.Screen name="advances" options={{ title: "Advances" }} />
+        <Stack.Screen name="approvals" options={{ title: "Approvals" }} />
+        <Stack.Screen name="devices" options={{ title: "Scanner devices" }} />
+        <Stack.Screen name="face-enroll" options={{ title: "Face scan" }} />
+        <Stack.Screen name="history" options={{ title: "History" }} />
+        <Stack.Screen name="leaves" options={{ title: "Leave" }} />
+        <Stack.Screen name="register" options={{ title: "Monthly register" }} />
+        <Stack.Screen name="scanner-setup" options={{ title: "Face scanner" }} />
+        <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="team" options={{ title: "Managers" }} />
+      </Stack.Protected>
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const [fontsReady, fontError] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold });
@@ -26,34 +86,20 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
   // Wait a moment for the Geist font (it is bundled, so this is instant on the phone).
-  if (!fontsReady && !fontError) return <View style={{ flex: 1, backgroundColor: C.white }} />;
+  if (!fontsReady && !fontError) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   return (
     <SafeAreaProvider>
       <KeyboardProvider>
-      <DialogProvider>
-      <AuthProvider>
-        <LiveProvider>
-        <LiveProfileRefresher />
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <Stack
-          screenOptions={{
-            // Vercel / Linear style: white bar, black title, page just below in light grey.
-            headerStyle: { backgroundColor: C.white },
-            headerTintColor: C.text,
-            headerTitleStyle: { fontFamily: FONT.semibold, fontSize: 17 },
-            headerShadowVisible: false,
-            contentStyle: { backgroundColor: C.bg },
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="scanner" options={{ headerShown: false, orientation: "default" }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-        <UpdatePrompt />
-        </LiveProvider>
-      </AuthProvider>
-      </DialogProvider>
+        <DialogProvider>
+          <AuthProvider>
+            <LiveProvider>
+              <LiveProfileRefresher />
+              <StatusBar style={isDark ? "light" : "dark"} />
+              <RootStack />
+              <UpdatePrompt />
+            </LiveProvider>
+          </AuthProvider>
+        </DialogProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
   );

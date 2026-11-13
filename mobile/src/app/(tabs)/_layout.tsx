@@ -1,91 +1,48 @@
-import { Redirect, Tabs } from "expo-router";
-import { Pressable, View, type PressableProps } from "react-native";
-import { CalendarDays, House, IndianRupee, Menu, Users } from "@/components/icons";
+import { Tabs } from "expo-router";
+import { View } from "react-native";
 import { useAuth } from "@/lib/auth";
 import { FONT } from "@/components/Text";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C } from "@/lib/theme";
+import { useWindowLayout } from "@/lib/layout";
+import { AppTabBar } from "@/components/NavBar";
+import { MoreSheet } from "@/components/MoreSheet";
+import { SearchSheet } from "@/components/SearchSheet";
 
 /**
- * Tab buttons with no press feedback: no Android ripple hue, no opacity dip.
- * The active tab already shows through its tint color; a flash on every tap is noise.
+ * Main tabs. Back behaviour:
+ *  - a sheet is open (More / Search): Back closes it (the sheet is a Modal);
+ *  - another tab is open: Back goes to Today (Material's rule for top-level destinations);
+ *  - Today is open: ONE Back closes the app (see useExitOnBack in the Today screen).
+ * The login / scanner screens are never under the tabs in the history (Stack.Protected in the
+ * root layout), so Back can no longer drop the user on the login page ("logged out").
  */
-function FlatTabButton({ onPress, onLongPress, accessibilityState, accessibilityLabel, testID, style, children }: PressableProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      accessibilityState={accessibilityState}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      testID={testID}
-      android_ripple={{ color: "transparent" }}
-      style={(state) => [typeof style === "function" ? style(state) : style, { opacity: 1 }]}
-    >
-      {children}
-    </Pressable>
-  );
-}
-
 export default function TabsLayout() {
-  const { ready, me, scannerMode } = useAuth();
-  const insets = useSafeAreaInsets();
-  if (ready && !me) return <Redirect href={scannerMode ? "/scanner" : "/login"} />;
+  const { me } = useAuth();
+  const layout = useWindowLayout();
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: C.text,
-        tabBarInactiveTintColor: C.muted,
-        // One floating pill bar, pinned to the bottom on every screen size.
-        // left/right 16 matches the card padding, so the bar lines up with the cards.
-        tabBarPosition: "bottom",
-        tabBarButton: FlatTabButton,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: Math.max(insets.bottom, 12) + 8,
-          height: 68,
-          paddingHorizontal: 8,
-          paddingTop: 8,
-          paddingBottom: 8,
-          borderRadius: 34,
-          borderWidth: 1,
-          borderColor: C.hairline,
-          backgroundColor: C.white,
-          elevation: 8,
-          shadowColor: "#000",
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 6 },
-        },
-        tabBarItemStyle: { borderRadius: 26 },
-        tabBarLabelStyle: { fontSize: 11, fontFamily: FONT.medium, marginTop: 2 },
-        tabBarIconStyle: { marginBottom: -2 },
-        headerStyle: { backgroundColor: C.white },
-        headerBackground: () => <View style={{ flex: 1, backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: C.line }} />,
-        headerTintColor: C.text,
-        headerTitleStyle: { fontFamily: FONT.bold, fontSize: 20, color: C.text, letterSpacing: -0.4 },
-        headerTitleAlign: "left",
-        headerShadowVisible: false,
-        sceneStyle: { backgroundColor: C.bg },
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: me?.business.name ?? "Today", tabBarLabel: "Today", tabBarIcon: ({ color, size }) => <House color={color as string} size={size} /> }} />
-      <Tabs.Screen name="employees" options={{ title: "Employees", tabBarLabel: "Employees", tabBarIcon: ({ color, size }) => <Users color={color as string} size={size} /> }} />
-      <Tabs.Screen name="attendance" options={{ title: "Attendance", tabBarLabel: "Attendance", tabBarIcon: ({ color, size }) => <CalendarDays color={color as string} size={size} /> }} />
-      <Tabs.Screen name="salary" options={{ title: "Salary", tabBarLabel: "Salary", tabBarIcon: ({ color, size }) => <IndianRupee color={color as string} size={size} /> }} />
-      <Tabs.Screen
-        name="more"
-        options={{
-          title: "More",
-          tabBarLabel: "More",
-          tabBarBadge: me?.pendingApprovals ? me.pendingApprovals : undefined,
-          tabBarBadgeStyle: { backgroundColor: C.red },
-          tabBarIcon: ({ color, size }) => <Menu color={color as string} size={size} />,
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Tabs
+        backBehavior="firstRoute"
+        tabBar={(props) => <AppTabBar {...props} rail={layout.rail} />}
+        screenOptions={{
+          tabBarPosition: layout.rail ? "left" : "bottom",
+          animation: "shift",
+          headerStyle: { backgroundColor: C.bg },
+          headerBackground: () => <View style={{ flex: 1, backgroundColor: C.bg }} />,
+          headerTintColor: C.text,
+          headerTitleStyle: { fontFamily: FONT.bold, fontSize: 24, color: C.text, letterSpacing: -0.6 },
+          headerTitleAlign: "left",
+          headerShadowVisible: false,
+          sceneStyle: { backgroundColor: C.bg },
         }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen name="index" options={{ title: me?.business.name ?? "Today", headerShown: false }} />
+        <Tabs.Screen name="employees" options={{ title: "Employees" }} />
+        <Tabs.Screen name="attendance" options={{ title: "Attendance" }} />
+        <Tabs.Screen name="salary" options={{ title: "Salary" }} />
+      </Tabs>
+      <MoreSheet />
+      <SearchSheet />
+    </View>
   );
 }
