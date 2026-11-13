@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, RefreshControl, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, Text, View } from "react-native";
 import { Camera, CalendarDays } from "lucide-react-native";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
 import { EmployeeForm, employeeBody } from "@/components/EmployeeForm";
@@ -31,7 +31,7 @@ function istToday() {
 export default function EmployeeDetail() {
   const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
   const { me, can } = useAuth();
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id]);
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "payroll", "attendance"]);
   const [tab, setTab] = useState<Tab>(created ? "face" : "face");
   const [amount, setAmount] = useState("");
   const [months, setMonths] = useState("1");
@@ -162,13 +162,13 @@ export default function EmployeeDetail() {
         <Card style={{ gap: 0 }}>
           {data.salary.length === 0 ? <Muted>No salary prepared yet.</Muted> : null}
           {data.salary.map((s, i) => (
-            <View key={s.id} style={{ paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: C.line, gap: 2 }}>
+            <Pressable key={s.id} onPress={() => router.push({ pathname: "/payslip/[lineId]", params: { lineId: s.id } })} style={{ paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: C.line, gap: 2 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={{ fontWeight: "600", color: C.text }}>{monthLabel(s.month)}</Text>
                 <Text style={{ fontWeight: "700", color: C.text }}>{rs(s.net)}</Text>
               </View>
               <Muted>{s.payableDays} days · gross {rs(s.gross)} · paid {s.paid ? rs(s.paid) : "—"}{s.locked ? "" : " · draft"}</Muted>
-            </View>
+            </Pressable>
           ))}
         </Card>
       ) : null}

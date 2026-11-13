@@ -2,7 +2,7 @@ import { decideApproval, giveAdvance, sendApprovalOtp, verifyApprovalOtp } from 
 import { addManualPunch, clearDayStatus, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { enrollFace, removeFace, setEmployeeLeft, setEmployeeLogin, updateEmployee } from "@/app/actions/employees";
 import { addAdjustment, lockPayrollAction, recalcPayroll, recordPayment, reopenPayrollAction } from "@/app/actions/payroll";
-import { revokeDevice } from "@/app/actions/admin";
+import { addHoliday, addSite, removeHoliday, revokeDevice, saveManager, toggleManager, toggleSite, updateSettings } from "@/app/actions/admin";
 import type { ActionResult } from "@/lib/action";
 import { actionResponse, apiError, readJson, staff, toForm } from "@/lib/api";
 
@@ -27,6 +27,13 @@ const ACTIONS: Record<string, (prev: ActionResult, form: FormData) => Promise<Ac
   addAdjustment,
   recordPayment,
   revokeDevice,
+  updateSettings,
+  addSite,
+  toggleSite,
+  addHoliday,
+  removeHoliday,
+  saveManager,
+  toggleManager,
 };
 
 export async function POST(req: Request, ctx: RouteContext<"/api/m/action/[name]">) {

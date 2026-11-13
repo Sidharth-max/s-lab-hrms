@@ -9,7 +9,7 @@ import { useLoad } from "@/lib/useLoad";
 interface Adv { id: string; employeeId: string; employee: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string; status: string }
 
 export default function AdvancesScreen() {
-  const { data, error, refreshing, reload } = useLoad(() => api.get<{ advances: Adv[] }>("/api/m/advances"));
+  const { data, error, refreshing, reload } = useLoad(() => api.get<{ advances: Adv[] }>("/api/m/advances"), [], ["advance", "approval", "payroll"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
   const total = data.advances.filter((a) => a.status === "ACTIVE").reduce((s, a) => s + a.remaining, 0);

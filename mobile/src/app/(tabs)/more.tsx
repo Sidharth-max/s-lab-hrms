@@ -1,9 +1,8 @@
 import Constants from "expo-constants";
 import { router, type Href } from "expo-router";
-import { Alert, Linking, Pressable, Text, View } from "react-native";
-import { BadgeCheck, ChevronRight, Globe, HandCoins, IndianRupee, LogOut, ScanFace, type LucideIcon } from "lucide-react-native";
+import { Alert, Pressable, Text, View } from "react-native";
+import { BadgeCheck, CalendarRange, ChevronRight, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type LucideIcon } from "lucide-react-native";
 import { Card, Muted, Screen } from "@/components/ui";
-import { API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
 
@@ -37,14 +36,31 @@ export default function More() {
         <Item icon={HandCoins} label="Advances" onPress={go("/advances")} />
         <Divider />
         <Item icon={IndianRupee} label="Salary" onPress={go("/payroll")} />
+        <Divider />
+        <Item icon={CalendarRange} label="Attendance register" onPress={go("/register")} />
+      </Card>
+      <Card style={{ padding: 0, gap: 0 }}>
         {can("devices.register") ? (
           <>
-            <Divider />
             <Item icon={ScanFace} label={scannerMode ? "Face scanner (this device)" : "Use this device as face scanner"} onPress={go("/scanner-setup")} />
+            <Divider />
+            <Item icon={Smartphone} label="Scanner devices" onPress={go("/devices")} />
           </>
         ) : null}
-        <Divider />
-        <Item icon={Globe} label="Open website (settings, managers, history)" onPress={() => Linking.openURL(API_URL)} />
+        {can("settings.manage") ? (
+          <>
+            <Divider />
+            <Item icon={Settings} label="Settings" onPress={go("/settings")} />
+          </>
+        ) : null}
+        {me?.user.role === "OWNER" ? (
+          <>
+            <Divider />
+            <Item icon={UserCog} label="Managers" onPress={go("/team")} />
+            <Divider />
+            <Item icon={History} label="History" onPress={go("/history")} />
+          </>
+        ) : null}
       </Card>
       <Card style={{ padding: 0, gap: 0 }}>
         <Item

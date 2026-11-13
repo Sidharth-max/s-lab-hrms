@@ -47,6 +47,21 @@ const empId = r.data.data.id;
 r = await call("POST", "/api/m/employees", { name: "Dup", code: "A100", siteId, joinedOn: "2026-10-01", wageType: "DAILY", wage: "600" });
 check(r.status === 400 && /already used/.test(r.data.error), "duplicate code should be refused");
 
+step("employee code is filled in automatically when left empty");
+r = await call("GET", "/api/m/employees");
+check(/^E\d{3}$/.test(r.data.nextCode), "nextCode missing: " + JSON.stringify(r.data.nextCode));
+const expected = r.data.nextCode;
+r = await call("POST", "/api/m/employees", { name: "Auto Code", siteId, joinedOn: "2026-10-01", wageType: "MONTHLY", wage: "9000" });
+check(r.data.ok, "create without code failed: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/employees/${r.data.data.id}`);
+check(r.data.employee?.code === expected, `auto code should be ${expected}, got ${r.data.employee?.code}`);
+
+step("new app screens load");
+for (const p of ["/api/m/settings", "/api/m/team", "/api/m/audit", "/api/m/devices", "/api/m/register"]) {
+  r = await call("GET", p);
+  check(r.status === 200, `${p} returned ${r.status}`);
+}
+
 step("employee detail");
 r = await call("GET", `/api/m/employees/${empId}`);
 check(r.data.employee?.wage === 60000 && r.data.employee.esiEnabled === true, "detail wrong: " + JSON.stringify(r.data.employee));

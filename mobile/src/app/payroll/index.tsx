@@ -16,7 +16,7 @@ function monthKey(offset = 0) {
 }
 
 export default function PayrollList() {
-  const { data, error, refreshing, reload } = useLoad(() => api.get<{ runs: Run[] }>("/api/m/payroll"));
+  const { data, error, refreshing, reload } = useLoad(() => api.get<{ runs: Run[] }>("/api/m/payroll"), [], ["payroll"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
   const missing = [monthKey(-1), monthKey(0)].filter((m) => !data.runs.some((r) => r.month === m));

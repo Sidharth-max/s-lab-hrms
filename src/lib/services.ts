@@ -190,3 +190,13 @@ export async function reopenPayroll(businessId: string, month: string, tx: Tx) {
   const lines = await tx.payrollLine.findMany({ where: { runId: run.id }, select: { employeeId: true } });
   await syncAdvanceStatuses(lines.map((l) => l.employeeId), tx);
 }
+
+/** Next free employee code: E001, E002, … (one more than the highest E-number used, so codes never repeat). */
+export async function nextEmployeeCode(businessId: string, tx: Tx = db): Promise<string> {
+  const rows = await tx.employee.findMany({ where: { businessId, code: { startsWith: "E" } }, select: { code: true } });
+  const max = rows.reduce((m, r) => {
+    const n = /^E(\d+)$/.exec(r.code);
+    return n ? Math.max(m, Number(n[1])) : m;
+  }, 0);
+  return `E${String(max + 1).padStart(3, "0")}`;
+}

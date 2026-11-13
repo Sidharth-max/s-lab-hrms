@@ -43,7 +43,17 @@ export function EmployeeForm({
   return (
     <View style={{ gap: 14 }}>
       <Field label="Full name" value={v.name} onChangeText={(t) => set("name", t)} />
-      {isNew ? <Field label="Employee code" value={v.code} onChangeText={(t) => set("code", t.toUpperCase())} autoCapitalize="characters" maxLength={12} /> : null}
+      {isNew ? (
+        <Field
+          label="Employee code"
+          hint="Filled in automatically. Leave it, or type your own."
+          placeholder="Automatic"
+          value={v.code}
+          onChangeText={(t) => set("code", t.toUpperCase())}
+          autoCapitalize="characters"
+          maxLength={12}
+        />
+      ) : null}
       <Field label="Mobile (optional, needed for web login)" value={v.phone} onChangeText={(t) => set("phone", t)} keyboardType="phone-pad" />
       <View style={{ gap: 6 }}>
         <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>

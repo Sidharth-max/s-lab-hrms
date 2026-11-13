@@ -3,6 +3,7 @@ import { getDevice } from "@/lib/auth";
 import { nextPunch } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { publish } from "@/lib/events";
 import { decodeImage, faceProvider } from "@/lib/face";
 import { livenessResult } from "@/lib/face/liveness";
 import { dateKeyToDb, dbToDateKey, formatIstTime, istDateKey } from "@/lib/time";
@@ -122,6 +123,7 @@ export async function POST(req: Request) {
     return { duplicate: false as const, type: p.type, at: p.at };
   });
 
+  if (!result.duplicate) publish(device.businessId, "attendance");
   const time = formatIstTime(result.at);
   const first = employee.name.split(" ")[0];
   const speech = result.duplicate

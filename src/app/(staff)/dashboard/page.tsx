@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { requireStaff } from "@/lib/auth";
 import { STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
@@ -33,6 +34,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
 
   return (
     <div className="flex flex-col gap-4">
+      <LiveRefresh kinds={["attendance", "employee", "approval"]} />
       {sp.denied && (
         <div className="notice-red">
           {"You do not have permission for that page. Ask the owner."}

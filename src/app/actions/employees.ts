@@ -11,6 +11,7 @@ import { parseRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { dateKeyToDb } from "@/lib/time";
+import { nextEmployeeCode } from "@/lib/services";
 
 function parseWeeklyOff(form: FormData) {
   const customWeeklyOff = str(form, "weeklyOffMode") === "custom";
@@ -48,7 +49,8 @@ function parsePay(form: FormData) {
 export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
   const name = str(form, "name");
-  const code = str(form, "code").toUpperCase();
+  // Left empty: the next free code (E001, E002, …) is used.
+  const code = str(form, "code").toUpperCase() || (await nextEmployeeCode(actor.businessId));
   const siteId = str(form, "siteId");
   const joinedOn = str(form, "joinedOn");
   const phoneRaw = str(form, "phone");

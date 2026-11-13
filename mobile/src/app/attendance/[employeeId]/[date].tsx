@@ -29,7 +29,7 @@ const STATUSES = [
 
 export default function DayScreen() {
   const { employeeId, date } = useLocalSearchParams<{ employeeId: string; date: string }>();
-  const { data, error, refreshing, reload } = useLoad(() => api.get<DayDetail>(`/api/m/attendance/${employeeId}/${date}`), [employeeId, date]);
+  const { data, error, refreshing, reload } = useLoad(() => api.get<DayDetail>(`/api/m/attendance/${employeeId}/${date}`), [employeeId, date], ["attendance"]);
   const [type, setType] = useState<"IN" | "OUT">("IN");
   const [time, setTime] = useState("");
   const [nextDay, setNextDay] = useState(false);

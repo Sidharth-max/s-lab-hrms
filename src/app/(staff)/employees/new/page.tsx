@@ -7,11 +7,12 @@ import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
 import { siteWhere } from "@/lib/scope";
 import { istDateKey } from "@/lib/time";
+import { nextEmployeeCode } from "@/lib/services";
 
 export default async function NewEmployee() {
   const actor = await requireStaff("employees.manage");
   const sites = await db.site.findMany({ where: { ...siteWhere(actor), active: true }, orderBy: { name: "asc" } });
-  const count = await db.employee.count({ where: { businessId: actor.businessId } });
+  const code = await nextEmployeeCode(actor.businessId);
   const business = await db.business.findUniqueOrThrow({ where: { id: actor.businessId } });
   if (sites.length === 0) {
     return (
@@ -29,7 +30,7 @@ export default async function NewEmployee() {
           isNew
           canSalary={can(actor, "salary.edit")}
           businessWeeklyOff={business.weeklyOffDays}
-          values={{ joinedOn: istDateKey(new Date()), code: `E${String(count + 1).padStart(3, "0")}` }}
+          values={{ joinedOn: istDateKey(new Date()), code }}
         />
       </ActionForm>
       <p className="muted">After saving, enroll the face on the next screen.</p>

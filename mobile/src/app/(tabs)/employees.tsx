@@ -14,7 +14,7 @@ interface Emp { id: string; name: string; code: string; phone: string | null; si
 export default function Employees() {
   const { can } = useAuth();
   const nav = useNavigation();
-  const { data, error, refreshing, reload } = useLoad(() => api.get<{ employees: Emp[] }>("/api/m/employees"));
+  const { data, error, refreshing, reload } = useLoad(() => api.get<{ employees: Emp[] }>("/api/m/employees"), [], ["employee"]);
   const [q, setQ] = useState("");
   const [show, setShow] = useState<"working" | "left">("working");
 

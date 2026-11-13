@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { apiError, json, staff } from "@/lib/api";
 import { can } from "@/lib/permissions";
 import { employeeScope } from "@/lib/scope";
+import { employedInMonthWhere } from "@/lib/services";
 import { isMonthKey, istMonthKey } from "@/lib/time";
 
 export async function GET(_req: Request, ctx: RouteContext<"/api/m/payroll/[month]">) {
@@ -12,7 +13,13 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/payroll/[mont
     const lines = run
       ? await db.payrollLine.findMany({ where: { runId: run.id, employee: employeeScope(actor) }, include: { employee: true }, orderBy: { employee: { name: "asc" } } })
       : [];
+    const [employees, adjustments] = await Promise.all([
+      db.employee.findMany({ where: { ...employeeScope(actor), ...employedInMonthWhere(actor.businessId, month) }, orderBy: { name: "asc" }, select: { id: true, name: true, code: true } }),
+      db.adjustment.findMany({ where: { month, employee: employeeScope(actor) }, include: { employee: true }, orderBy: { createdAt: "desc" } }),
+    ]);
     return json({
+      employees,
+      adjustments: adjustments.map((a) => ({ id: a.id, employee: a.employee.name, amount: a.amount, reason: a.reason })),
       month,
       exists: !!run,
       locked: run?.status === "LOCKED",

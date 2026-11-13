@@ -1,7 +1,6 @@
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +11,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, R } from "@/lib/theme";
 
 export function Screen({
@@ -29,9 +29,14 @@ export function Screen({
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
       {scroll ? (
-        <ScrollView keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }}>
+        <KeyboardAwareScrollView
+          bottomOffset={32}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={refreshControl}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
           {inner}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         inner
       )}

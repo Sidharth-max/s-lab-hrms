@@ -16,7 +16,7 @@ interface Day {
 
 export default function Attendance() {
   const [date, setDate] = useState<string | null>(null);
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Day>(`/api/m/attendance${date ? `?date=${date}` : ""}`), [date]);
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Day>(`/api/m/attendance${date ? `?date=${date}` : ""}`), [date], ["attendance", "employee"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
 

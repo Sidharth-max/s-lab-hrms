@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "./db";
+import { kindOf, publish } from "./events";
 
 export async function audit(
   businessId: string,
@@ -11,4 +12,6 @@ export async function audit(
   tx: Prisma.TransactionClient = db,
 ) {
   await tx.auditLog.create({ data: { businessId, actorId, action, entity, entityId, detail } });
+  // Every recorded change also tells open screens to refresh.
+  publish(businessId, kindOf(action));
 }

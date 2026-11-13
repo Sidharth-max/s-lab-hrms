@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useLive } from "@/lib/live";
 
 interface Dashboard {
   date: string;
@@ -15,7 +16,7 @@ interface Dashboard {
 
 function Stat({ label, value, of, tone }: { label: string; value: number; of?: number; tone?: "red" }) {
   return (
-    <Card style={{ flex: 1, minWidth: "45%", gap: 4, ...(tone === "red" ? { backgroundColor: C.redSoft, borderColor: "#fecaca" } : {}) }}>
+    <Card style={{ gap: 4, ...(tone === "red" ? { backgroundColor: C.redSoft, borderColor: "#fecaca" } : {}) }}>
       <Muted>{label}</Muted>
       <Text style={{ fontSize: 24, fontWeight: "700", color: C.text }}>
         {value}
@@ -26,7 +27,8 @@ function Stat({ label, value, of, tone }: { label: string; value: number; of?: n
 }
 
 export default function Today() {
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Dashboard>("/api/m/dashboard"));
+  const { connected } = useLive();
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Dashboard>("/api/m/dashboard"), [], ["attendance", "employee", "approval"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
   const needFace = data.rows.filter((r) => r.needsFace);
@@ -34,18 +36,28 @@ export default function Today() {
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <View style={{ gap: 2 }}>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: C.text }}>Today · {dateLabel(data.date)}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: C.text }}>Today · {dateLabel(data.date)}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }} accessibilityLabel={connected ? "Live updates on" : "Live updates off"}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: connected ? C.green : C.line }} />
+            <Text style={{ fontSize: 12, color: C.muted }}>{connected ? "Live" : "Offline"}</Text>
+          </View>
+        </View>
         <Muted>
           {data.storeHours ? `Store hours ${data.storeHours.open} to ${data.storeHours.close}${data.storeHours.anyScanFullDay ? " · any scan = full day" : ""}` : "Weekly off today"}
         </Muted>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-        <Stat label="Present" value={data.counts.present} of={data.counts.total} />
-        <Stat label="Still inside" value={data.counts.inside} />
-        <Stat label="Not came yet" value={data.counts.notIn} />
-        <Pressable style={{ flex: 1, minWidth: "45%" }} onPress={() => router.push("/approvals")}>
-          <Stat label="Waiting approval" value={data.counts.pendingApprovals} tone={data.counts.pendingApprovals ? "red" : undefined} />
-        </Pressable>
+      <View style={{ gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1 }}><Stat label="Present" value={data.counts.present} of={data.counts.total} /></View>
+          <View style={{ flex: 1 }}><Stat label="Still inside" value={data.counts.inside} /></View>
+        </View>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1 }}><Stat label="Not came yet" value={data.counts.notIn} /></View>
+          <Pressable style={{ flex: 1 }} onPress={() => router.push("/approvals")} accessibilityRole="button">
+            <Stat label="Waiting approval" value={data.counts.pendingApprovals} tone={data.counts.pendingApprovals ? "red" : undefined} />
+          </Pressable>
+        </View>
       </View>
       {needFace.length ? <Notice tone="red" text={`${needFace.length} employee(s) need a face photo before they can use the scanner.`} /> : null}
       <Card style={{ padding: 0, gap: 0 }}>

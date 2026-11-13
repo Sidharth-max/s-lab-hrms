@@ -11,7 +11,7 @@ interface Approvals { canDecide: boolean; pending: { id: string; summary: string
 
 export default function ApprovalsScreen() {
   const { refresh } = useAuth();
-  const { data, error, refreshing, reload } = useLoad(() => api.get<Approvals>("/api/m/approvals"));
+  const { data, error, refreshing, reload } = useLoad(() => api.get<Approvals>("/api/m/approvals"), [], ["approval", "advance"]);
   const [codes, setCodes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);

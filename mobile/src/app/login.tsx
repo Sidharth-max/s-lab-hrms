@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScanFace } from "lucide-react-native";
 import { Button, Card, Field, Muted, Notice } from "@/components/ui";
@@ -47,7 +48,7 @@ export default function Login() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "center", padding: 20, gap: 20 }}>
+      <KeyboardAwareScrollView bottomOffset={32} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 20, gap: 20 }}>
         <View style={{ alignItems: "center", gap: 8 }}>
           <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.text, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: C.white, fontWeight: "700", fontSize: 20 }}>S</Text>
@@ -77,7 +78,7 @@ export default function Login() {
         {scannerMode ? (
           <Button title="Back to face scan" variant="secondary" icon={<ScanFace size={18} color={C.text} />} onPress={() => router.replace("/scanner")} />
         ) : null}
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

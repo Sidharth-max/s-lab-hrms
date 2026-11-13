@@ -1,5 +1,6 @@
 import { router, Stack } from "expo-router";
-import { Card, Notice, Screen } from "@/components/ui";
+import { Card, Loading, Notice, Screen } from "@/components/ui";
+import { useLoad } from "@/lib/useLoad";
 import { EmployeeForm, employeeBody } from "@/components/EmployeeForm";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -12,6 +13,9 @@ function today() {
 export default function NewEmployee() {
   const { me, can } = useAuth();
   const sites = me?.sites ?? [];
+  // The server suggests the next free code (E001, E002, …); leaving it empty also works.
+  const { data, error } = useLoad(() => api.get<{ nextCode: string }>("/api/m/employees"));
+  if (!data && !error) return <Loading />;
   return (
     <Screen>
       <Stack.Screen options={{ title: "Add employee" }} />
@@ -23,7 +27,7 @@ export default function NewEmployee() {
           sites={sites}
           submitTitle="Add employee"
           initial={{
-            name: "", code: "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", basicPercent: "100",
+            name: "", code: data?.nextCode ?? "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", basicPercent: "100",
             pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [],
           }}
           onSubmit={async (v) => {

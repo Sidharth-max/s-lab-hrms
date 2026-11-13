@@ -42,7 +42,7 @@ export function EmployeeFields({
       </div>
       <div>
         <label className="label">Employee code</label>
-        <input name="code" className="input uppercase" defaultValue={values.code} required={isNew} disabled={!isNew} maxLength={12} />
+        <input name="code" className="input uppercase" defaultValue={values.code} disabled={!isNew} maxLength={12} placeholder="Automatic" />
       </div>
       <div>
         <label className="label">Mobile (optional, needed for web login)</label>

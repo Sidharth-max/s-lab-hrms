@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
+import { useLiveReload } from "./live";
 
 /**
  * Loads data from the API, reloads when the screen comes back into view, and supports pull-to-refresh.
  * `key` identifies what is loaded (e.g. the employee id); a new key loads again.
  */
-export function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = []) {
+/** `live` lists the kinds of server change that should reload this screen automatically. */
+export function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = [], live?: string[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,6 +55,8 @@ export function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = []) {
       void fetchNow();
     }, [fetchNow]),
   );
+
+  useLiveReload(live, () => void fetchNow());
 
   const reload = useCallback(async () => {
     setRefreshing(true);

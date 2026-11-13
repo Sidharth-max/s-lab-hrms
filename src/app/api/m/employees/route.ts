@@ -2,11 +2,13 @@ import { createEmployeeCore } from "@/app/actions/employees";
 import { db } from "@/lib/db";
 import { actionResponse, json, readJson, staff, toForm } from "@/lib/api";
 import { employeeScope } from "@/lib/scope";
+import { nextEmployeeCode } from "@/lib/services";
 
 export async function GET() {
   return staff(async (actor) => {
     const employees = await db.employee.findMany({ where: employeeScope(actor), include: { site: true }, orderBy: { name: "asc" } });
     return json({
+      nextCode: await nextEmployeeCode(actor.businessId),
       employees: employees.map((e) => ({
         id: e.id,
         name: e.name,

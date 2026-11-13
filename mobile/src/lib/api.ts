@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 // Client for the server's app API (/api/m). The login token and scanner token are kept in secure storage.
 
@@ -8,13 +9,23 @@ export const API_URL: string = (Constants.expoConfig?.extra as { apiUrl?: string
 const TOKEN_KEY = "hrms.session";
 const DEVICE_KEY = "hrms.device";
 
+// Phones use the encrypted secure store. The browser build (used only for testing) falls back to localStorage.
+const store =
+  Platform.OS === "web"
+    ? {
+        get: async (k: string) => globalThis.localStorage?.getItem(k) ?? null,
+        set: async (k: string, v: string) => globalThis.localStorage?.setItem(k, v),
+        del: async (k: string) => globalThis.localStorage?.removeItem(k),
+      }
+    : { get: SecureStore.getItemAsync, set: SecureStore.setItemAsync, del: SecureStore.deleteItemAsync };
+
 export const tokens = {
-  getSession: () => SecureStore.getItemAsync(TOKEN_KEY),
-  setSession: (t: string) => SecureStore.setItemAsync(TOKEN_KEY, t),
-  clearSession: () => SecureStore.deleteItemAsync(TOKEN_KEY),
-  getDevice: () => SecureStore.getItemAsync(DEVICE_KEY),
-  setDevice: (t: string) => SecureStore.setItemAsync(DEVICE_KEY, t),
-  clearDevice: () => SecureStore.deleteItemAsync(DEVICE_KEY),
+  getSession: () => store.get(TOKEN_KEY),
+  setSession: (t: string) => store.set(TOKEN_KEY, t),
+  clearSession: () => store.del(TOKEN_KEY),
+  getDevice: () => store.get(DEVICE_KEY),
+  setDevice: (t: string) => store.set(DEVICE_KEY, t),
+  clearDevice: () => store.del(DEVICE_KEY),
 };
 
 export class ApiError extends Error {

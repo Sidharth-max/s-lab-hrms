@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo/metro-runtime": "~58.0.17",
     "eslint-config-expo": "~58.0.4",
     "expo": "~58.0.24",
     "expo-camera": "~58.0.14",
@@ -10,17 +11,24 @@
     "expo-image-manipulator": "~58.0.16",
     "expo-keep-awake": "~58.0.4",
     "expo-linking": "~58.0.17",
+    "expo-print": "~58.0.9",
     "expo-router": "~58.0.31",
     "expo-secure-store": "~58.0.3",
+    "expo-sharing": "~58.0.23",
     "expo-speech": "~58.0.4",
     "expo-status-bar": "~58.0.5",
     "lucide-react-native": "^1.72.0",
     "react": "19.3.0",
     "react-dom": "^19.3.0",
     "react-native": "0.88.1",
+    "react-native-keyboard-controller": "1.22.7",
+    "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.11.1",
     "react-native-screens": "~4.30.1",
-    "react-native-svg": "15.16.0"
+    "react-native-sse": "^1.2.1",
+    "react-native-svg": "15.16.0",
+    "react-native-web": "^0.21.4",
+    "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
