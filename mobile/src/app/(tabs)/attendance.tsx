@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, Text, View } from "react-native";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { pickDate } from "@/components/pickers";
 import { Badge, Card, ErrorView, Loading, Muted, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { addDays, dateLabel, hours } from "@/lib/format";
@@ -26,7 +27,10 @@ export default function Attendance() {
         <Pressable onPress={() => setDate(addDays(data.date, -1))} hitSlop={12} accessibilityLabel="Previous day" style={{ padding: 6 }}>
           <ChevronLeft color={C.text} size={24} />
         </Pressable>
-        <Text style={{ fontSize: 17, fontWeight: "600", color: C.text }}>{data.date === data.today ? "Today" : dateLabel(data.date)}</Text>
+        <Pressable onPress={() => pickDate(data.date, setDate, data.today)} hitSlop={8} accessibilityLabel="Choose date" style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: C.line, backgroundColor: C.white }}>
+          <CalendarDays size={18} color={C.text} strokeWidth={1.75} />
+          <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{data.date === data.today ? `Today · ${dateLabel(data.date)}` : dateLabel(data.date)}</Text>
+        </Pressable>
         <Pressable
           onPress={() => data.date < data.today && setDate(addDays(data.date, 1))}
           hitSlop={12}

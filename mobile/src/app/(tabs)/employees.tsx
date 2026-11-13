@@ -1,8 +1,8 @@
-import { router, useNavigation } from "expo-router";
-import { useLayoutEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
+import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
-import { Plus, Search } from "lucide-react-native";
-import { Badge, ErrorView, Loading, Muted, Segmented } from "@/components/ui";
+import { ChevronRight, Plus, Search } from "lucide-react-native";
+import { Badge, ErrorView, Fab, Loading, Muted, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { rs } from "@/lib/format";
@@ -13,23 +13,9 @@ interface Emp { id: string; name: string; code: string; phone: string | null; si
 
 export default function Employees() {
   const { can } = useAuth();
-  const nav = useNavigation();
   const { data, error, refreshing, reload } = useLoad(() => api.get<{ employees: Emp[] }>("/api/m/employees"), [], ["employee"]);
   const [q, setQ] = useState("");
   const [show, setShow] = useState<"working" | "left">("working");
-
-  useLayoutEffect(() => {
-    nav.setOptions({
-      headerRight: can("employees.manage")
-        ? () => (
-            <Pressable onPress={() => router.push("/employee/new")} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 16 }} accessibilityLabel="Add employee">
-              <Plus size={20} color={C.text} />
-              <Text style={{ fontWeight: "600", color: C.text }}>Add</Text>
-            </Pressable>
-          )
-        : undefined,
-    });
-  }, [nav, can]);
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -42,18 +28,26 @@ export default function Employees() {
   if (!data) return <Loading />;
 
   return (
+    <View style={{ flex: 1 }}>
     <FlatList
       data={list}
       keyExtractor={(e) => e.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
-      contentContainerStyle={{ padding: 16, gap: 8 }}
+      contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 96 }}
       ListHeaderComponent={
         <View style={{ gap: 10, marginBottom: 4 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 8, backgroundColor: C.white, paddingHorizontal: 12 }}>
             <Search size={18} color={C.muted} />
             <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or mobile" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
           </View>
-          <Segmented options={[{ value: "working", label: "Working" }, { value: "left", label: "Left" }]} value={show} onChange={setShow} />
+          <Segmented
+            options={[
+              { value: "working", label: `Working (${data.employees.filter((e) => e.active).length})` },
+              { value: "left", label: `Left (${data.employees.filter((e) => !e.active).length})` },
+            ]}
+            value={show}
+            onChange={setShow}
+          />
         </View>
       }
       ListEmptyComponent={<Muted>No employees found.</Muted>}
@@ -66,11 +60,16 @@ export default function Employees() {
             <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
               {e.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{e.code}</Text>
             </Text>
-            {!e.face && e.active ? <Badge label="No face" /> : null}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              {!e.face && e.active ? <Badge label="No face" tone="red" /> : null}
+              <ChevronRight size={18} color={C.muted} />
+            </View>
           </View>
           <Muted>{e.site} · {rs(e.wage)} {e.wageType === "MONTHLY" ? "/ month" : "/ day"}</Muted>
         </Pressable>
       )}
     />
+    {can("employees.manage") ? <Fab icon={<Plus size={26} color={C.white} />} label="Add employee" onPress={() => router.push("/employee/new")} /> : null}
+    </View>
   );
 }

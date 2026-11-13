@@ -3,13 +3,15 @@ import { json, staff } from "@/lib/api";
 
 export async function GET() {
   return staff(async (actor) => {
-    const devices = await db.device.findMany({ where: { businessId: actor.businessId }, include: { site: true }, orderBy: { createdAt: "desc" } });
+    const devices = await db.device.findMany({ where: { businessId: actor.businessId }, include: { site: true }, orderBy: [{ revokedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }] });
     const users = new Map((await db.user.findMany({ where: { id: { in: devices.map((d) => d.registeredBy) } } })).map((u) => [u.id, u.name]));
     return json({
       devices: devices.map((d) => ({
         id: d.id,
         name: d.name,
         site: d.site.name,
+        siteId: d.siteId,
+        model: d.model,
         registeredBy: users.get(d.registeredBy) ?? "?",
         createdAt: d.createdAt.toISOString(),
         lastSeenAt: d.lastSeenAt?.toISOString() ?? null,

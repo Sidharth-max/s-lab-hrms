@@ -41,7 +41,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
       pendingAdvances: pending,
       advances: advances
         .filter((a) => a.remaining > 0)
-        .map((a) => ({ id: a.id, givenOn: dbToDateKey(a.givenOn), amount: a.amount, recovered: a.recovered, remaining: a.remaining, recoveryMonths: a.recoveryMonths, startMonth: a.startMonth })),
+        .map((a) => ({ id: a.id, givenOn: dbToDateKey(a.givenOn), amount: a.amount, recovered: a.recovered, remaining: a.remaining, recoveryMonths: a.recoveryMonths, startMonth: a.startMonth, note: a.note })),
       salary: lines.map((l) => ({ id: l.id, month: l.run.month, locked: l.run.status === "LOCKED", payableDays: l.payableDays, gross: l.gross, net: l.net, paid: l.paidAmount })),
     });
   });

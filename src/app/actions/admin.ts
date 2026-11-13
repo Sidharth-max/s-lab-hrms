@@ -189,6 +189,21 @@ export const registerDevice = safe(async (_p: ActionResult, form: FormData): Pro
   return { ok: true, message: "This device is now a scanner. Open Scan to start." };
 });
 
+export const renameDevice = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+  const actor = await assertStaff("devices.register");
+  const d = await db.device.findFirst({ where: { id: str(form, "deviceId"), businessId: actor.businessId } });
+  if (!d) return { error: "Device not found" };
+  const name = str(form, "name").slice(0, 60);
+  if (!name) return { error: "Enter a name" };
+  const siteId = str(form, "siteId") || d.siteId;
+  const site = await db.site.findFirst({ where: { id: siteId, businessId: actor.businessId, active: true } });
+  if (!site) return { error: "Choose a site" };
+  await db.device.update({ where: { id: d.id }, data: { name, siteId: site.id } });
+  await audit(actor.businessId, actor.id, "device.rename", "Device", d.id, { from: d.name, to: name, siteId: site.id });
+  revalidatePath("/devices");
+  return { ok: true, message: "Scanner saved" };
+});
+
 export const revokeDevice = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("devices.register");
   const d = await db.device.findFirst({ where: { id: str(form, "deviceId"), businessId: actor.businessId, revokedAt: null } });

@@ -157,6 +157,8 @@ model Device {
   name         String
   language     String    @default("hi") // scanner screen and voice: "hi" | "en"
   tokenHash    String    @unique
+  hardwareId   String? // Android ID of the phone/tablet: the same device registering again reuses this record
+  model        String? // e.g. "Samsung SM-T295"
   registeredBy String
   createdAt    DateTime  @default(now())
   lastSeenAt   DateTime?
@@ -164,6 +166,8 @@ model Device {
 
   business Business @relation(fields: [businessId], references: [id])
   site     Site     @relation(fields: [siteId], references: [id])
+
+  @@index([businessId, hardwareId])
 }
 
 model Holiday {
@@ -240,6 +244,7 @@ enum AdvanceStatus {
   ACTIVE
   REJECTED
   CLEARED
+  CANCELLED // removed by the owner (given by mistake)
 }
 
 model Advance {

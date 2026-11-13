@@ -11,9 +11,11 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.muted,
-        tabBarStyle: { borderTopColor: C.line },
-        headerStyle: { backgroundColor: C.white },
-        headerTitleStyle: { fontWeight: "600" },
+        tabBarStyle: { borderTopColor: C.line, backgroundColor: C.white },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        headerStyle: { backgroundColor: C.head },
+        headerTintColor: C.headText,
+        headerTitleStyle: { fontWeight: "600", color: C.headText },
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: C.bg },
       }}

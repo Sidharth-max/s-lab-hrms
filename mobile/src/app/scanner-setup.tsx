@@ -4,6 +4,7 @@ import { Alert, Pressable, Text, View } from "react-native";
 import { Button, Card, Field, H2, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { deviceInfo } from "@/lib/device-info";
 import { C } from "@/lib/theme";
 
 export default function ScannerSetup() {
@@ -31,7 +32,7 @@ export default function ScannerSetup() {
       ) : (
         <Card>
           <H2>Use this device as the face scanner</H2>
-          <Muted>Workers will then only see the face scan screen. You log out after setting it up.</Muted>
+          <Muted>Workers will then only see the face scan screen. You log out after setting it up. If this device was a scanner before, its old entry is reused, not duplicated.</Muted>
           <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {sites.map((s) => (
@@ -50,7 +51,7 @@ export default function ScannerSetup() {
               setBusy(true);
               setError(null);
               try {
-                const r = await api.post<{ deviceToken: string }>("/api/m/devices/register", { siteId, name });
+                const r = await api.post<{ deviceToken: string }>("/api/m/devices/register", { siteId, name, ...deviceInfo() });
                 await enterScanner(r.deviceToken);
                 await signOut();
                 router.replace("/scanner");

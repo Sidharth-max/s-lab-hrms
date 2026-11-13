@@ -1,9 +1,9 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, RefreshControl, Text, View } from "react-native";
-import { Camera, CalendarDays } from "lucide-react-native";
+import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil } from "lucide-react-native";
 import { Badge, Button, Card, ErrorView, Field, H2, Loading, Muted, Notice, Row, Screen, Segmented } from "@/components/ui";
-import { EmployeeForm, employeeBody } from "@/components/EmployeeForm";
+import { DateField, MonthField } from "@/components/pickers";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, monthLabel, rs } from "@/lib/format";
@@ -18,33 +18,144 @@ interface Detail {
   };
   balance: { earned: number; outstanding: number; balance: number };
   pendingAdvances: number;
-  advances: { id: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string }[];
+  advances: { id: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string; note: string | null }[];
   salary: { id: string; month: string; locked: boolean; payableDays: number; gross: number; net: number; paid: number }[];
 }
 
-type Tab = "face" | "advance" | "details" | "salary" | "account";
+interface Register {
+  month: string;
+  current: string;
+  rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number }[];
+}
+
+type Tab = "overview" | "attendance" | "advance" | "salary" | "account";
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function istToday() {
   return new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
+}
+
+function dayColors(status: string) {
+  if (status === "PRESENT") return { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" };
+  if (status === "HALF_DAY") return { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" };
+  if (status === "ABSENT" || status === "UNPAID_LEAVE") return { bg: C.redSoft, fg: C.red, border: "#fecaca" };
+  if (status === "FUTURE" || status === "NOT_EMPLOYED") return { bg: C.white, fg: "#c4c4c4", border: C.line };
+  return { bg: C.soft, fg: C.text, border: C.line };
+}
+
+/** One person's month as a calendar. Tap a day to see or fix it. */
+function MonthCalendar({ employeeId }: { employeeId: string }) {
+  const [month, setMonth] = useState<string | null>(null);
+  const { data, error, reload } = useLoad(
+    () => api.get<Register>(`/api/m/register?employeeId=${employeeId}${month ? `&month=${month}` : ""}`),
+    [employeeId, month],
+    ["attendance", "employee", "settings"],
+  );
+  if (!data && error) return <Notice tone="red" text={error} />;
+  if (!data) return <Loading />;
+  const row = data.rows[0];
+  const first = new Date(`${data.month}-01T00:00:00`).getDay();
+  const cells: ({ date: string; status: string; short: string; manual: boolean; missingOut: boolean } | null)[] = [...Array(first).fill(null), ...(row?.days ?? [])];
+  while (cells.length % 7) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7));
+  return (
+    <Card>
+      <MonthField value={data.month} onChange={setMonth} max={data.current} />
+      {!row ? <Muted>Not employed in this month.</Muted> : (
+        <>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Badge label={`Present ${row.present}`} tone="green" />
+            <Badge label={`Absent ${row.absent}`} tone="red" />
+            <Badge label={`Leave ${row.leave}`} />
+          </View>
+          <View style={{ gap: 4 }}>
+            <View style={{ flexDirection: "row", gap: 4 }}>
+              {DAYS.map((d) => <Text key={d} style={{ flex: 1, textAlign: "center", fontSize: 11, color: C.muted, fontWeight: "600" }}>{d}</Text>)}
+            </View>
+            {weeks.map((w, i) => (
+              <View key={i} style={{ flexDirection: "row", gap: 4 }}>
+                {w.map((d, j) => {
+                  if (!d) return <View key={j} style={{ flex: 1, aspectRatio: 1 }} />;
+                  const col = dayColors(d.status);
+                  const tappable = d.status !== "FUTURE" && d.status !== "NOT_EMPLOYED";
+                  return (
+                    <Pressable
+                      key={j}
+                      disabled={!tappable}
+                      onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId, date: d.date } })}
+                      accessibilityLabel={`${dateLabel(d.date)}: ${d.short || d.status}`}
+                      style={{ flex: 1, aspectRatio: 1, borderRadius: 8, borderWidth: 1, borderColor: col.border, backgroundColor: col.bg, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Text style={{ fontSize: 12, color: C.muted }}>{Number(d.date.slice(8))}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: col.fg }}>{d.short}{d.manual ? "*" : ""}{d.missingOut ? "!" : ""}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+          <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch</Muted>
+        </>
+      )}
+      {error ? <Button title="Retry" variant="secondary" onPress={reload} /> : null}
+    </Card>
+  );
+}
+
+function GiveAdvance({ employeeId, onDone }: { employeeId: string; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
+  const [amount, setAmount] = useState("");
+  const [months, setMonths] = useState("1");
+  const [givenOn, setGivenOn] = useState(istToday());
+  const [startMonth, setStartMonth] = useState(istToday().slice(0, 7));
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <Card>
+      <H2>Give advance</H2>
+      <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+      <DateField label="Given on" value={givenOn} onChange={setGivenOn} max={istToday()} />
+      <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Recover over</Text>
+      <Segmented options={[{ value: "1", label: "Full" }, { value: "2", label: "2 m" }, { value: "3", label: "3 m" }, { value: "6", label: "6 m" }, { value: "12", label: "12 m" }]} value={months} onChange={setMonths} />
+      <MonthField label="First recovery month" value={startMonth} onChange={setStartMonth} />
+      <Field label="Note" value={note} onChangeText={setNote} placeholder="Optional" />
+      <Button
+        title="Save advance"
+        icon={<HandCoins size={18} color={C.white} />}
+        loading={busy}
+        disabled={!amount}
+        onPress={async () => {
+          setBusy(true);
+          try {
+            const r = await api.action("giveAdvance", { employeeId, amount, recoveryMonths: months, givenOn, startMonth, note });
+            setAmount("");
+            setNote("");
+            await onDone({ text: r.message ?? "Saved", ok: true });
+          } catch (e) {
+            await onDone({ text: (e as Error).message, ok: false });
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </Card>
+  );
 }
 
 export default function EmployeeDetail() {
   const { id, created } = useLocalSearchParams<{ id: string; created?: string }>();
   const { me, can } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "payroll", "attendance"]);
-  const [tab, setTab] = useState<Tab>(created ? "face" : "face");
-  const [amount, setAmount] = useState("");
-  const [months, setMonths] = useState("1");
+  const [tab, setTab] = useState<Tab>("overview");
+  const [leftOn, setLeftOn] = useState(istToday());
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
-  async function run(name: string, body: Record<string, unknown>, after?: () => void) {
+  async function run(name: string, body: Record<string, unknown>) {
     setBusy(name);
     setMsg(null);
     try {
       const r = await api.action(name, body);
       setMsg({ text: r.message ?? "Saved", ok: true });
-      after?.();
       await reload();
     } catch (e) {
       setMsg({ text: (e as Error).message, ok: false });
@@ -57,21 +168,50 @@ export default function EmployeeDetail() {
   if (!data) return <Loading />;
   const e = data.employee;
   const manage = can("employees.manage");
+  const isOwner = me?.user.role === "OWNER";
+  const weeklyOff = e.customWeeklyOff ? (e.weeklyOffDays.length ? e.weeklyOffDays.map((d) => DAYS[d]).join(", ") : "None") : "Same as business";
 
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
-      <Stack.Screen options={{ title: e.name }} />
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Muted>{e.code} · {e.site}</Muted>
-        {!e.active ? <Badge label={`Left ${e.leftOn ? dateLabel(e.leftOn) : ""}`} /> : null}
-      </View>
-      {created ? <Notice tone="green" text="Employee added. Now take the face photo." /> : null}
+      <Stack.Screen
+        options={{
+          title: e.name,
+          headerRight: manage
+            ? () => (
+                <Pressable onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} hitSlop={10} accessibilityLabel="Edit employee" style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8 }}>
+                  <Pencil size={18} color={C.headText} strokeWidth={1.75} />
+                  <Text style={{ color: C.headText, fontWeight: "600" }}>Edit</Text>
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
+
+      <Card>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+          <View style={{ flexShrink: 1, gap: 2 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>{e.name}</Text>
+            <Muted>{e.code} · {e.site}{e.phone ? ` · ${e.phone}` : ""}</Muted>
+          </View>
+          {e.active ? <Badge label="Working" tone="green" /> : <Badge label={`Left ${e.leftOn ? dateLabel(e.leftOn) : ""}`} tone="red" />}
+        </View>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <Badge label={e.face ? "Face enrolled" : "No face"} tone={e.face ? "green" : "red"} />
+          <Badge label={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
+          {e.pfEnabled ? <Badge label="PF" /> : null}
+          {e.esiEnabled ? <Badge label="ESIC" /> : null}
+        </View>
+        <Row label="Balance this month" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
+      </Card>
+
+      {created ? <Notice tone="green" text="Employee added. Now take the face photos." /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
+
       <Segmented
         options={[
-          { value: "face", label: "Face" },
+          { value: "overview", label: "Overview" },
+          { value: "attendance", label: "Attendance" },
           { value: "advance", label: "Advance" },
-          { value: "details", label: "Details" },
           { value: "salary", label: "Salary" },
           ...(manage ? [{ value: "account" as Tab, label: "Login" }] : []),
         ]}
@@ -79,83 +219,69 @@ export default function EmployeeDetail() {
         onChange={setTab}
       />
 
-      {tab === "face" ? (
-        <Card>
-          <H2>Face for attendance</H2>
-          <Muted>{e.face ? `Enrolled ${e.faceEnrolledAt ? dateLabel(e.faceEnrolledAt.slice(0, 10)) : ""}` : "Not enrolled. This person cannot use the scanner yet."}</Muted>
-          {manage && e.active ? (
-            <Button title={e.face ? "Re-take face photo" : "Take face photo"} icon={<Camera size={18} color={C.white} />} onPress={() => router.push({ pathname: "/face-enroll", params: { id: e.id, name: e.name } })} />
-          ) : null}
-          {manage && e.face ? (
-            <Button
-              title="Remove face"
-              variant="secondary"
-              loading={busy === "removeFace"}
-              onPress={() => Alert.alert("Remove face?", "The employee will not be able to scan.", [{ text: "Cancel" }, { text: "Remove", style: "destructive", onPress: () => run("removeFace", { id: e.id }) }])}
-            />
-          ) : null}
-          <Button title="Attendance today" variant="secondary" icon={<CalendarDays size={18} color={C.text} />} onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: e.id, date: istToday() } })} />
-        </Card>
+      {tab === "overview" ? (
+        <>
+          <Card>
+            <H2>Face for attendance</H2>
+            <Muted>{e.face ? `Enrolled ${e.faceEnrolledAt ? dateLabel(e.faceEnrolledAt.slice(0, 10)) : ""}` : "Not enrolled. This person cannot use the scanner yet."}</Muted>
+            {manage && e.active ? (
+              <Button title={e.face ? "Re-take face photos" : "Take face photos"} icon={<Camera size={18} color={C.white} />} onPress={() => router.push({ pathname: "/face-enroll", params: { id: e.id, name: e.name } })} />
+            ) : null}
+            {manage && e.face ? (
+              <Button
+                title="Remove face"
+                variant="secondary"
+                loading={busy === "removeFace"}
+                onPress={() => Alert.alert("Remove face?", "The employee will not be able to scan.", [{ text: "Cancel" }, { text: "Remove", style: "destructive", onPress: () => void run("removeFace", { id: e.id }) }])}
+              />
+            ) : null}
+          </Card>
+          <Card>
+            <Button title="Attendance today" variant="secondary" icon={<CalendarCheck size={18} color={C.text} />} onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: e.id, date: istToday() } })} />
+            {can("advances.manage") && e.active ? <Button title="Give advance" variant="secondary" icon={<HandCoins size={18} color={C.text} />} onPress={() => setTab("advance")} /> : null}
+          </Card>
+          <Card>
+            <H2>Details</H2>
+            <Row label="Mobile" value={e.phone ?? "—"} />
+            <Row label="Joined" value={dateLabel(e.joinedOn)} />
+            <Row label="Pay" value={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "per month" : "per day"}`} />
+            <Row label="Basic for PF" value={`${e.basicPercent}%`} />
+            <Row label="PF / ESIC" value={[e.pfEnabled ? "PF" : null, e.esiEnabled ? "ESIC" : null].filter(Boolean).join(" + ") || "Off"} />
+            <Row label="Weekly off" value={weeklyOff} />
+            {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} /> : null}
+          </Card>
+        </>
       ) : null}
+
+      {tab === "attendance" ? <MonthCalendar employeeId={e.id} /> : null}
 
       {tab === "advance" ? (
-        <Card>
-          <H2>Advance balance</H2>
-          <Row label="Earned this month" value={rs(data.balance.earned)} />
-          <Row label="Advance to recover" value={rs(data.balance.outstanding)} />
-          <Row label="Balance" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
-          {data.advances.map((a) => (
-            <View key={a.id} style={{ borderTopWidth: 1, borderTopColor: C.line, paddingTop: 8 }}>
-              <Row label={dateLabel(a.givenOn)} value={rs(a.amount)} />
-              <Muted>Recovered {rs(a.recovered)} · {a.recoveryMonths === 1 ? "Full" : `${a.recoveryMonths} months`} from {monthLabel(a.startMonth)}</Muted>
-            </View>
-          ))}
-          {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for owner approval.`} /> : null}
-          {can("advances.manage") && e.active ? (
-            <View style={{ gap: 10, borderTopWidth: 1, borderTopColor: C.line, paddingTop: 12 }}>
-              <H2>Give advance</H2>
-              <Field label="Amount (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-              <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Recover over</Text>
-              <Segmented options={[{ value: "1", label: "Full" }, { value: "2", label: "2 m" }, { value: "4", label: "4 m" }, { value: "6", label: "6 m" }, { value: "12", label: "12 m" }]} value={months} onChange={setMonths} />
-              <Button title="Save advance" loading={busy === "giveAdvance"} disabled={!amount} onPress={() => run("giveAdvance", { employeeId: e.id, amount, recoveryMonths: months }, () => setAmount(""))} />
-            </View>
+        <>
+          <Card>
+            <H2>Advance balance</H2>
+            <Row label="Earned this month" value={rs(data.balance.earned)} />
+            <Row label="Advance to recover" value={rs(data.balance.outstanding)} />
+            <Row label="Balance" value={<Text style={{ fontSize: 15, fontWeight: "700", color: data.balance.balance < 0 ? C.red : C.text }}>{rs(data.balance.balance)}</Text>} />
+            {data.pendingAdvances ? <Notice text={`${data.pendingAdvances} advance(s) waiting for owner approval.`} /> : null}
+          </Card>
+          {data.advances.length ? (
+            <Card style={{ padding: 0, gap: 0 }}>
+              {data.advances.map((a, i) => (
+                <Pressable key={a.id} onPress={() => router.push({ pathname: "/advance/[id]", params: { id: a.id } })} style={({ pressed }) => [{ padding: 14, gap: 2, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }, pressed && { backgroundColor: C.soft }]}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                    <Text style={{ fontWeight: "600", color: C.text }}>{dateLabel(a.givenOn)} · {rs(a.amount)}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Text style={{ fontWeight: "700", color: C.text }}>{rs(a.remaining)} left</Text>
+                      <ChevronRight size={16} color={C.muted} />
+                    </View>
+                  </View>
+                  <Muted>Recovered {rs(a.recovered)} · {a.recoveryMonths === 1 ? "Full" : `${a.recoveryMonths} months`} from {monthLabel(a.startMonth)}{isOwner ? " · tap to edit" : ""}</Muted>
+                </Pressable>
+              ))}
+            </Card>
           ) : null}
-        </Card>
-      ) : null}
-
-      {tab === "details" ? (
-        manage ? (
-          <Card>
-            <EmployeeForm
-              isNew={false}
-              canSalary={can("salary.edit")}
-              sites={me?.sites ?? []}
-              submitTitle="Save"
-              initial={{
-                name: e.name, code: e.code, phone: e.phone ?? "", siteId: e.siteId, joinedOn: e.joinedOn, wageType: e.wageType,
-                wage: String(e.wage / 100), basicPercent: String(e.basicPercent), pfEnabled: e.pfEnabled, esiEnabled: e.esiEnabled,
-                customWeeklyOff: e.customWeeklyOff, weeklyOffDays: e.weeklyOffDays,
-              }}
-              onSubmit={async (v) => {
-                try {
-                  const r = await api.action("updateEmployee", { id: e.id, ...employeeBody(v, can("salary.edit"), false) });
-                  setMsg({ text: r.message ?? "Saved", ok: true });
-                  await reload();
-                  return null;
-                } catch (err) {
-                  return (err as Error).message;
-                }
-              }}
-            />
-          </Card>
-        ) : (
-          <Card>
-            <Row label="Mobile" value={e.phone ?? "—"} />
-            <Row label="Pay" value={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
-            <Row label="PF / ESIC" value={`${e.pfEnabled ? "PF" : "—"} ${e.esiEnabled ? "ESIC" : ""}`} />
-            <Row label="Joined" value={dateLabel(e.joinedOn)} />
-          </Card>
-        )
+          {can("advances.manage") && e.active ? <GiveAdvance employeeId={e.id} onDone={async (m) => { setMsg(m); await reload(); }} /> : null}
+        </>
       ) : null}
 
       {tab === "salary" ? (
@@ -167,7 +293,7 @@ export default function EmployeeDetail() {
                 <Text style={{ fontWeight: "600", color: C.text }}>{monthLabel(s.month)}</Text>
                 <Text style={{ fontWeight: "700", color: C.text }}>{rs(s.net)}</Text>
               </View>
-              <Muted>{s.payableDays} days · gross {rs(s.gross)} · paid {s.paid ? rs(s.paid) : "—"}{s.locked ? "" : " · draft"}</Muted>
+              <Muted>{s.payableDays} days · gross {rs(s.gross)} · paid {s.paid ? rs(s.paid) : "—"}{s.locked ? "" : " · draft"} · payslip</Muted>
             </Pressable>
           ))}
         </Card>
@@ -182,15 +308,16 @@ export default function EmployeeDetail() {
           </Card>
           <Card>
             <H2>{e.active ? "Employee left" : "Rejoin"}</H2>
+            {e.active ? <DateField label="Last working day" value={leftOn} onChange={setLeftOn} min={e.joinedOn} /> : null}
             <Button
-              title={e.active ? "Mark as left today" : "Make active again"}
+              title={e.active ? "Mark as left" : "Make active again"}
               variant={e.active ? "danger" : "secondary"}
               loading={busy === "setEmployeeLeft"}
               onPress={() =>
                 e.active
-                  ? Alert.alert("Mark as left?", "Their face will be deleted. Attendance and salary history are kept.", [
+                  ? Alert.alert("Mark as left?", `Left on ${dateLabel(leftOn)}. Their face will be deleted. Attendance and salary history are kept.`, [
                       { text: "Cancel" },
-                      { text: "Mark as left", style: "destructive", onPress: () => run("setEmployeeLeft", { id: e.id, leftOn: istToday() }) },
+                      { text: "Mark as left", style: "destructive", onPress: () => void run("setEmployeeLeft", { id: e.id, leftOn }) },
                     ])
                   : run("setEmployeeLeft", { id: e.id, leftOn: "" })
               }

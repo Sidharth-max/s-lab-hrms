@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { editAdvance } from "@/app/actions/advances";
+import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
@@ -23,7 +25,9 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
     ACTIVE: "Recovering",
     CLEARED: "Cleared",
     REJECTED: "Rejected",
+    CANCELLED: "Cancelled",
   };
+  const owner = actor.role === "OWNER";
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,7 +47,7 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
           <thead>
             <tr>
               <th>Employee</th><th>Given</th><th>Amount</th><th>Recovered</th>
-              <th>Left</th><th>Plan</th><th>Status</th>
+              <th>Left</th><th>Plan</th><th>Status</th>{owner && <th />}
             </tr>
           </thead>
           <tbody>
@@ -55,13 +59,36 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
                   <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
                   <td data-label={"Amount"}>{formatRs(a.amount)}</td>
                   <td data-label={"Recovered"}>{formatRs(r)}</td>
-                  <td data-label={"Left"} className="font-semibold">{formatRs(a.status === "REJECTED" ? 0 : a.amount - r)}</td>
+                  <td data-label={"Left"} className="font-semibold">{formatRs(a.status === "REJECTED" || a.status === "CANCELLED" ? 0 : a.amount - r)}</td>
                   <td data-label={"Plan"}>{a.recoveryMonths === 1 ? "Full" : `${a.recoveryMonths} months`} {"from"} {formatMonth(a.startMonth)}</td>
                   <td data-label={"Status"}>{STATUS[a.status]}</td>
+                  {owner && (
+                    <td>
+                      {(a.status === "ACTIVE" || a.status === "CLEARED") && (
+                        <details>
+                          <summary className="btn-secondary !py-1 cursor-pointer">Edit</summary>
+                          <ActionForm action={editAdvance} className="mt-2 grid min-w-64 gap-2" submitLabel="Save changes">
+                            <input type="hidden" name="advanceId" value={a.id} />
+                            <label className="label">Amount (₹)<input name="amount" className="input" inputMode="decimal" defaultValue={a.amount / 100} required /></label>
+                            <label className="label">Given on<input name="givenOn" type="date" className="input" defaultValue={dbToDateKey(a.givenOn)} required /></label>
+                            <label className="label">Recover over (months)<input name="recoveryMonths" type="number" min={1} max={24} className="input" defaultValue={a.recoveryMonths} /></label>
+                            <label className="label">First recovery month<input name="startMonth" type="month" className="input" defaultValue={a.startMonth} disabled={r > 0} /></label>
+                            <label className="label">Note<input name="note" className="input" defaultValue={a.note ?? ""} /></label>
+                          </ActionForm>
+                          {r === 0 && (
+                            <ActionForm action={editAdvance} className="mt-2" submitLabel="Cancel this advance" submitClass="btn-danger !py-1" confirm="Cancel this advance? It will no longer be recovered.">
+                              <input type="hidden" name="advanceId" value={a.id} />
+                              <input type="hidden" name="cancel" value="1" />
+                            </ActionForm>
+                          )}
+                        </details>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
-            {advances.length === 0 && <tr><td colSpan={7} className="muted">No advances.</td></tr>}
+            {advances.length === 0 && <tr><td colSpan={owner ? 8 : 7} className="muted">No advances.</td></tr>}
           </tbody>
         </table>
       </div>

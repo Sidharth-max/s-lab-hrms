@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { DateField, TimeField } from "@/components/pickers";
 
 interface DayRule { open: string; close: string; halfDayBelowMins: number; anyScanFullDay: boolean }
 interface Settings {
@@ -121,9 +122,9 @@ function SettingsForm({
             {!d.off ? (
               <>
                 <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}><Field label="Opens" value={d.open} onChangeText={(t) => setDay(i, { open: t })} maxLength={5} keyboardType="numbers-and-punctuation" /></View>
-                  <View style={{ flex: 1 }}><Field label="Closes" value={d.close} onChangeText={(t) => setDay(i, { close: t })} maxLength={5} keyboardType="numbers-and-punctuation" /></View>
-                  <View style={{ flex: 1 }}><Field label="Half day (h)" value={d.half} onChangeText={(t) => setDay(i, { half: t })} keyboardType="decimal-pad" /></View>
+                  <View style={{ flex: 1 }}><TimeField compact label="Opens" value={d.open} onChange={(t) => setDay(i, { open: t })} /></View>
+                  <View style={{ flex: 1 }}><TimeField compact label="Closes" value={d.close} onChange={(t) => setDay(i, { close: t })} /></View>
+                  <View style={{ flex: 0.8 }}><Field label="Half day (h)" value={d.half} onChangeText={(t) => setDay(i, { half: t })} keyboardType="decimal-pad" /></View>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ color: C.text }}>Any scan = full day</Text>
@@ -161,7 +162,7 @@ function SettingsForm({
       <Card>
         <H2>Holidays (paid for monthly staff)</H2>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <View style={{ flex: 1 }}><Field label="Date (YYYY-MM-DD)" value={hDate} onChangeText={setHDate} maxLength={10} keyboardType="numbers-and-punctuation" /></View>
+          <View style={{ flex: 1 }}><DateField label="Date" value={hDate} onChange={setHDate} /></View>
           <View style={{ flex: 1 }}><Field label="Name" value={hName} onChangeText={setHName} /></View>
         </View>
         <Button title="Add holiday" variant="secondary" icon={<Plus size={18} color={C.text} />} loading={busy === "holiday"} disabled={!/^\d{4}-\d{2}-\d{2}$/.test(hDate) || !hName.trim()} onPress={() => run("holiday", "addHoliday", { date: hDate, name: hName }, () => { setHDate(""); setHName(""); })} />

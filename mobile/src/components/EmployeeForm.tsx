@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 import { Button, Field, Muted, Notice, Segmented } from "./ui";
 import { C } from "@/lib/theme";
+import { DateField } from "./pickers";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -65,7 +66,7 @@ export function EmployeeForm({
           ))}
         </View>
       </View>
-      <Field label="Joining date (YYYY-MM-DD)" value={v.joinedOn} onChangeText={(t) => set("joinedOn", t)} keyboardType="numbers-and-punctuation" maxLength={10} />
+      <DateField label="Joining date" value={v.joinedOn} onChange={(t) => set("joinedOn", t)} />
 
       {isNew || canSalary ? (
         <>

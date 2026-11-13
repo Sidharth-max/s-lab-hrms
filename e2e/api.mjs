@@ -76,6 +76,17 @@ check(r.data.ok && /3 photos/.test(r.data.message), "enroll with 3 photos failed
 r = await call("POST", "/api/m/action/enrollFace", { id: empId, image: Array(6).fill(fakeJpeg), consent: true });
 check(r.status === 400, "more than 5 photos should be refused");
 
+step("same phone registered twice keeps one scanner entry");
+r = await call("POST", "/api/m/devices/register", { siteId, name: "Phone A", hardwareId: "hw-test-1", model: "Test phone" });
+const firstDev = r.data;
+r = await call("POST", "/api/m/devices/register", { siteId, name: "Phone A renamed", hardwareId: "hw-test-1", model: "Test phone" });
+check(r.data.reused && r.data.device.id === firstDev.device.id, "re-register should reuse the entry: " + JSON.stringify(r.data));
+check((await call("GET", "/api/scan", null, { "X-Device-Token": firstDev.deviceToken })).status === 401, "old token of a re-registered phone must stop working");
+r = await call("POST", "/api/m/action/renameDevice", { deviceId: firstDev.device.id, name: "Gate", siteId });
+check(r.data.ok, "rename failed: " + JSON.stringify(r.data));
+r = await call("GET", "/api/m/devices");
+check(r.data.devices.filter((d) => d.model === "Test phone").length === 1 && r.data.devices.some((d) => d.name === "Gate"), "devices list wrong");
+
 step("register this app as a scanner and scan");
 r = await call("POST", "/api/m/devices/register", { siteId, name: "API tablet" });
 check(r.data.deviceToken, "register failed: " + JSON.stringify(r.data));
@@ -112,6 +123,18 @@ check(r.data.ok, "recalc failed: " + JSON.stringify(r.data));
 r = await call("GET", `/api/m/payroll/${month}`);
 const line = r.data.lines.find((l) => l.employeeId === empId);
 check(line && line.gross === 60000 && line.advance === 10000, "salary line wrong: " + JSON.stringify(line));
+
+step("owner edits and cancels an advance");
+const advId = (await call("GET", "/api/m/advances")).data.advances.find((a) => a.employeeId === empId).id;
+r = await call("POST", "/api/m/action/editAdvance", { advanceId: advId, amount: "250", recoveryMonths: "1" });
+check(r.data.ok, "edit advance failed: " + JSON.stringify(r.data));
+r = await call("GET", `/api/m/advances/${advId}`);
+check(r.data.advance.amount === 25000 && r.data.canEdit, "advance not updated: " + JSON.stringify(r.data));
+r = await call("POST", "/api/m/action/editAdvance", { advanceId: advId, cancel: "1" });
+check(r.data.ok, "cancel advance failed: " + JSON.stringify(r.data));
+r = await call("POST", "/api/m/action/recalcPayroll", { month });
+r = await call("GET", `/api/m/payroll/${month}`);
+check(r.data.lines.find((l) => l.employeeId === empId).advance === 0, "cancelled advance must not be recovered");
 
 step("unknown action and logout");
 check((await call("POST", "/api/m/action/deleteEverything", {})).status === 404, "unknown action should 404");

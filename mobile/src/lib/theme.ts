@@ -11,6 +11,10 @@ export const C = {
   green: "#16a34a",
   greenSoft: "#f0fdf4",
   white: "#ffffff",
+  // Two-tone: charcoal header bar and status bar over light content.
+  head: "#171717",
+  headText: "#ffffff",
+  headMuted: "#a3a3a3",
 };
 
 export const R = { sm: 6, md: 8, lg: 12 };

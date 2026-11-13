@@ -14,11 +14,11 @@ export default function RootLayout() {
       <AuthProvider>
         <LiveProvider>
         <LiveProfileRefresher />
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: C.white },
-            headerTintColor: C.text,
+            headerStyle: { backgroundColor: C.head },
+            headerTintColor: C.headText,
             headerTitleStyle: { fontWeight: "600" },
             headerShadowVisible: false,
             contentStyle: { backgroundColor: C.bg },

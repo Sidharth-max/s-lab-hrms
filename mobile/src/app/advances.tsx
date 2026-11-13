@@ -20,7 +20,7 @@ export default function AdvancesScreen() {
       <Card style={{ padding: 0, gap: 0 }}>
         {data.advances.length === 0 ? <View style={{ padding: 16 }}><Muted>No open advances.</Muted></View> : null}
         {data.advances.map((a, i) => (
-          <Pressable key={a.id} onPress={() => router.push({ pathname: "/employee/[id]", params: { id: a.employeeId } })} style={{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }}>
+          <Pressable key={a.id} onPress={() => router.push({ pathname: "/advance/[id]", params: { id: a.id } })} style={{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ fontWeight: "600", color: C.text }}>{a.employee}</Text>
               <Text style={{ fontWeight: "700", color: C.text }}>{rs(a.remaining)}</Text>

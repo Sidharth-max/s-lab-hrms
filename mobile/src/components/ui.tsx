@@ -109,11 +109,25 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
         const active = o.value === value;
         return (
           <Pressable key={o.value} onPress={() => onChange(o.value)} style={[styles.segmentItem, active && styles.segmentActive]}>
-            <Text style={[styles.segmentText, active && { color: C.white }]}>{o.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.segmentText, active && { color: C.white }]}>{o.label}</Text>
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+/** Round floating action button, bottom right (e.g. add employee). */
+export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
+    >
+      {icon}
+    </Pressable>
   );
 }
 
@@ -170,6 +184,22 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry?: () 
 }
 
 export const styles = StyleSheet.create({
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: C.head,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
   screen: { flex: 1, backgroundColor: C.bg },
   inner: { flex: 1, gap: 12 },
   padded: { padding: 16 },
@@ -182,10 +212,11 @@ export const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },
   input: { minHeight: 44, borderWidth: 1, borderColor: C.line, borderRadius: R.md, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
-  segment: { flexDirection: "row", borderWidth: 1, borderColor: C.line, borderRadius: R.md, overflow: "hidden", alignSelf: "flex-start" },
-  segmentItem: { paddingHorizontal: 14, paddingVertical: 9, backgroundColor: C.white },
+  // Full width with equal parts, so five tabs still fit on a narrow phone.
+  segment: { flexDirection: "row", borderWidth: 1, borderColor: C.line, borderRadius: R.md, overflow: "hidden", alignSelf: "stretch", backgroundColor: C.white },
+  segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 10, backgroundColor: C.white, alignItems: "center", justifyContent: "center" },
   segmentActive: { backgroundColor: C.text },
-  segmentText: { fontSize: 14, fontWeight: "500", color: C.text },
+  segmentText: { fontSize: 13, fontWeight: "600", color: C.text },
   badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: "flex-start" },
   badgeText: { fontSize: 12, fontWeight: "600" },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, paddingVertical: 4 },

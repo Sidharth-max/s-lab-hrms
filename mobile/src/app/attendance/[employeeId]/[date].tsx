@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { TimeField } from "@/components/pickers";
 
 interface DayDetail {
   employee: { id: string; name: string; code: string };
@@ -96,7 +97,7 @@ export default function DayScreen() {
           <Card>
             <H2>Add missed punch</H2>
             <Segmented options={[{ value: "IN", label: "IN" }, { value: "OUT", label: "OUT" }]} value={type} onChange={setType} />
-            <Field label="Time (HH:MM, 24 hour)" value={time} onChangeText={setTime} placeholder="09:30" keyboardType="numbers-and-punctuation" maxLength={5} />
+            <TimeField label="Time" value={time} onChange={setTime} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Switch value={nextDay} onValueChange={setNextDay} trackColor={{ true: C.green, false: C.line }} />
               <Text style={{ color: C.text }}>Time is after midnight (night shift)</Text>

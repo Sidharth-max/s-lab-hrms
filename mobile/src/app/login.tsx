@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScanFace } from "lucide-react-native";
 import { Button, Card, Field, Muted, Notice } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -17,6 +17,7 @@ export default function Login() {
   const [devCode, setDevCode] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   async function sendCode() {
     setBusy(true);
@@ -47,17 +48,18 @@ export default function Login() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Two-tone: charcoal band behind the status bar with the name; the form sits on the light part. */}
+      <View style={{ backgroundColor: C.head, paddingTop: insets.top + 28, paddingBottom: 28, alignItems: "center", gap: 8 }}>
+        <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: C.white, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: C.head, fontWeight: "800", fontSize: 22 }}>S</Text>
+        </View>
+        <Text style={{ fontSize: 22, fontWeight: "700", color: C.headText }}>S-Lab HRMS</Text>
+        <Text style={{ fontSize: 14, color: C.headMuted }}>Attendance and salary</Text>
+      </View>
       {/* The page shrinks to the space above the keyboard, so the number and OTP boxes stay visible. */}
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 20, gap: 20, width: "100%", maxWidth: 480, alignSelf: "center" }}>
-        <View style={{ alignItems: "center", gap: 8 }}>
-          <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: C.text, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: C.white, fontWeight: "700", fontSize: 20 }}>S</Text>
-          </View>
-          <Text style={{ fontSize: 22, fontWeight: "700", color: C.text }}>S-Lab HRMS</Text>
-          <Muted>Attendance and salary</Muted>
-        </View>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, padding: 20, paddingBottom: insets.bottom + 20, gap: 20, width: "100%", maxWidth: 480, alignSelf: "center" }}>
         <Card>
           {step === "phone" ? (
             <>
@@ -82,6 +84,6 @@ export default function Login() {
         ) : null}
       </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

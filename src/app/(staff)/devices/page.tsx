@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { forgetThisDevice, registerDevice, revokeDevice } from "@/app/actions/admin";
+import { forgetThisDevice, registerDevice, renameDevice, revokeDevice } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
 import { getDevice, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -8,7 +8,7 @@ import { siteWhere } from "@/lib/scope";
 export default async function DevicesPage() {
   const actor = await requireStaff("devices.register");
   const [devices, sites, current] = await Promise.all([
-    db.device.findMany({ where: { businessId: actor.businessId }, include: { site: true }, orderBy: { createdAt: "desc" } }),
+    db.device.findMany({ where: { businessId: actor.businessId }, include: { site: true }, orderBy: [{ revokedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }] }),
     db.site.findMany({ where: { ...siteWhere(actor), active: true }, orderBy: { name: "asc" } }),
     getDevice(),
   ]);
@@ -54,15 +54,30 @@ export default async function DevicesPage() {
           <tbody>
             {devices.map((d) => (
               <tr key={d.id} className={d.revokedAt ? "text-[var(--muted)]" : ""}>
-                <td className="card-title">{d.name}{current?.id === d.id && <span className="badge badge-neutral ml-1">this device</span>}</td>
+                <td className="card-title">
+                  {d.name}{current?.id === d.id && <span className="badge badge-neutral ml-1">this device</span>}
+                  {d.model && <div className="muted text-xs font-normal">{d.model}</div>}
+                </td>
                 <td data-label={"Site"}>{d.site.name}</td>
                 <td data-label={"Registered by"}>{users.get(d.registeredBy) ?? "?"} · {d.createdAt.toLocaleDateString("en-IN")}</td>
                 <td data-label={"Last scan"}>{d.lastSeenAt?.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) ?? "—"}</td>
                 <td>
                   {d.revokedAt ? "Removed" : (
+                    <div className="flex flex-wrap items-center gap-2">
+                    <details>
+                      <summary className="btn-secondary !py-1 cursor-pointer">Rename</summary>
+                      <ActionForm action={renameDevice} className="mt-2 flex flex-col gap-2" submitLabel="Save">
+                        <input type="hidden" name="deviceId" value={d.id} />
+                        <input name="name" className="input" defaultValue={d.name} required maxLength={60} />
+                        <select name="siteId" className="input" defaultValue={d.siteId}>
+                          {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </ActionForm>
+                    </details>
                     <ActionForm action={revokeDevice} submitLabel={"Remove"} submitClass="btn-danger !py-1" confirm={"Remove this scanner? It will stop working immediately."}>
                       <input type="hidden" name="deviceId" value={d.id} />
                     </ActionForm>
+                    </div>
                   )}
                 </td>
               </tr>
