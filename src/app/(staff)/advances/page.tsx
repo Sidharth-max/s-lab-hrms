@@ -54,15 +54,19 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
           <tbody>
             {advances.map((a) => {
               const r = rec.get(a.id) ?? 0;
+              // Cancelled and rejected advances are not recovered: shown greyed out with the amount struck through.
+              const dead = a.status === "CANCELLED" || a.status === "REJECTED";
               return (
-                <tr key={a.id}>
+                <tr key={a.id} className={dead ? "bg-[var(--soft)]/60 text-[var(--muted)] [&_a]:!text-[var(--muted)]" : ""}>
                   <td className="card-title"><Link className="font-medium hover:underline" href={`/employees/${a.employeeId}?advance=1`}>{a.employee.name}</Link></td>
                   <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
-                  <td data-label={"Amount"}>{formatRs(a.amount)}</td>
+                  <td data-label={"Amount"} className={dead ? "line-through" : ""}>{formatRs(a.amount)}</td>
                   <td data-label={"Recovered"}>{formatRs(r)}</td>
-                  <td data-label={"Left"} className="font-semibold">{formatRs(a.status === "REJECTED" || a.status === "CANCELLED" ? 0 : a.amount - r)}</td>
+                  <td data-label={"Left"} className={dead ? "" : "font-semibold"}>{formatRs(a.status === "REJECTED" || a.status === "CANCELLED" ? 0 : a.amount - r)}</td>
                   <td data-label={"Plan"}>{a.recoveryMonths === 1 ? "Full" : `${a.recoveryMonths} months`} {"from"} {formatMonth(a.startMonth)}</td>
-                  <td data-label={"Status"}>{STATUS[a.status]}</td>
+                  <td data-label={"Status"}>
+                    <span className={`badge ${dead ? "badge-neutral opacity-70" : a.status === "CLEARED" ? "badge-green" : a.status === "PENDING_APPROVAL" ? "badge-amber" : "badge-neutral"}`}>{STATUS[a.status]}</span>
+                  </td>
                   {owner && (
                     <td>
                       {(a.status === "ACTIVE" || a.status === "CLEARED") && (
