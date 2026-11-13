@@ -1,7 +1,6 @@
 import { createReadStream } from "node:fs";
 import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
 import { NextResponse, type NextRequest } from "next/server";
 import { apkDownloadUrl, latestApk } from "@/lib/release";
 
@@ -78,7 +77,36 @@ function serve(file: string, size: number, range: string | null) {
     headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
   }
   headers.set("Content-Length", String(end - start + 1));
-  const body = Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream;
+  // Phones often cancel or resume downloads; the stream must tolerate being closed at any moment.
+  const source = createReadStream(file, { start, end });
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      source.on("data", (chunk) => {
+        try {
+          controller.enqueue(new Uint8Array(chunk as Buffer));
+          if ((controller.desiredSize ?? 1) <= 0) source.pause();
+        } catch {
+          source.destroy();
+        }
+      });
+      source.on("end", () => {
+        try {
+          controller.close();
+        } catch {}
+      });
+      source.on("error", (e) => {
+        try {
+          controller.error(e);
+        } catch {}
+      });
+    },
+    pull() {
+      source.resume();
+    },
+    cancel() {
+      source.destroy();
+    },
+  });
   return new Response(body, { status, headers });
 }
 
