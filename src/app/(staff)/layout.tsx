@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogOut } from "@/components/icons";
 import { logout } from "@/app/actions/auth";
 import { requireStaff, getDevice } from "@/lib/auth";
@@ -34,10 +35,10 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="min-h-dvh pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <header className="no-print sticky top-0 z-30 border-b border-[var(--line)] bg-white pt-[env(safe-area-inset-top)]">
+      <header className="no-print sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--card)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--text)] text-xs font-bold text-white">{business.name.slice(0, 1).toUpperCase()}</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--brand)] text-xs font-bold text-[var(--on-brand)]">{business.name.slice(0, 1).toUpperCase()}</span>
             <span className="truncate">{business.name}</span>
           </Link>
           <div className="flex items-center gap-2 text-sm">
@@ -45,6 +46,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
               {actor.name} · {actor.role === "OWNER" ? "Owner" : "Manager"}
             </span>
             <a href="/download" className="hidden link lg:inline">Android app</a>
+            <ThemeToggle />
             <form action={logout}>
               <button className="btn-secondary !h-8 !px-3" aria-label={logoutLabel}>
                 <LogOut size={15} aria-hidden />

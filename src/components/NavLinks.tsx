@@ -93,7 +93,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
       {open && (
         <div className="no-print fixed inset-0 z-40 bg-black/30 sm:hidden" onClick={() => setOpen(false)}>
           <div
-            className="absolute inset-x-0 bottom-0 rounded-t-xl border-t border-[var(--line)] bg-white p-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
+            className="absolute inset-x-0 bottom-0 rounded-t-xl border-t border-[var(--line)] bg-[var(--card)] p-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
             onClick={(e) => e.stopPropagation()}
           >
             <ul className="flex flex-col">
@@ -125,7 +125,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
           </div>
         </div>
       )}
-      <nav className="no-print fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[var(--line)] bg-white pb-[env(safe-area-inset-bottom)] sm:hidden">
+      <nav className="no-print fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[var(--line)] bg-[var(--card)] pb-[env(safe-area-inset-bottom)] sm:hidden">
         {primary.map((l) => {
           const Icon = ICONS[l.icon];
           const active = isActive(path, l.href);

@@ -15,4 +15,7 @@ export const mockFace: FaceProvider = {
     return { ok: true, employeeId: mockEmployeeId, similarity: 99.9 };
   },
   async remove() {},
+  async pose() {
+    return { ok: false, reason: "unavailable" };
+  },
 };

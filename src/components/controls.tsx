@@ -48,9 +48,9 @@ export function ConfirmHost() {
   if (!req) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onMouseDown={() => close(false)}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-md rounded-xl bg-[var(--card)] p-5 shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex gap-3">
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${req.danger ? "bg-red-50 text-[var(--red)]" : "bg-[var(--soft)]"}`}>
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${req.danger ? "bg-[var(--red-soft)] text-[var(--red)]" : "bg-[var(--soft)]"}`}>
             <CircleAlert size={18} />
           </span>
           <div className="pt-1">
@@ -90,7 +90,7 @@ function usePopover() {
   return { open, setOpen, ref };
 }
 
-const panel = "absolute left-0 top-full z-50 mt-1 rounded-lg border border-[var(--line)] bg-white p-1 shadow-xl";
+const panel = "absolute left-0 top-full z-50 mt-1 rounded-lg border border-[var(--line)] bg-[var(--card)] p-1 shadow-xl";
 
 /* ───────────── Select ───────────── */
 
@@ -226,7 +226,7 @@ export function DateInput({
         disabled={disabled}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`input flex items-center justify-between gap-2 text-left disabled:opacity-60 ${value ? "" : "text-neutral-400"}`}
+        className={`input flex items-center justify-between gap-2 text-left disabled:opacity-60 ${value ? "" : "text-[var(--placeholder)]"}`}
         onClick={() => {
           setShown((value || today).slice(0, 7));
           setOpen(!open);
@@ -253,7 +253,7 @@ export function DateInput({
                   type="button"
                   disabled={!ok(d)}
                   onClick={() => pick(d)}
-                  className={`h-9 rounded-md text-sm transition disabled:text-neutral-300 ${d === value ? "bg-[var(--brand)] font-semibold text-white" : d === today ? "border border-[var(--text)] font-semibold" : "hover:bg-[var(--soft)]"}`}
+                  className={`h-9 rounded-md text-sm transition disabled:text-[var(--faint)] ${d === value ? "bg-[var(--brand)] font-semibold text-[var(--on-brand)]" : d === today ? "border border-[var(--text)] font-semibold" : "hover:bg-[var(--soft)]"}`}
                 >
                   {Number(d.slice(8))}
                 </button>
@@ -301,11 +301,11 @@ export function TimeInput({ name, defaultValue = "", className = "", disabled }:
   const [h, mm] = /^\d{1,2}:\d{2}$/.test(value) ? value.split(":").map(Number) : [9, 0];
   const set = (hh: number, m: number) => setValue(`${pad(hh)}:${pad(m)}`);
   const pm = h >= 12;
-  const cell = (on: boolean) => `h-8 rounded-md text-sm font-medium border ${on ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] hover:bg-[var(--soft)]"}`;
+  const cell = (on: boolean) => `h-8 rounded-md text-sm font-medium border ${on ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]" : "border-[var(--line)] hover:bg-[var(--soft)]"}`;
   return (
     <div ref={ref} className={`relative ${className}`}>
       <input type="hidden" name={name} value={value} disabled={disabled} />
-      <button type="button" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} className={`input flex items-center justify-between gap-2 text-left ${value ? "" : "text-neutral-400"}`} onClick={() => setOpen(!open)}>
+      <button type="button" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} className={`input flex items-center justify-between gap-2 text-left ${value ? "" : "text-[var(--placeholder)]"}`} onClick={() => setOpen(!open)}>
         <span>{time12(value)}</span>
         <Clock size={16} className="shrink-0 text-[var(--muted)]" />
       </button>

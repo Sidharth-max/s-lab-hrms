@@ -110,7 +110,8 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
             </ActionForm>
           </section>
           <section className="card">
-            <h2 className="mb-3 font-semibold">Set day status</h2>
+            <h2 className="font-semibold">Set day status</h2>
+            <p className="muted mb-3">For leave, absent or half day. This overrides scans and scheduled leave for this day. To record working times, use Mark attendance.</p>
             <ActionForm action={setDayStatus} className="flex flex-col gap-3" submitLabel={"Set status"} resetOnSuccess>
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />

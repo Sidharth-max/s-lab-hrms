@@ -12,7 +12,8 @@ const config: ExpoConfig = {
   version: process.env.VERSION_NAME || "1.0.0",
   orientation: "default",
   icon: "./assets/icon.png",
-  userInterfaceStyle: "light",
+  // Follows the phone's light / dark setting (the app also has its own choice in More).
+  userInterfaceStyle: "automatic",
   backgroundColor: "#ffffff",
   android: {
     package: "dev.slab.hrms",
@@ -30,6 +31,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "expo-system-ui",
     [
       "expo-camera",
       {

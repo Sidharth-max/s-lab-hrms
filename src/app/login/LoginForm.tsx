@@ -17,7 +17,7 @@ export function LoginForm() {
         <label className="label" htmlFor="phone">Mobile number</label>
         <input id="phone" name="phone" className="input" inputMode="numeric" autoComplete="tel" placeholder={"10 digit mobile"} defaultValue={phone} required autoFocus />
         <button className="btn-primary" disabled={sending}>{sending ? "Sending…" : "Get OTP"}</button>
-        {sent?.error && <p className="text-sm text-red-600">{sent.error}</p>}
+        {sent?.error && <p className="text-sm text-[var(--red)]">{sent.error}</p>}
       </form>
     );
   }
@@ -34,7 +34,7 @@ export function LoginForm() {
       <label className="label" htmlFor="code">OTP</label>
       <input id="code" name="code" className="input tracking-[0.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus />
       <button className="btn-primary" disabled={verifying}>{verifying ? "Checking…" : "Log in"}</button>
-      {verified?.error && <p className="text-sm text-red-600">{verified.error}</p>}
+      {verified?.error && <p className="text-sm text-[var(--red)]">{verified.error}</p>}
       <button type="button" className="text-sm link" onClick={() => setEditPhone(true)}>
         {"Change number / resend OTP"}
       </button>

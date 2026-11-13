@@ -15,7 +15,6 @@ import { useCameraSession } from "@/lib/camera";
 import { haptic } from "@/lib/haptics";
 import { capture } from "@/lib/photo";
 import { startUpdate, useAppUpdate } from "@/lib/update";
-import { C } from "@/lib/theme";
 
 type Result = { ok: boolean; title: string; detail?: string };
 
@@ -161,7 +160,7 @@ export default function Scanner() {
           </View>
           <View style={styles.oval} pointerEvents="none" />
           <View style={styles.footer}>
-            {busy ? <ActivityIndicator color={C.white} size="large" /> : <ScanFace color={C.white} size={40} />}
+            {busy ? <ActivityIndicator color={"#fff"} size="large" /> : <ScanFace color={"#fff"} size={40} />}
             <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
             {!ready && camera.show ? (
               <Pressable onPress={camera.restart} style={{ padding: 8 }}>
@@ -176,12 +175,12 @@ export default function Scanner() {
             ) : null}
             <View style={styles.actions}>
               <Pressable onPress={() => router.push("/login")} hitSlop={8} style={styles.action} accessibilityRole="button">
-                <LogIn color={C.white} size={18} />
+                <LogIn color={"#fff"} size={18} />
                 <Text style={styles.actionText}>Manager / owner login</Text>
               </Pressable>
               {update ? (
-                <Pressable onPress={() => startUpdate(update)} hitSlop={8} style={[styles.action, { backgroundColor: C.green, borderColor: C.green }]} accessibilityRole="button">
-                  <Download color={C.white} size={18} />
+                <Pressable onPress={() => startUpdate(update)} hitSlop={8} style={[styles.action, { backgroundColor: "#16a34a", borderColor: "#16a34a" }]} accessibilityRole="button">
+                  <Download color={"#fff"} size={18} />
                   <Text style={styles.actionText}>Update app ({update.name})</Text>
                 </Pressable>
               ) : null}
@@ -206,7 +205,7 @@ export default function Scanner() {
                 }}
                 style={{ backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 10, padding: 14 }}
               >
-                <Text style={{ color: C.white, fontWeight: "600", fontSize: 16 }}>{e.name}</Text>
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>{e.name}</Text>
                 <Text style={styles.headerSub}>{e.code}</Text>
               </Pressable>
             ))}
@@ -216,8 +215,8 @@ export default function Scanner() {
       ) : null}
 
       {result ? (
-        <Pressable onPress={() => setResult(null)} style={[StyleSheet.absoluteFill, styles.result, { backgroundColor: result.ok ? C.green : C.red }]}>
-          {result.ok ? <CircleCheck color={C.white} size={96} /> : <CircleX color={C.white} size={96} />}
+        <Pressable onPress={() => setResult(null)} style={[StyleSheet.absoluteFill, styles.result, { backgroundColor: result.ok ? "#16a34a" : "#dc2626" }]}>
+          {result.ok ? <CircleCheck color={"#fff"} size={96} /> : <CircleX color={"#fff"} size={96} />}
           <Text style={[styles.big, { fontSize: 32, marginTop: 20 }]}>{result.title}</Text>
           {result.detail ? <Text style={[styles.big, { fontSize: 20, fontWeight: "400", marginTop: 8 }]}>{result.detail}</Text> : null}
         </Pressable>
@@ -229,14 +228,14 @@ export default function Scanner() {
 const styles = StyleSheet.create({
   black: { flex: 1, backgroundColor: "#000" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: 16, backgroundColor: "rgba(0,0,0,0.55)", gap: 12 },
-  headerTitle: { color: C.white, fontWeight: "600", fontSize: 15 },
+  headerTitle: { color: "#fff", fontWeight: "600", fontSize: 15 },
   headerSub: { color: "rgba(255,255,255,0.75)", fontSize: 13 },
   oval: { alignSelf: "center", width: "60%", aspectRatio: 3 / 4, borderRadius: 1000, borderWidth: 3, borderColor: "rgba(255,255,255,0.7)" },
   footer: { alignItems: "center", gap: 8, padding: 20, backgroundColor: "rgba(0,0,0,0.6)" },
-  big: { color: C.white, fontSize: 22, fontWeight: "600", textAlign: "center" },
-  pill: { color: C.white, borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
+  big: { color: "#fff", fontSize: 22, fontWeight: "600", textAlign: "center" },
+  pill: { color: "#fff", borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
   result: { alignItems: "center", justifyContent: "center", padding: 24 },
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 },
   action: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
-  actionText: { color: C.white, fontWeight: "600", fontSize: 14 },
+  actionText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 });

@@ -2,6 +2,7 @@ import "server-only";
 import {
   CreateCollectionCommand,
   DeleteFacesCommand,
+  DetectFacesCommand,
   IndexFacesCommand,
   RekognitionClient,
   SearchFacesByImageCommand,
@@ -73,6 +74,7 @@ export const awsFace: FaceProvider = {
           matches = await searchRaw(businessId, image);
         } catch (e) {
           if (errName(e) === "InvalidParameterException") {
+            if (i > 0) continue; // a side / up / down photo without a clear face is simply left out
             await undo();
             return { ok: false, error: `${label}No clear face found. Look at the camera in good light.` };
           }
@@ -96,6 +98,7 @@ export const awsFace: FaceProvider = {
         );
         const faceId = res.FaceRecords?.[0]?.Face?.FaceId;
         if (!faceId) {
+          if (i > 0) continue; // extra angles are best-effort; the straight photo is the one that must be good
           await undo();
           return { ok: false, error: `${label}Face quality too low. Use good light, remove mask or cap, and retry.` };
         }
@@ -125,6 +128,21 @@ export const awsFace: FaceProvider = {
       if (errName(e) === "InvalidParameterException") return { ok: false, reason: "no_face", message: "No face found" };
       console.error("Face search failed", e);
       return { ok: false, reason: "error", message: "Face service error" };
+    }
+  },
+
+  async pose(image) {
+    try {
+      const res = await rekognition().send(new DetectFacesCommand({ Image: { Bytes: image }, Attributes: ["DEFAULT"] }));
+      // The largest face is the person being enrolled.
+      const face = (res.FaceDetails ?? []).sort((a, b) => (b.BoundingBox?.Width ?? 0) * (b.BoundingBox?.Height ?? 0) - (a.BoundingBox?.Width ?? 0) * (a.BoundingBox?.Height ?? 0))[0];
+      if (!face?.Pose) return { ok: false, reason: "no_face" };
+      return { ok: true, yaw: face.Pose.Yaw ?? 0, pitch: face.Pose.Pitch ?? 0 };
+    } catch (e) {
+      if (errName(e) === "InvalidParameterException" || errName(e) === "InvalidImageFormatException") return { ok: false, reason: "no_face" };
+      // e.g. AccessDeniedException when rekognition:DetectFaces is not in the IAM policy yet.
+      console.error("Face pose check unavailable", errName(e));
+      return { ok: false, reason: "unavailable" };
     }
   },
 

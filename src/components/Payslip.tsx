@@ -63,7 +63,7 @@ export async function Payslip({
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+        <div className="flex items-center justify-between rounded-lg bg-[var(--soft)] p-3">
           <span className="font-semibold">Net pay</span>
           <span className="text-2xl font-bold">{formatRs(line.net)}</span>
         </div>

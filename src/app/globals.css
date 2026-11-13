@@ -1,18 +1,78 @@
 @import "tailwindcss";
 
+/* dark: classes follow our data-theme attribute. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
-  /* Only charcoal, white, red (errors) and green (success). Greys are tints of charcoal. */
+  /* Charcoal, white, red (errors), green (success), amber (half day). Greys are tints of charcoal. */
+  color-scheme: light;
   --bg: #ffffff;
   --card: #ffffff;
   --text: #171717;
   --muted: #666666;
   --line: #ebebeb;
   --soft: #f4f4f4;
+  --track: #f1f1f1;
+  --track-hover: #e8e8e8;
+  --placeholder: #a3a3a3;
+  --faint: #d4d4d4;
   --brand: #171717;
   --brand-dark: #000000;
+  --on-brand: #ffffff;
   --red: #dc2626;
+  --red-soft: #fef2f2;
+  --red-tint: #fde8e8;
+  --red-line: #fecaca;
+  --red-ink: #b91c1c;
   --green: #16a34a;
+  --green-soft: #f0fdf4;
+  --green-tint: #dcfce7;
+  --green-line: #bbf7d0;
+  --green-ink: #15803d;
   --amber: #b45309; /* half day */
+  --amber-soft: #fffbeb;
+  --amber-tint: #fef3c7;
+  --amber-ink: #a16207;
+}
+
+/* Dark palette: set by the small script in the page head (saved choice, or the device setting). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --card: #161616;
+  --text: #ededed;
+  --muted: #a1a1a1;
+  --line: #2a2a2a;
+  --soft: #1f1f1f;
+  --track: #242424;
+  --track-hover: #2e2e2e;
+  --placeholder: #6b6b6b;
+  --faint: #4a4a4a;
+  --brand: #ededed;
+  --brand-dark: #ffffff;
+  --on-brand: #0a0a0a;
+  --red: #ef4444;
+  --red-soft: #2a1414;
+  --red-tint: #3b1515;
+  --red-line: #5c1f1f;
+  --red-ink: #fca5a5;
+  --green: #22c55e;
+  --green-soft: #0f2417;
+  --green-tint: #11351f;
+  --green-line: #14532d;
+  --green-ink: #86efac;
+  --amber: #fbbf24;
+  --amber-soft: #2a2008;
+  --amber-tint: #3a2c0a;
+  --amber-ink: #fcd34d;
+}
+
+/* Payslips and other printouts are always light. */
+@media print {
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #fff; --card: #fff; --text: #171717; --muted: #666; --line: #ebebeb; --soft: #f4f4f4; --brand: #171717; --on-brand: #fff;
+  }
 }
 
 body {
@@ -33,14 +93,14 @@ body {
   }
   .segmented > button,
   .segmented > a {
-    @apply rounded-full bg-[#f1f1f1] px-4 py-2 font-medium whitespace-nowrap text-[var(--text)] transition-colors hover:bg-[#e8e8e8];
+    @apply rounded-full bg-[var(--track)] px-4 py-2 font-medium whitespace-nowrap text-[var(--text)] transition-colors hover:bg-[var(--track-hover)];
   }
   .segmented > [data-active="true"] {
-    @apply bg-[var(--brand)] text-white hover:bg-[var(--brand)];
+    @apply bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand)];
   }
   /* 16px text on phones so the browser does not zoom in on focus; 14px on larger screens. */
   .input {
-    @apply h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3.5 text-base outline-none transition-[border-color,box-shadow] placeholder:text-neutral-400 focus:border-[var(--text)] focus:ring-2 focus:ring-neutral-200 sm:h-10 sm:text-sm;
+    @apply h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--card)] px-3.5 text-base outline-none transition-[border-color,box-shadow] placeholder:text-[var(--placeholder)] focus:border-[var(--text)] focus:ring-2 focus:ring-[var(--line)] sm:h-10 sm:text-sm;
   }
   select.input {
     @apply pr-8;
@@ -52,10 +112,10 @@ body {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9;
   }
   .btn-primary {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-dark)];
   }
   .btn-secondary {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 border border-[var(--line)] bg-white text-[var(--text)] shadow-[0_1px_1px_rgba(0,0,0,0.04)] hover:bg-[var(--soft)];
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 border border-[var(--line)] bg-[var(--card)] text-[var(--text)] shadow-[0_1px_1px_rgba(0,0,0,0.04)] hover:bg-[var(--soft)];
   }
   .btn-danger {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-[background-color,border-color,color,opacity] disabled:opacity-50 sm:h-9 bg-[var(--red)] text-white hover:bg-red-700;
@@ -77,28 +137,28 @@ body {
     @apply inline-flex items-center gap-1.5 rounded-full border-0 px-2.5 py-0.5 text-xs font-semibold;
   }
   .badge-neutral {
-    @apply bg-[#f1f1f1] text-[var(--text)];
+    @apply bg-[var(--track)] text-[var(--text)];
   }
   .badge-red {
-    @apply bg-[#fde8e8] text-red-700;
+    @apply bg-[var(--red-tint)] text-[var(--red-ink)];
   }
   .badge-amber {
-    @apply bg-amber-100 text-amber-700;
+    @apply bg-[var(--amber-tint)] text-[var(--amber-ink)];
   }
   .badge-green {
-    @apply bg-green-100 text-green-700;
+    @apply bg-[var(--green-tint)] text-[var(--green-ink)];
   }
   .notice {
-    @apply rounded-lg border border-[var(--line)] bg-white p-3 text-sm;
+    @apply rounded-lg border border-[var(--line)] bg-[var(--card)] p-3 text-sm;
   }
   .notice-red {
-    @apply rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800;
+    @apply rounded-lg border border-[var(--red-line)] bg-[var(--red-soft)] p-3 text-sm text-[var(--red-ink)];
   }
   .notice-green {
-    @apply rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800;
+    @apply rounded-lg border border-[var(--green-line)] bg-[var(--green-soft)] p-3 text-sm text-[var(--green-ink)];
   }
   .link {
-    @apply font-medium text-[var(--text)] underline decoration-neutral-300 underline-offset-4 hover:decoration-[var(--text)];
+    @apply font-medium text-[var(--text)] underline decoration-[var(--line)] underline-offset-4 hover:decoration-[var(--text)];
   }
   .h1 {
     @apply text-2xl font-semibold tracking-[-0.03em] sm:text-3xl;
@@ -192,9 +252,9 @@ input[type="radio"] {
   width: 1.125rem;
   height: 1.125rem;
   margin: 0;
-  border: 1.5px solid #a3a3a3;
+  border: 1.5px solid var(--placeholder);
   border-radius: 5px;
-  background: #fff;
+  background: var(--card);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
 }
@@ -210,8 +270,8 @@ input[type="checkbox"]:checked::after {
   content: "";
   width: 0.55rem;
   height: 0.3rem;
-  border-left: 2px solid #fff;
-  border-bottom: 2px solid #fff;
+  border-left: 2px solid var(--on-brand);
+  border-bottom: 2px solid var(--on-brand);
   transform: translateY(-1px) rotate(-45deg);
 }
 input[type="radio"]:checked::after {
@@ -219,7 +279,7 @@ input[type="radio"]:checked::after {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
-  background: #fff;
+  background: var(--on-brand);
 }
 input[type="checkbox"]:focus-visible,
 input[type="radio"]:focus-visible {

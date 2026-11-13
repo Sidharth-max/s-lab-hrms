@@ -9,6 +9,9 @@ import { api } from "@/lib/api";
 import { addDays, dateLabel, hours } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useWide } from "@/lib/layout";
+import { PanePlaceholder, TwoPane } from "@/components/TwoPane";
+import { DayView } from "@/components/DayView";
 
 interface Day {
   date: string;
@@ -20,11 +23,13 @@ export default function Attendance() {
   const [date, setDate] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [show, setShow] = useState<"active" | "all" | "archived">("active");
+  const wide = useWide();
+  const [selected, setSelected] = useState<{ employeeId: string; date: string } | null>(null);
   const { data, error, refreshing, reload } = useLoad(() => api.get<Day>(`/api/m/attendance?show=${show}${date ? `&date=${date}` : ""}`), [date, show], ["attendance", "employee"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
 
-  return (
+  const list = (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       {picking ? <DatePickerSheet visible value={data.date} max={data.today} onChange={setDate} onClose={() => setPicking(false)} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -50,8 +55,8 @@ export default function Attendance() {
         {data.rows.map((r, i) => (
           <Pressable
             key={r.employeeId}
-            onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: r.employeeId, date: data.date } })}
-            style={({ pressed }) => [{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }, pressed && { backgroundColor: C.soft }]}
+            onPress={() => (wide ? setSelected({ employeeId: r.employeeId, date: data.date }) : router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: r.employeeId, date: data.date } }))}
+            style={({ pressed }) => [{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }, (pressed || (wide && selected?.employeeId === r.employeeId && selected.date === data.date)) && { backgroundColor: C.soft }]}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
@@ -68,5 +73,12 @@ export default function Attendance() {
         ))}
       </Card>
     </Screen>
+  );
+  if (!wide) return list;
+  return (
+    <TwoPane
+      left={list}
+      right={selected ? <DayView key={`${selected.employeeId}-${selected.date}`} employeeId={selected.employeeId} date={selected.date} embedded /> : <PanePlaceholder icon={<CalendarDays size={40} color={C.faint} />} text="Choose a person to see or fix their day" />}
+    />
   );
 }

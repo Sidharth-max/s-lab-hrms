@@ -44,7 +44,7 @@ export default function Register() {
             {data.rows.length > 4 ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 999, backgroundColor: C.white, paddingHorizontal: 12 }}>
                 <Search size={18} color={C.muted} />
-                <TextInput value={q} onChangeText={setQ} placeholder="Search employee…" placeholderTextColor="#a3a3a3" style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
+                <TextInput value={q} onChangeText={setQ} placeholder="Search employee…" placeholderTextColor={C.placeholder} style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
               </View>
             ) : null}
             <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch. Tap a day to open it.</Muted>
@@ -52,7 +52,7 @@ export default function Register() {
         }
         ListEmptyComponent={<Muted>No employees in this month.</Muted>}
         renderItem={({ item: r }) => (
-          <View style={{ backgroundColor: C.white, borderWidth: 1, borderColor: "#ebebeb", borderRadius: 14, padding: 14, gap: 12 }}>
+          <View style={{ backgroundColor: C.white, borderWidth: 1, borderColor: C.hairline, borderRadius: 14, padding: 14, gap: 12 }}>
             <Pressable onPress={() => router.push({ pathname: "/employee/[id]", params: { id: r.employeeId } })} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Avatar name={r.name} size={36} />
               <Text style={{ flex: 1, fontSize: 15, fontWeight: "600", color: C.text }} numberOfLines={1}>{r.name}</Text>

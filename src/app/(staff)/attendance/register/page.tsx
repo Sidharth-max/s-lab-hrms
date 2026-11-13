@@ -11,11 +11,11 @@ import { parseShow, showWhere } from "@/lib/show-filter";
 import { ShowTabs } from "@/components/ShowTabs";
 
 const COLOR: Partial<Record<DerivedStatus, string>> = {
-  PRESENT: "bg-green-50 text-[var(--green)]",
-  HALF_DAY: "bg-amber-50 text-[var(--amber)]",
-  ABSENT: "bg-red-50 text-[var(--red)]",
+  PRESENT: "bg-[var(--green-soft)] text-[var(--green)]",
+  HALF_DAY: "bg-[var(--amber-soft)] text-[var(--amber)]",
+  ABSENT: "bg-[var(--red-soft)] text-[var(--red)]",
   PAID_LEAVE: "bg-[var(--soft)] text-[var(--text)]",
-  UNPAID_LEAVE: "bg-red-50 text-[var(--red)] opacity-70",
+  UNPAID_LEAVE: "bg-[var(--red-soft)] text-[var(--red)] opacity-70",
   WEEKLY_OFF: "text-[var(--muted)]",
   HOLIDAY: "bg-[var(--soft)] text-[var(--muted)]",
 };
@@ -78,7 +78,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
                   return short ? (
                     <Link key={d.date} href={`/attendance/${e.id}/${d.date}`} className={`rounded-md border border-[var(--line)] py-1 ${COLOR[d.status] ?? ""}`}>{body}</Link>
                   ) : (
-                    <span key={d.date} className="rounded-md border border-[var(--line)] py-1 text-neutral-300">{body}</span>
+                    <span key={d.date} className="rounded-md border border-[var(--line)] py-1 text-[var(--faint)]">{body}</span>
                   );
                 })}
               </div>
@@ -91,7 +91,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
         <table className="table text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-white">Employee</th>
+              <th className="sticky left-0 bg-[var(--card)]">Employee</th>
               {dates.map((d) => <th key={d} className="!px-1 text-center">{Number(d.slice(8))}</th>)}
               <th>Present</th><th>Absent</th><th>Leave</th>
             </tr>
@@ -102,7 +102,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
               const c = countDays(list);
               return (
                 <tr key={e.id}>
-                  <td className="sticky left-0 bg-white font-medium whitespace-nowrap">{e.name}</td>
+                  <td className="sticky left-0 bg-[var(--card)] font-medium whitespace-nowrap">{e.name}</td>
                   {list.map((d) => (
                     <td key={d.date} className="!px-0.5 text-center">
                       {STATUS_SHORT[d.status] ? (

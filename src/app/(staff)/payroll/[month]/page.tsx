@@ -110,7 +110,7 @@ export default async function PayrollMonth({ params }: PageProps<"/payroll/[mont
                   <td data-label="PF">{l.pfEmployee ? formatRs(l.pfEmployee) : "—"}</td>
                   <td data-label="ESIC">{l.esiEmployee ? formatRs(l.esiEmployee) : "—"}</td>
                   <td data-label={L.adv}>{l.advanceRecovered ? formatRs(l.advanceRecovered) : "—"}</td>
-                  <td data-label={L.net} className={`font-semibold ${l.net < 0 ? "text-red-600" : ""}`}>{formatRs(l.net)}</td>
+                  <td data-label={L.net} className={`font-semibold ${l.net < 0 ? "text-[var(--red)]" : ""}`}>{formatRs(l.net)}</td>
                   <td data-label={L.paid}>
                     <span>
                       {l.paidAmount ? `${formatRs(l.paidAmount)} ${l.paymentMode ?? ""}` : "—"}

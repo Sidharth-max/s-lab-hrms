@@ -41,7 +41,7 @@ export default async function ApprovalsPage() {
               </ActionForm>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
+            <div className="flex flex-col gap-2 rounded-lg bg-[var(--soft)] p-3">
               <p className="text-sm">{"Owner not here? Send an OTP to the owner's mobile and type the code they tell you."}</p>
               <ActionForm action={sendApprovalOtp} submitLabel={"Send OTP to owner"} submitClass="btn-secondary">
                 <input type="hidden" name="approvalId" value={r.id} />
