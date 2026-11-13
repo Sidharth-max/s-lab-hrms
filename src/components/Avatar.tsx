@@ -8,7 +8,7 @@ export function Avatar({ name, size = 36, muted = false }: { name: string; size?
   return (
     <span
       aria-hidden
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-tight ${muted ? "bg-[var(--soft)] text-[var(--muted)]" : "bg-[var(--brand)] text-white"}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-tight ${muted ? "bg-[var(--soft)] text-[var(--muted)]" : "bg-[var(--brand)] text-[var(--on-brand)]"}`}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
     >
       {initials(name)}

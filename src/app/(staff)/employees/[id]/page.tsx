@@ -43,7 +43,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
       <p className="muted">
         {emp.faceId
           ? `Enrolled on ${emp.faceEnrolledAt?.toLocaleDateString("en-IN")}`
-          : "Not enrolled. This person cannot use the scanner yet."}
+          : emp.inHouse ? "Not needed: in-house staff are marked present automatically. Enroll a face only if they should also scan." : "Not enrolled. This person cannot use the scanner yet."}
       </p>
       {manage && emp.active && <FaceEnroll employeeId={emp.id} enrolled={!!emp.faceId} />}
       {manage && emp.faceId && (
@@ -65,7 +65,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
       <div className="grid grid-cols-3 gap-2 text-sm">
         <div><div className="muted">Earned this month</div><div className="text-lg font-semibold">{formatRs(balance.earned)}</div></div>
         <div><div className="muted">Advance to recover</div><div className="text-lg font-semibold">{formatRs(balance.outstanding)}</div></div>
-        <div><div className="muted">Balance</div><div className={`text-lg font-semibold ${balance.balance < 0 ? "text-red-600" : ""}`}>{formatRs(balance.balance)}</div></div>
+        <div><div className="muted">Balance</div><div className={`text-lg font-semibold ${balance.balance < 0 ? "text-[var(--red)]" : ""}`}>{formatRs(balance.balance)}</div></div>
       </div>
       {open.length > 0 && (
         <table className="table table-cards">
@@ -193,7 +193,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           action={setEmployeeLeft}
           submitLabel={emp.active ? "Archive employee" : "Restore employee"}
           submitClass={emp.active ? "btn-danger" : "btn-primary"}
-          confirm={emp.active ? "Archive this employee? Their face will be deleted. Attendance and salary history are kept." : undefined}
+          confirm={emp.active ? `Archive this employee? Their face will be deleted and planned leave ends. Attendance and salary history are kept.${balance.outstanding > 0 ? ` Note: ${formatRs(balance.outstanding)} advance is still to be recovered.` : ""}` : undefined}
           className="flex flex-col gap-3"
         >
           <input type="hidden" name="id" value={emp.id} />

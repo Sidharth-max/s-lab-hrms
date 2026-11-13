@@ -59,13 +59,11 @@ const empUrl = page.url().split("?")[0];
 step("enroll face with camera");
 await page.click("button:has-text('Enroll face')");
 await page.waitForTimeout(1500);
-for (const n of [1, 2, 3]) {
-  await page.click(`button:has-text('Take photo ${n}')`);
-  await page.waitForTimeout(800);
-}
+await page.click("button:has-text('Start face scan')");
+await page.waitForSelector("text=Scan complete", { timeout: 60000 });
 await page.check("input[name=consent]");
 await page.click("button:has-text('Save face')");
-await page.waitForSelector("text=Face enrolled (3 photos)");
+await page.waitForSelector("text=Face enrolled (5 photos)");
 
 step("give advance within balance needs no approval");
 await page.click("button[role=tab]:has-text('Advance')");
@@ -124,7 +122,7 @@ await page.click("button:has-text('Save advance')");
 await page.waitForSelector("text=Sent for approval");
 await page.goto(`${BASE}/approvals`);
 await page.click("button:has-text('Send OTP to owner')");
-const msg = await page.locator("p.text-green-700:has-text('test code')").first().textContent();
+const msg = await page.locator("p:has-text('test code')").first().textContent();
 const code = /test code: (\d{6})/.exec(msg)[1];
 await page.fill("input[name=code]", code);
 await page.click("button:has-text('Approve with OTP')");

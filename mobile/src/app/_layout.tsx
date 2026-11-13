@@ -7,12 +7,24 @@ import { LiveProfileRefresher, LiveProvider } from "@/lib/live";
 import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { DialogProvider } from "@/components/dialog";
 import { useFonts, Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold } from "@expo-google-fonts/geist";
-import { View } from "react-native";
+import { Appearance, View } from "react-native";
 import { FONT } from "@/components/Text";
-import { C } from "@/lib/theme";
+import * as SystemUI from "expo-system-ui";
+import { useEffect } from "react";
+import { C, isDark, setThemePref, themePref } from "@/lib/theme";
 
 export default function RootLayout() {
   const [fontsReady, fontError] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold });
+  useEffect(() => {
+    // Window colour behind the screens (seen during transitions and behind the keyboard).
+    void SystemUI.setBackgroundColorAsync(C.bg).catch(() => {});
+    if (themePref !== "system") return;
+    // Following the phone: when it switches between light and dark, restart with the other palette.
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      if ((colorScheme === "dark") !== isDark) void setThemePref("system");
+    });
+    return () => sub.remove();
+  }, []);
   // Wait a moment for the Geist font (it is bundled, so this is instant on the phone).
   if (!fontsReady && !fontError) return <View style={{ flex: 1, backgroundColor: C.white }} />;
   return (
@@ -22,7 +34,7 @@ export default function RootLayout() {
       <AuthProvider>
         <LiveProvider>
         <LiveProfileRefresher />
-        <StatusBar style="dark" />
+        <StatusBar style={isDark ? "light" : "dark"} />
         <Stack
           screenOptions={{
             // Vercel / Linear style: white bar, black title, page just below in light grey.

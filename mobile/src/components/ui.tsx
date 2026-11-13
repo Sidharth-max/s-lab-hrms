@@ -3,7 +3,7 @@ import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, View, t
 import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { C, R } from "@/lib/theme";
+import { C, isDark, R } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 
 export function Screen({
@@ -93,7 +93,7 @@ export function Field({ label, hint, style, onFocus, onBlur, ...props }: TextInp
     <View style={{ gap: 6 }}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        placeholderTextColor="#a3a3a3"
+        placeholderTextColor={C.placeholder}
         style={[styles.input, focused && { borderColor: C.text }, style]}
         onFocus={(e) => { setFocused(true); onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); onBlur?.(e); }}
@@ -132,7 +132,7 @@ export function Tabs<T extends string>({ options, value, onChange }: { options: 
             onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: active ? C.text : pressed ? "#e9e9e9" : "#f1f1f1" })}
+            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: active ? C.text : pressed ? C.trackPressed : C.track })}
           >
             <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.white : C.text }}>{o.label}</Text>
           </Pressable>
@@ -178,7 +178,7 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
           height: 30,
           borderRadius: 15,
           padding: 3,
-          backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [C.line, C.green] }),
+          backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [isDark ? "#3a3a3a" : "#d4d4d4", C.green] }),
         }}
       >
         <Animated.View
@@ -186,7 +186,7 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
             width: 24,
             height: 24,
             borderRadius: 12,
-            backgroundColor: C.white,
+            backgroundColor: "#ffffff",
             transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) }],
             shadowColor: "#000",
             shadowOpacity: 0.2,
@@ -216,10 +216,10 @@ export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: st
 
 export function Badge({ label, tone = "neutral", dot }: { label: string; tone?: "neutral" | "red" | "green" | "amber"; dot?: boolean }) {
   const map = {
-    neutral: { bg: "#f1f1f1", fg: C.text, border: C.line },
-    red: { bg: "#fde8e8", fg: "#b91c1c", border: "#fecaca" },
-    green: { bg: "#dcfce7", fg: "#15803d", border: "#bbf7d0" },
-    amber: { bg: "#fef3c7", fg: "#a16207", border: C.amberLine },
+    neutral: { bg: C.track, fg: C.text, border: C.line },
+    red: { bg: C.redTint, fg: C.redInk, border: C.redLine },
+    green: { bg: C.greenTint, fg: C.greenInk, border: C.greenLine },
+    amber: { bg: C.amberTint, fg: C.amberInk, border: C.amberLine },
   }[tone];
   return (
     <View style={[styles.badge, { backgroundColor: map.bg }]}>
@@ -240,8 +240,8 @@ export function Row({ label, value, strong }: { label: string; value: React.Reac
 export function Notice({ text, tone = "neutral" }: { text: string; tone?: "neutral" | "red" | "green" }) {
   const map = {
     neutral: { bg: C.white, fg: C.text, border: C.line },
-    red: { bg: C.redSoft, fg: "#991b1b", border: "#fecaca" },
-    green: { bg: C.greenSoft, fg: "#166534", border: "#bbf7d0" },
+    red: { bg: C.redSoft, fg: C.redInk, border: C.redLine },
+    green: { bg: C.greenSoft, fg: C.greenInk, border: C.greenLine },
   }[tone];
   return (
     <View style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]}>
@@ -287,7 +287,7 @@ export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   inner: { flex: 1, gap: 14 },
   padded: { padding: 16, paddingTop: 18 },
-  card: { backgroundColor: C.card, borderColor: "#ebebeb", borderWidth: 1, borderRadius: 20, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
+  card: { backgroundColor: C.card, borderColor: C.hairline, borderWidth: 1, borderRadius: 20, padding: 16, gap: 10, shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
   h1: { fontSize: 22, fontWeight: "700", color: C.text, letterSpacing: -0.3 },
   h2: { fontSize: 16, fontWeight: "600", color: C.text, letterSpacing: -0.2 },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
@@ -295,10 +295,10 @@ export const styles = StyleSheet.create({
   buttonText: { fontSize: 15, fontWeight: "500" },
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },
-  input: { minHeight: 48, borderWidth: 1, borderColor: "#e4e4e4", borderRadius: 14, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
+  input: { minHeight: 48, borderWidth: 1, borderColor: C.hairline, borderRadius: 14, paddingHorizontal: 12, fontSize: 16, color: C.text, backgroundColor: C.white },
   // Full width with equal parts, so five tabs still fit on a narrow phone.
   // Pill group: grey pill track, the chosen option a filled charcoal pill.
-  segment: { flexDirection: "row", gap: 2, padding: 4, borderRadius: 999, alignSelf: "stretch", backgroundColor: "#f1f1f1" },
+  segment: { flexDirection: "row", gap: 2, padding: 4, borderRadius: 999, alignSelf: "stretch", backgroundColor: C.track },
   segmentItem: { flex: 1, paddingHorizontal: 4, paddingVertical: 9, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   segmentActive: { backgroundColor: C.text },
   segmentText: { fontSize: 13, fontWeight: "600", color: C.text },

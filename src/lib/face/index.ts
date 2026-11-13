@@ -11,6 +11,11 @@ export type SearchResult =
   | { ok: true; employeeId: string; similarity: number }
   | { ok: false; reason: "no_face" | "no_match" | "ambiguous" | "error"; message: string };
 
+export type PoseResult =
+  | { ok: true; yaw: number; pitch: number }
+  /** no_face: nobody in the picture. unavailable: the check cannot run (test mode, or AWS permission missing). */
+  | { ok: false; reason: "no_face" | "unavailable" };
+
 export interface FaceProvider {
   name: "mock" | "aws";
   /** Enrolls one or more photos of the same person and replaces their earlier photos. */
@@ -18,6 +23,8 @@ export interface FaceProvider {
   /** mockEmployeeId is only honoured by the mock provider (test mode). */
   search(businessId: string, image: Buffer, mockEmployeeId?: string): Promise<SearchResult>;
   remove(businessId: string, faceIds: string[]): Promise<void>;
+  /** Head direction in one photo (degrees), for the guided face scan. */
+  pose(image: Buffer): Promise<PoseResult>;
 }
 
 export function faceProvider(): FaceProvider {

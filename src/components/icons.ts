@@ -38,4 +38,10 @@ export {
   UserPlus as UserPlus,
   Users as Users,
   X as X,
+  ArrowRight,
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  Sun,
+  Moon,
 } from "@phosphor-icons/react/dist/ssr";

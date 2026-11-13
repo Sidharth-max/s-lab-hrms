@@ -91,7 +91,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
 
 function Stat({ label, value, of, warn }: { label: string; value: number; of?: number; warn?: boolean }) {
   return (
-    <div className={`card ${warn ? "border-red-200 bg-red-50" : ""}`}>
+    <div className={`card ${warn ? "border-[var(--red-line)] bg-[var(--red-soft)]" : ""}`}>
       <div className="muted">{label}</div>
       <div className="text-2xl font-bold">{value}{of != null && <span className="text-base font-normal text-[var(--muted)]"> / {of}</span>}</div>
     </div>

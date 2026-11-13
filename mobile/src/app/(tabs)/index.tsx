@@ -1,11 +1,13 @@
 import { router } from "expo-router";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Badge, Card, ErrorView, Loading, Muted, Notice, Screen } from "@/components/ui";
+import { Badge, Card, ErrorView, Loading, Muted, Notice, Screen, Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { useWide } from "@/lib/layout";
+import { TwoPane } from "@/components/TwoPane";
 import { useLive } from "@/lib/live";
 
 interface Dashboard {
@@ -17,7 +19,7 @@ interface Dashboard {
 
 function Stat({ label, value, of, tone }: { label: string; value: number; of?: number; tone?: "red" }) {
   return (
-    <Card style={{ gap: 4, ...(tone === "red" ? { backgroundColor: C.redSoft, borderColor: "#fecaca" } : {}) }}>
+    <Card style={{ gap: 4, ...(tone === "red" ? { backgroundColor: C.redSoft, borderColor: C.redLine } : {}) }}>
       <Muted>{label}</Muted>
       <Text style={{ fontSize: 26, fontWeight: "700", color: C.text, letterSpacing: -0.5, fontVariant: ["tabular-nums"] }}>
         {value}
@@ -29,13 +31,14 @@ function Stat({ label, value, of, tone }: { label: string; value: number; of?: n
 
 export default function Today() {
   const { connected } = useLive();
+  const wide = useWide();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Dashboard>("/api/m/dashboard"), [], ["attendance", "employee", "approval"]);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
   const needFace = data.rows.filter((r) => r.needsFace);
 
-  return (
-    <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
+  const summary = (
+    <>
       <View style={{ gap: 2 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Text style={{ fontSize: 20, fontWeight: "700", color: C.text }}>Today · {dateLabel(data.date)}</Text>
@@ -61,8 +64,11 @@ export default function Today() {
         </View>
       </View>
       {needFace.length ? <Notice tone="red" text={`${needFace.length} employee(s) need a face photo before they can use the scanner.`} /> : null}
+    </>
+  );
+  const people = (
       <Card style={{ padding: 0, gap: 0 }}>
-        {data.rows.length === 0 ? <View style={{ padding: 16 }}><Muted>No employees yet.</Muted></View> : null}
+        {data.rows.length === 0 ? <View style={{ padding: 16, gap: 12, alignItems: "flex-start" }}><Muted>No employees yet. Add your staff to see the attendance for today here.</Muted><Button title="Add employee" onPress={() => router.push("/employee/new")} /></View> : null}
         {data.rows.map((r, i) => (
           <Pressable
             key={r.id}
@@ -82,6 +88,14 @@ export default function Today() {
           </Pressable>
         ))}
       </Card>
+  );
+  const refresh = <RefreshControl refreshing={refreshing} onRefresh={reload} />;
+  // Open foldable / tablet: numbers on the left, people on the right.
+  if (wide) return <TwoPane left={<Screen refreshControl={refresh}>{summary}</Screen>} right={<Screen refreshControl={refresh}>{people}</Screen>} />;
+  return (
+    <Screen refreshControl={refresh}>
+      {summary}
+      {people}
     </Screen>
   );
 }

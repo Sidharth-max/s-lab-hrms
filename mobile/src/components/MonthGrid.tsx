@@ -9,10 +9,10 @@ export interface GridDay { date: string; status: string; short: string; manual: 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
 
 function colors(status: string) {
-  if (status === "PRESENT") return { bg: C.greenSoft, fg: C.green, border: "#bbf7d0" };
+  if (status === "PRESENT") return { bg: C.greenSoft, fg: C.green, border: C.greenLine };
   if (status === "HALF_DAY") return { bg: C.amberSoft, fg: C.amber, border: C.amberLine };
-  if (status === "ABSENT" || status === "UNPAID_LEAVE") return { bg: C.redSoft, fg: C.red, border: "#fecaca" };
-  if (status === "FUTURE" || status === "NOT_EMPLOYED") return { bg: C.white, fg: "#c4c4c4", border: "#f0f0f0" };
+  if (status === "ABSENT" || status === "UNPAID_LEAVE") return { bg: C.redSoft, fg: C.red, border: C.redLine };
+  if (status === "FUTURE" || status === "NOT_EMPLOYED") return { bg: C.white, fg: C.faint, border: C.hairline };
   return { bg: C.soft, fg: C.text, border: C.line };
 }
 

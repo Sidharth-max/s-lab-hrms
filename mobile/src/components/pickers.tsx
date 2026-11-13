@@ -95,7 +95,7 @@ export function DatePickerSheet({ visible, value, onChange, onClose, min, max, t
                     pressed && !sel && { backgroundColor: C.soft },
                   ]}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: sel || d === today ? "700" : "400", color: sel ? C.white : enabled ? C.text : "#c4c4c4" }}>{Number(d.slice(8))}</Text>
+                  <Text style={{ fontSize: 15, fontWeight: sel || d === today ? "700" : "400", color: sel ? C.white : enabled ? C.text : C.faint }}>{Number(d.slice(8))}</Text>
                 </Pressable>
               );
             })}
@@ -165,7 +165,7 @@ function Box({ label, text, icon, onPress, compact, placeholder }: { label?: str
     <View style={{ gap: 6 }}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label ? `${label}: ${text}` : text} style={({ pressed }) => [styles.box, compact && { paddingHorizontal: 10 }, pressed && { backgroundColor: C.soft }]}>
-        <Text style={[styles.boxText, placeholder && { color: "#a3a3a3" }]} numberOfLines={1}>{text}</Text>
+        <Text style={[styles.boxText, placeholder && { color: C.placeholder }]} numberOfLines={1}>{text}</Text>
         {icon}
       </Pressable>
     </View>

@@ -1,30 +1,93 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { enrollFace } from "@/app/actions/employees";
 import { Camera, type CameraHandle } from "./Camera";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CircleCheck, ScanFace, type IconType } from "./icons";
 
-/** Three photos from slightly different angles make the scanner recognise the person more reliably. */
-const FACE_STEPS = ["Look straight at the camera", "Turn the head a little to the left", "Turn the head a little to the right"];
+// Guided face scan: one continuous session. The page shows where to look (straight, right, left,
+// up, down) and takes each picture by itself once the head is turned the right way (checked on
+// the server). Nobody presses a shutter button.
+const STEPS: { key: string; text: string; Icon: IconType }[] = [
+  { key: "straight", text: "Look straight at the camera", Icon: ScanFace },
+  { key: "side1", text: "Slowly turn your head to the right", Icon: ArrowRight },
+  { key: "side2", text: "Now turn your head to the left", Icon: ArrowLeft },
+  { key: "vert1", text: "Look up a little", Icon: ArrowUp },
+  { key: "vert2", text: "Look down a little", Icon: ArrowDown },
+];
+const MAX_TRIES = 9;
 
 export function FaceEnroll({ employeeId, enrolled }: { employeeId: string; enrolled: boolean }) {
   const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "scanning" | "done">("idle");
+  const [step, setStep] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [hint, setHint] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const cam = useRef<CameraHandle>(null);
+  const run = useRef(0);
   const [state, action, pending] = useActionState(enrollFace, null);
-  const done = photos.length >= FACE_STEPS.length;
+  useEffect(() => () => { run.current += 1; }, []);
+
+  async function scan() {
+    const me = ++run.current;
+    setPhase("scanning");
+    setPhotos([]);
+    setError(null);
+    const kept: string[] = [];
+    const signs: Record<string, number> = {};
+    for (let i = 0; i < STEPS.length; i++) {
+      setStep(i);
+      setHint(null);
+      let accepted = false;
+      for (let t = 0; t < MAX_TRIES && !accepted; t++) {
+        await new Promise((r) => setTimeout(r, t === 0 ? 900 : 450));
+        if (run.current !== me) return;
+        const image = cam.current?.capture();
+        if (!image) continue;
+        const s = STEPS[i].key;
+        try {
+          const res = await fetch("/api/m/face/pose", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image, step: s, ref: s === "side2" ? signs.side1 : s === "vert2" ? signs.vert1 : 0 }) });
+          const r = (await res.json()) as { accept?: boolean; hint?: string; sign?: number; error?: string };
+          if (run.current !== me) return;
+          if (r.accept) {
+            if (r.sign) signs[s] = r.sign;
+            kept.push(image);
+            setPhotos([...kept]);
+            accepted = true;
+          } else setHint(r.hint ?? r.error ?? "Hold still");
+        } catch {
+          setHint("No connection. Trying again…");
+        }
+      }
+      if (!accepted && i === 0) {
+        setPhase("idle");
+        setError("Could not see the face clearly. Use good light, remove cap, mask or dark glasses, and start again.");
+        return;
+      }
+    }
+    setPhase("done");
+  }
+
+  function close() {
+    run.current += 1;
+    setOpen(false);
+    setPhase("idle");
+    setPhotos([]);
+  }
 
   if (!open) {
     return (
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="btn-primary" onClick={() => setOpen(true)}>
-          {enrolled ? "Re-take face photos" : "Enroll face"}
+          {enrolled ? "Scan face again" : "Enroll face"}
         </button>
-        {state?.ok && <span className="text-sm text-green-700">{state.message}</span>}
+        {state?.ok && <span className="text-sm text-[var(--green)]">{state.message}</span>}
       </div>
     );
   }
 
+  const Current = STEPS[step];
   return (
     <form
       action={async (f) => {
@@ -34,52 +97,60 @@ export function FaceEnroll({ employeeId, enrolled }: { employeeId: string; enrol
     >
       <input type="hidden" name="id" value={employeeId} />
       {photos.map((p, i) => <input key={i} type="hidden" name="image" value={p} />)}
-      {!done && (
+      {phase !== "done" ? (
         <>
-          <p className="text-center font-medium">
-            Photo {photos.length + 1} of {FACE_STEPS.length}: {FACE_STEPS[photos.length]}
-          </p>
-          <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-xl">
+          <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-2xl">
             <Camera ref={cam} className="aspect-[3/4] w-full" />
+            {phase === "scanning" && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 bg-black/55 p-4 text-center text-white" aria-live="polite">
+                <Current.Icon size={40} weight="bold" aria-hidden />
+                <p className="text-lg font-semibold">{Current.text}</p>
+                {hint && <p className="text-sm text-white/80">{hint}</p>}
+              </div>
+            )}
           </div>
-          <p className="muted text-center">Good light, no cap, mask or dark glasses.</p>
+          <div className="mx-auto flex w-full max-w-sm gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+            {STEPS.map((s, i) => (
+              <span key={s.key} className={`h-1.5 flex-1 rounded-full ${phase === "scanning" && i < step ? "bg-[var(--green)]" : phase === "scanning" && i === step ? "bg-[var(--text)]" : "bg-[var(--line)]"}`} />
+            ))}
+          </div>
+          {phase === "idle" && <p className="muted text-center">Sit at face height in good light. Follow the arrows: the pictures are taken automatically.</p>}
+          <div className="flex flex-wrap justify-center gap-2">
+            {phase === "idle" ? (
+              <button type="button" className="btn-primary" onClick={() => void scan()}>Start face scan</button>
+            ) : (
+              <button type="button" className="btn-secondary" onClick={() => { run.current += 1; setPhase("idle"); setPhotos([]); }}>Stop</button>
+            )}
+            <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
+          </div>
         </>
-      )}
-      {photos.length > 0 && (
-        <div className="flex justify-center gap-2">
-          {photos.map((p, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={p} alt={`Face photo ${i + 1}`} className="aspect-[3/4] w-20 -scale-x-100 rounded-lg object-cover" />
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap justify-center gap-2">
-        {!done && (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => {
-              const p = cam.current?.capture();
-              if (p) setPhotos((list) => [...list, p]);
-            }}
-          >
-            Take photo {photos.length + 1}
-          </button>
-        )}
-        {photos.length > 0 && <button type="button" className="btn-secondary" onClick={() => setPhotos([])}>Start again</button>}
-        <button type="button" className="btn-secondary" onClick={() => { setOpen(false); setPhotos([]); }}>Cancel</button>
-      </div>
-      {done && (
+      ) : (
         <>
+          <div className="flex flex-col items-center gap-1 py-2 text-center">
+            <CircleCheck size={48} weight="fill" className="text-[var(--green)]" aria-hidden />
+            <p className="font-semibold">Scan complete</p>
+            <p className="muted">{photos.length} of {STEPS.length} angles captured</p>
+          </div>
+          <div className="flex justify-center gap-2">
+            {photos.map((p, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={i} src={p} alt={`Face angle ${i + 1}`} className="aspect-[3/4] w-14 -scale-x-100 rounded-xl object-cover" />
+            ))}
+          </div>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" name="consent" className="mt-1 h-5 w-5" required />
             {"The employee was told that their face is used only to mark attendance, and that a manager can mark attendance for them instead if they prefer."}
           </label>
-          <button className="btn-primary" disabled={pending}>{pending ? "Saving…" : "Save face"}</button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button className="btn-primary" disabled={pending}>{pending ? "Saving…" : "Save face"}</button>
+            <button type="button" className="btn-secondary" onClick={() => void scan()}>Scan again</button>
+            <button type="button" className="btn-secondary" onClick={close}>Cancel</button>
+          </div>
         </>
       )}
-      {state?.error && <p className="text-center text-sm text-red-600">{state.error}</p>}
-      {state?.ok && <p className="text-center text-sm text-green-700">{state.message}</p>}
+      {error && <p className="notice-red text-center">{error}</p>}
+      {state?.error && <p className="text-center text-sm text-[var(--red)]">{state.error}</p>}
+      {state?.ok && <p className="text-center text-sm text-[var(--green)]">{state.message}</p>}
     </form>
   );
 }

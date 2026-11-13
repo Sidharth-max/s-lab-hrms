@@ -17,9 +17,15 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+const THEME_SCRIPT = `(function(){try{var p=localStorage.getItem("hrms.theme");var d=p==="dark"||(p!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";if(d){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#0a0a0a")}}catch(e){}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={GeistSans.variable}>
+    <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
+      <head>
+        {/* Sets the theme before the page paints (saved choice, else the device setting): no flash. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh antialiased">
         {children}
         <Toaster />

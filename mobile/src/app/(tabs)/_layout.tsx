@@ -25,12 +25,13 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: me?.business.name ?? "Today", tabBarLabel: "Today", tabBarIcon: ({ color, size }) => <House color={color as string} size={size} /> }} />
-      <Tabs.Screen name="employees" options={{ title: "Employees", tabBarIcon: ({ color, size }) => <Users color={color as string} size={size} /> }} />
-      <Tabs.Screen name="attendance" options={{ title: "Attendance", tabBarIcon: ({ color, size }) => <CalendarDays color={color as string} size={size} /> }} />
+      <Tabs.Screen name="employees" options={{ title: "Employees", tabBarLabel: "Employees", tabBarIcon: ({ color, size }) => <Users color={color as string} size={size} /> }} />
+      <Tabs.Screen name="attendance" options={{ title: "Attendance", tabBarLabel: "Attendance", tabBarIcon: ({ color, size }) => <CalendarDays color={color as string} size={size} /> }} />
       <Tabs.Screen
         name="more"
         options={{
           title: "More",
+          tabBarLabel: "More",
           tabBarBadge: me?.pendingApprovals ? me.pendingApprovals : undefined,
           tabBarBadgeStyle: { backgroundColor: C.red },
           tabBarIcon: ({ color, size }) => <Menu color={color as string} size={size} />,

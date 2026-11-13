@@ -75,8 +75,8 @@ export function ActionForm({
             <button type="submit" className={submitClass}>
               {pending ? "Please wait…" : (submitLabel ?? "Save")}
             </button>
-            {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-            {state?.ok && state.message && <p className="text-sm text-green-700">{state.message}</p>}
+            {state?.error && <p className="text-sm text-[var(--red)]">{state.error}</p>}
+            {state?.ok && state.message && <p className="text-sm text-[var(--green-ink)]">{state.message}</p>}
           </div>
         )}
       </fieldset>

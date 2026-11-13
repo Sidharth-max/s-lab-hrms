@@ -149,6 +149,10 @@ export const setEmployeeLeft = safe(async (_p: ActionResult, form: FormData): Pr
   await db.$transaction(async (tx) => {
     await tx.employee.update({ where: { id: emp.id }, data: { leftOn: dateKeyToDb(leftOn), active: false, faceId: null, faceIds: [], faceEnrolledAt: null } });
     if (emp.userId) await tx.user.update({ where: { id: emp.userId }, data: { active: false } });
+    // Leave planned after the last working day no longer applies.
+    const last = dateKeyToDb(leftOn);
+    await tx.leavePlan.updateMany({ where: { employeeId: emp.id, status: "ACTIVE", fromDate: { gt: last } }, data: { status: "CANCELLED" } });
+    await tx.leavePlan.updateMany({ where: { employeeId: emp.id, status: "ACTIVE", toDate: { gt: last } }, data: { toDate: last } });
   });
   // Remove the face so the person can no longer mark attendance. Attendance and salary history stay.
   const faces = storedFaceIds(emp);

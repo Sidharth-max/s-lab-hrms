@@ -38,6 +38,12 @@ Name it `s-lab-hrms-rekognition`.
       "Resource": "arn:aws:rekognition:ap-south-1:ACCOUNT_ID:collection/hrms-*"
     },
     {
+      "Sid": "GuidedFaceScan",
+      "Effect": "Allow",
+      "Action": "rekognition:DetectFaces",
+      "Resource": "*"
+    },
+    {
       "Sid": "Liveness",
       "Effect": "Allow",
       "Action": [
@@ -141,3 +147,11 @@ who needs enrolling. Open each employee > **Re-take face photo**. Use good light
 Billed per image search, per face stored per month, and (if on) per liveness check.
 Monthly searches = employees × working days × 2 (in and out). Example: 50 staff × 26 days × 2 = 2,600 searches.
 Liveness, when enabled, adds one check per scan.
+
+## Guided face scan (DetectFaces)
+
+Face enrolment is one guided scan: the screen says look straight, right, left, up, down and takes
+each picture by itself. The server checks the head direction of each frame with
+`rekognition:DetectFaces` (the `GuidedFaceScan` statement above; it must use `"Resource": "*"`).
+Without that permission enrolment still works, but frames are accepted without checking the
+direction. Cost: about 5 to 15 DetectFaces calls per enrolment.

@@ -114,6 +114,11 @@ export const markAttendance = safe(async (_p: ActionResult, form: FormData): Pro
     data: rows.map((r) => ({ businessId: actor.businessId, employeeId: emp.id, type: r.type, at: r.at, workDate: dateKeyToDb(date), source: "MANUAL" as const, reason, createdBy: actor.id })),
   });
   if (inAt) await endLeaveOnReturn(actor.businessId, emp.id, date, actor.id);
+  // A status set by hand earlier (absent, leave…) would hide these times: put the day back on automatic.
+  const last = await db.dayOverride.findFirst({ where: { employeeId: emp.id, workDate: dateKeyToDb(date) }, orderBy: { createdAt: "desc" } });
+  if (inAt && last && last.status !== "AUTO" && last.status !== "PRESENT") {
+    await db.dayOverride.create({ data: { employeeId: emp.id, workDate: dateKeyToDb(date), status: "AUTO", reason: "Attendance marked by hand", createdBy: actor.id } });
+  }
   for (const r of rows) {
     await audit(actor.businessId, actor.id, "attendance.punch.add", "AttendancePunch", null, { employeeId: emp.id, date, type: r.type, time: r.type === "IN" ? inTime : outTime, reason });
   }
