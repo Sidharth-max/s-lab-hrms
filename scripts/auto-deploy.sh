@@ -20,8 +20,13 @@ log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 
 git fetch -q origin "$BRANCH" || { log "git fetch failed"; exit 0; }
 REMOTE="$(git rev-parse "origin/$BRANCH")"
-LOCAL="$(git rev-parse HEAD)"
-[ "$REMOTE" = "$LOCAL" ] && exit 0
+# Deploy when the RUNNING app is older than main — not when the checkout is.
+# The server often commits and pushes from this same checkout, which makes
+# REMOTE == LOCAL while the running container still serves an older version.
+# The health endpoint reports the deployed version (deploy.sh builds with it).
+PORT="$(grep -E '^APP_PORT=' .env.production 2>/dev/null | tail -1 | cut -d= -f2-)"
+RUNNING="$(curl -fsS --max-time 10 "http://127.0.0.1:${PORT:-3000}/api/health" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("version",""))' 2>/dev/null || true)"
+[ -n "$RUNNING" ] && [ "$(git rev-parse --short "$REMOTE" 2>/dev/null)" = "$RUNNING" ] && exit 0
 [ "$(cat "$STATE_DIR/failed-sha" 2>/dev/null || true)" = "$REMOTE" ] && exit 0
 
 # Wait for the CI workflow ("web" job) on that commit.
