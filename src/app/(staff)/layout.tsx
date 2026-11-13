@@ -34,7 +34,7 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
   const logoutLabel = device ? "Log out to scanner" : "Log out";
 
   return (
-    <div className="min-h-dvh pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
+    <div className="min-h-dvh pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-0">
       <header className="no-print sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--card)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">

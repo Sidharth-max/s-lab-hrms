@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
 import { CalendarCheck, Camera, ChevronRight, HandCoins, Pencil, RotateCcw } from "@/components/icons";
-import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row, Screen, Tabs } from "@/components/ui";
+import { Avatar, Badge, Button, Card, ErrorView, H2, Loading, Muted, Notice, Row, Screen, Tabs, Segmented } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
 import { GiveAdvanceForm } from "@/components/GiveAdvanceForm";
@@ -19,10 +19,11 @@ interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
     wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
-    face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean;
+    face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean; holdSalary: boolean;
   };
   balance: { earned: number; outstanding: number; balance: number };
   today: { status: string; label: string } | null;
+  due: { total: number; months: { month: string; due: number }[] };
   pendingAdvances: number;
   advances: { id: string; givenOn: string; amount: number; recovered: number; remaining: number; recoveryMonths: number; startMonth: string; note: string | null }[];
   salary: { id: string; month: string; locked: boolean; payableDays: number; gross: number; net: number; paid: number }[];
@@ -81,6 +82,7 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "payroll", "attendance"]);
   const [tab, setTab] = useState<Tab>("overview"); // a new employee lands on Overview, where the face photo button is first
   const [leftOn, setLeftOn] = useState(istToday());
+  const [payMode, setPayMode] = useState<"CASH" | "BANK" | "UPI" | "CHEQUE">("CASH");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -141,6 +143,7 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
         </View>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           {e.inHouse ? <Badge label="In-house" /> : null}
+          {e.holdSalary ? <Badge label="Salary on hold" tone="amber" /> : null}
           {e.face ? <Badge label="Face enrolled" tone="green" dot /> : e.inHouse ? null : <Badge label="No face" tone="red" dot />}
           <Badge label={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "/ month" : "/ day"}`} />
           {e.pfEnabled ? <Badge label="PF" /> : null}
@@ -245,6 +248,33 @@ export function EmployeeDetailView({ id, created, embedded }: { id: string; crea
           ) : null}
           {can("advances.manage") && e.active ? <GiveAdvanceForm employeeId={e.id} onDone={async (m) => { setMsg(m); await reload(); }} /> : null}
         </>
+      ) : null}
+
+      {tab === "salary" && (data.due.total > 0 || e.holdSalary) ? (
+        <Card>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <H2>Salary due</H2>
+            {e.holdSalary ? <Badge label="Salary on hold" tone="amber" /> : null}
+          </View>
+          <Text style={{ fontSize: 26, fontWeight: "700", color: C.text, letterSpacing: -0.5 }}>{rs(data.due.total)}</Text>
+          {data.due.months.length ? (
+            <Muted>{data.due.months.map((m) => `${monthLabel(m.month)} ${rs(m.due)}`).join(" · ")}</Muted>
+          ) : (
+            <Muted>Nothing due yet. Months count here once their salary is approved and locked.</Muted>
+          )}
+          {can("payroll.lock") && data.due.total > 0 ? (
+            <>
+              <Segmented options={[{ value: "CASH", label: "Cash" }, { value: "BANK", label: "Bank" }, { value: "UPI", label: "UPI" }, { value: "CHEQUE", label: "Cheque" }]} value={payMode} onChange={setPayMode} />
+              <Button
+                title={`Pay all due (${rs(data.due.total)})`}
+                loading={busy === "payAllDue"}
+                onPress={async () => {
+                  if (await dialog.confirm({ title: `Pay ${rs(data.due.total)} to ${e.name}?`, message: `Marks ${data.due.months.length} month(s) as paid today by ${payMode.toLowerCase()}.`, confirmText: "Pay all" })) void run("payAllDue", { employeeId: e.id, mode: payMode });
+                }}
+              />
+            </>
+          ) : null}
+        </Card>
       ) : null}
 
       {tab === "salary" ? (

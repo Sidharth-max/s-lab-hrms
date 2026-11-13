@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Pencil } from "@/components/icons";
+import { can } from "@/lib/permissions";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { requireStaff } from "@/lib/auth";
 import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
@@ -44,6 +46,11 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
           <Link href={`/attendance/register?month=${date.slice(0, 7)}`} className="btn-secondary">Monthly register</Link>
         </div>
       </div>
+      {can(actor, "attendance.edit") && (
+        <p className="muted">
+          To add or change attendance for an earlier day: choose the date above, press Go, then press <b>Edit</b> next to the person. You can also open an employee and use the Attendance register.
+        </p>
+      )}
       <ShowTabs show={show} params={{ date: date === today ? undefined : date }} />
       <div className="card overflow-x-auto !p-0">
         <table className="table table-cards">
@@ -68,7 +75,7 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
                 <td data-label={"In"}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
                 <td data-label={"Out"}>{d.outAt ? formatIstTime(d.outAt) : "—"}</td>
                 <td data-label={"Worked"}>{minsToText(d.workedMins)}</td>
-                <td><Link className="link" href={`/attendance/${e.id}/${date}`}>Details / edit</Link></td>
+                <td><Link className="btn-secondary !h-9" href={`/attendance/${e.id}/${date}`}><Pencil size={14} aria-hidden />Edit</Link></td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={7} className="muted">No employees for this date.</td></tr>}

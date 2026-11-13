@@ -65,7 +65,7 @@ export default function More() {
   const isOwner = me?.user.role === "OWNER";
   const admin = can("devices.register") || can("settings.manage") || isOwner;
   const menu = (
-    <Screen>
+    <Screen tabs>
       <Card style={{ padding: 0, gap: 0 }}>
         <Item icon={BadgeCheck} label="Approvals" badge={me?.pendingApprovals} onPress={go("/approvals")} />
         <Divider />

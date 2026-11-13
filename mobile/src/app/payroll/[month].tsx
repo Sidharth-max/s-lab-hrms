@@ -9,7 +9,7 @@ import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
 
-interface Line { id: string; employeeId: string; name: string; wageType: string; rate: number; payableDays: number; daysInMonth: number; gross: number; adjustments: number; pf: number; esi: number; advance: number; net: number; paid: number; paymentMode: string | null }
+interface Line { id: string; employeeId: string; name: string; wageType: string; rate: number; payableDays: number; daysInMonth: number; gross: number; adjustments: number; pf: number; esi: number; advance: number; net: number; paid: number; paymentMode: string | null; hold?: boolean }
 interface Month { employees: { id: string; name: string; code: string }[]; adjustments: { id: string; employee: string; amount: number; reason: string }[]; month: string; exists: boolean; locked: boolean; updatedAt: string | null; canRun: boolean; canLock: boolean; lines: Line[] }
 
 export default function PayrollMonth() {
@@ -80,7 +80,7 @@ export default function PayrollMonth() {
             {rs(l.rate)}{l.wageType === "MONTHLY" ? "/m" : "/d"} · {l.payableDays}{l.wageType === "MONTHLY" ? ` of ${l.daysInMonth}` : ""} days · gross {rs(l.gross)}
             {l.pf ? ` · PF ${rs(l.pf)}` : ""}{l.esi ? ` · ESIC ${rs(l.esi)}` : ""}{l.advance ? ` · advance ${rs(l.advance)}` : ""}{l.adjustments ? ` · adj ${rs(l.adjustments)}` : ""}
           </Muted>
-          <Muted>{l.paid ? `Paid ${rs(l.paid)} ${l.paymentMode ?? ""}` : "Not paid"}</Muted>
+          <Muted>{l.paid ? `Paid ${rs(l.paid)} ${l.paymentMode ?? ""}` : l.hold ? "On hold: pay later from the employee's Salary tab" : "Not paid"}</Muted>
           <Button title="Payslip" variant="secondary" onPress={() => router.push({ pathname: "/payslip/[lineId]", params: { lineId: l.id } })} />
           {data.locked && data.canLock ? (
             payFor === l.id ? (

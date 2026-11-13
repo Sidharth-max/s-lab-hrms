@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { assertStaff } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { parseRs } from "@/lib/money";
+import { formatRs, parseRs } from "@/lib/money";
 import { canSeeSite } from "@/lib/permissions";
-import { lockPayroll, recalculatePayroll, reopenPayroll } from "@/lib/services";
+import { lockPayroll, recalculatePayroll, reopenPayroll, salaryDue } from "@/lib/services";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { dateKeyToDb, isMonthKey, istDateKey, istMonthKey } from "@/lib/time";
 
@@ -90,4 +90,21 @@ export const recordPayment = safe(async (_p: ActionResult, form: FormData): Prom
   });
   revalidatePath(`/payroll/${line.run.month}`);
   return { ok: true, message: "Payment saved" };
+});
+
+/** Pays everything that is due to one employee across locked months in one go (held salary, or months paid late). */
+export const payAllDue = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+  const actor = await assertStaff("payroll.lock");
+  const emp = await db.employee.findFirst({ where: { id: str(form, "employeeId"), businessId: actor.businessId } });
+  if (!emp) return { error: "Employee not found" };
+  const paidOn = str(form, "paidOn") || istDateKey(new Date());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) return { error: "Enter the payment date" };
+  const mode = ["CASH", "BANK", "UPI", "CHEQUE"].includes(str(form, "mode")) ? str(form, "mode") : "CASH";
+  const ref = str(form, "ref") || null;
+  const due = await salaryDue(emp.id);
+  if (due.months.length === 0) return { error: "Nothing is due. Only approved and locked months can be paid." };
+  await db.$transaction(due.months.map((m) => db.payrollLine.update({ where: { id: m.lineId }, data: { paidAmount: m.net, paidOn: dateKeyToDb(paidOn), paymentMode: mode, paymentRef: ref } })));
+  await audit(actor.businessId, actor.id, "payroll.payall", "Employee", emp.id, { total: due.total, months: due.months.map((m) => m.month), mode });
+  revalidatePath("/", "layout");
+  return { ok: true, message: `Paid ${formatRs(due.total)} for ${due.months.length} month${due.months.length === 1 ? "" : "s"}` };
 });

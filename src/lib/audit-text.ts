@@ -171,6 +171,8 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
         const amt = n(d.amount);
         return r("salary", `${amt >= 0 ? "Extra payment" : "Deduction"} of ${formatRs(Math.abs(amt))} for ${subject} in ${month(d.month)}`, d.reason ? `Reason: ${s(d.reason)}` : null);
       }
+      case "payroll.payall":
+        return r("salary", `Paid all salary due to ${subject}: ${formatRs(n(d.total))}`, join(`${Array.isArray(d.months) ? d.months.length : 0} month(s)`, s(d.mode)));
       case "payroll.payment": {
         const line = lineById.get(s(l.entityId));
         return r(

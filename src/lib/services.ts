@@ -127,7 +127,9 @@ export async function recalculatePayroll(businessId: string, month: string, tx: 
   const ids = employees.map((e) => e.id);
   const [adjustments, advances] = await Promise.all([
     tx.adjustment.findMany({ where: { employeeId: { in: ids }, month } }),
-    tx.advance.findMany({ where: { employeeId: { in: ids }, status: { in: ["ACTIVE", "CLEARED"] }, startMonth: { lte: month } } }),
+    // Held-salary staff recover advances from the held total, whatever the instalment plan says,
+    // so all their advances given up to this month are loaded (filtered per employee below).
+    tx.advance.findMany({ where: { employeeId: { in: ids }, status: { in: ["ACTIVE", "CLEARED"] }, givenOn: { lte: monthRange(month).end } } }),
   ]);
   const rec = await recoveredByAdvance(advances.map((a) => a.id), tx);
 
@@ -138,12 +140,13 @@ export async function recalculatePayroll(businessId: string, month: string, tx: 
   const dim = daysInMonth(month);
   for (const e of employees) {
     const advInputs: AdvanceInput[] = advances
-      .filter((a) => a.employeeId === e.id)
+      .filter((a) => a.employeeId === e.id && (e.holdSalary || a.startMonth <= month))
       .map((a) => ({
         id: a.id,
         amount: a.amount,
-        recoveryMonths: a.recoveryMonths,
-        startMonth: a.startMonth,
+        // Held salary: the whole outstanding advance comes out of the held amount straight away.
+        recoveryMonths: e.holdSalary ? 1 : a.recoveryMonths,
+        startMonth: e.holdSalary && a.startMonth > month ? month : a.startMonth,
         recoveredBefore: rec.get(a.id) ?? 0,
         givenOn: dbToDateKey(a.givenOn),
       }));
@@ -222,4 +225,15 @@ export async function todayStatus(employee: Employee, tx: Tx = db) {
   if (!d || d.status === "NOT_EMPLOYED" || d.status === "FUTURE") return null;
   // Absent so far today simply means they have not scanned in yet.
   return { status: d.status, label: d.status === "ABSENT" ? "Not in yet" : STATUS_LABEL[d.status] };
+}
+
+/** Locked salary not yet (fully) paid to an employee: the amount due when salary is held or paid late. */
+export async function salaryDue(employeeId: string, tx: Tx = db) {
+  const lines = await tx.payrollLine.findMany({
+    where: { employeeId, run: { status: "LOCKED" } },
+    include: { run: { select: { month: true } } },
+    orderBy: { run: { month: "asc" } },
+  });
+  const months = lines.filter((l) => l.net - l.paidAmount > 0).map((l) => ({ lineId: l.id, month: l.run.month, net: l.net, paid: l.paidAmount, due: l.net - l.paidAmount }));
+  return { total: months.reduce((s, m) => s + m.due, 0), months };
 }

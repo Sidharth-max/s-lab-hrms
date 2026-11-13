@@ -23,6 +23,7 @@ export interface EmployeeValues {
   esicNumber?: string;
   customWeeklyOff: boolean;
   inHouse?: boolean;
+  holdSalary?: boolean;
   weeklyOffDays: number[];
 }
 
@@ -85,6 +86,13 @@ export function EmployeeForm({
           <Field label="Basic % of wage (used for PF)" value={v.basicPercent} onChangeText={(t) => set("basicPercent", t)} keyboardType="number-pad" maxLength={3} />
           {canSalary ? (
             <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: "row", gap: 12, alignItems: "center", borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>Hold salary, pay later together</Text>
+                  <Text style={{ fontSize: 13, color: C.muted, lineHeight: 18 }}>Salary is still calculated every month, but kept as due. Pay several months (or the whole year) in one go from the employee&apos;s Salary tab. Advances are taken from the held amount.</Text>
+                </View>
+                <Toggle value={!!v.holdSalary} onValueChange={(b) => set("holdSalary", b)} label="Hold salary" />
+              </View>
               <View style={{ gap: 10, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>PF deduction</Text>
@@ -153,7 +161,7 @@ export function employeeBody(v: EmployeeValues, canSalary: boolean, isNew: boole
     siteId: v.siteId,
     joinedOn: v.joinedOn,
     ...(isNew || canSalary
-      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "" }
+      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "", holdSalary: canSalary && !!v.holdSalary }
       : {}),
     weeklyOffMode: v.customWeeklyOff ? "custom" : "business",
     inHouse: !!v.inHouse,

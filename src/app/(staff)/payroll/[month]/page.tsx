@@ -102,7 +102,7 @@ export default async function PayrollMonth({ params }: PageProps<"/payroll/[mont
             <tbody>
               {lines.map((l) => (
                 <tr key={l.id}>
-                  <td className="card-title font-medium"><Link className="font-medium hover:underline" href={`/employees/${l.employeeId}`}>{l.employee.name}</Link></td>
+                  <td className="card-title font-medium"><Link className="font-medium hover:underline" href={`/employees/${l.employeeId}`}>{l.employee.name}</Link>{l.employee.holdSalary && <span className="badge badge-amber ml-1">On hold</span>}</td>
                   <td data-label={L.rate} className="whitespace-nowrap">{formatRs(l.rate)}{l.wageType === "MONTHLY" ? "/m" : "/d"}</td>
                   <td data-label={L.days}>{l.payableDays}{l.wageType === "MONTHLY" ? ` / ${l.daysInMonth}` : ""}</td>
                   <td data-label={L.gross}>{formatRs(l.gross)}</td>

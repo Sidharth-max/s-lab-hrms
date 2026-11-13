@@ -11,3 +11,6 @@ export function useWide() {
 
 /** Width of the left (list) panel in the two-panel layout. */
 export const LIST_PANE = 340;
+
+/** Space to leave at the bottom of tab screens on phones, where the navigation bar floats over the content. */
+export const FLOATING_NAV_SPACE = 96;

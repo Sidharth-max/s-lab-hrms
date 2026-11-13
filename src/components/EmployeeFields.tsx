@@ -18,6 +18,7 @@ interface Values {
   esicNumber?: string | null;
   customWeeklyOff?: boolean;
   inHouse?: boolean;
+  holdSalary?: boolean;
   weeklyOffDays?: number[];
 }
 
@@ -111,6 +112,15 @@ export function EmployeeFields({
             <input name="basicPercent" type="number" min={1} max={100} className="input" defaultValue={values.basicPercent ?? 100} />
           </div>
           <div className="flex flex-col justify-end gap-3 @lg:col-span-2">
+            {canSalary && (
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] p-3">
+                <input type="checkbox" name="holdSalary" defaultChecked={values.holdSalary ?? false} className="mt-0.5 h-5 w-5" />
+                <span>
+                  <span className="block font-medium">Hold salary, pay later together</span>
+                  <span className="muted block">Salary is still calculated every month, but kept as due. Pay several months (or the whole year) in one go from the employee&apos;s Salary tab. Advances are taken from the held amount.</span>
+                </span>
+              </label>
+            )}
             {canSalary ? (
               <div className="grid gap-3 @lg:grid-cols-2">
                 <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] p-3">

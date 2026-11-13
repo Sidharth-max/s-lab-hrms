@@ -91,9 +91,9 @@ export default function Today() {
   );
   const refresh = <RefreshControl refreshing={refreshing} onRefresh={reload} />;
   // Open foldable / tablet: numbers on the left, people on the right.
-  if (wide) return <TwoPane left={<Screen refreshControl={refresh}>{summary}</Screen>} right={<Screen refreshControl={refresh}>{people}</Screen>} />;
+  if (wide) return <TwoPane left={<Screen tabs refreshControl={refresh}>{summary}</Screen>} right={<Screen tabs refreshControl={refresh}>{people}</Screen>} />;
   return (
-    <Screen refreshControl={refresh}>
+    <Screen tabs refreshControl={refresh}>
       {summary}
       {people}
     </Screen>

@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
-import { useWide } from "@/lib/layout";
+import { FLOATING_NAV_SPACE, useWide } from "@/lib/layout";
 import { PanePlaceholder, TwoPane } from "@/components/TwoPane";
 import { EmployeeDetailView } from "@/components/EmployeeDetailView";
 
@@ -39,7 +39,7 @@ export default function Employees() {
       data={list}
       keyExtractor={(e) => e.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
-      contentContainerStyle={{ padding: 16, paddingBottom: 96 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: wide ? 96 : 96 + FLOATING_NAV_SPACE }}
       ListHeaderComponent={
         <View style={{ gap: 10, marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.line, borderRadius: 999, backgroundColor: C.white, paddingHorizontal: 12 }}>
@@ -84,7 +84,7 @@ export default function Employees() {
         </Pressable>
       )}
     />
-    {can("employees.manage") ? <Fab icon={<Plus size={26} color={C.white} />} label="Add employee" onPress={() => router.push("/employee/new")} /> : null}
+    {can("employees.manage") ? <Fab icon={<Plus size={26} color={C.white} />} label="Add employee" lift={wide ? 0 : FLOATING_NAV_SPACE - 8} onPress={() => router.push("/employee/new")} /> : null}
     </View>
   );
   if (!wide) return list_;

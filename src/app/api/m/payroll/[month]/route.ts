@@ -30,6 +30,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/payroll/[mont
         id: l.id,
         employeeId: l.employeeId,
         name: l.employee.name,
+        hold: l.employee.holdSalary,
         wageType: l.wageType,
         rate: l.rate,
         payableDays: l.payableDays,

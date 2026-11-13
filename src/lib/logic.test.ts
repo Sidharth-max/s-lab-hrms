@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countDays, deriveMonth, nextPunch, type PunchInput } from "./attendance";
 import { parseRs, formatRs } from "./money";
-import { advanceDue, calculatePay, statutory, type StatutoryRates } from "./payroll";
+import { advanceDue, calculatePay, grossPay, statutory, type StatutoryRates } from "./payroll";
 import { istDateKey, istDateTime, monthDiff, addMonths, daysInMonth } from "./time";
 
 const rates: StatutoryRates = {
@@ -258,5 +258,18 @@ describe("day rules parsing", () => {
     expect(parseDayRules(null)[1].halfDayBelowMins).toBe(240);
     expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: true, weeklyOffDays: [2] })).toEqual([2]);
     expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: false, weeklyOffDays: [2] })).toEqual([0]);
+  });
+});
+
+describe("month length", () => {
+  const emp = { wageType: "MONTHLY" as const, monthlyWage: 3000000, dailyWage: 0, basicPercent: 100, pfEnabled: false, esiEnabled: false };
+  it("pays the full salary for a full month of 28, 30 or 31 days", () => {
+    expect(grossPay(emp, 28, 28)).toBe(3000000); // February
+    expect(grossPay(emp, 30, 30)).toBe(3000000);
+    expect(grossPay(emp, 31, 31)).toBe(3000000);
+  });
+  it("uses that month's own day count for missed days", () => {
+    expect(grossPay(emp, 27, 28)).toBe(Math.round((3000000 * 27) / 28)); // one day missed in February
+    expect(grossPay(emp, 30, 31)).toBe(Math.round((3000000 * 30) / 31));
   });
 });

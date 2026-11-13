@@ -5,19 +5,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, isDark, R } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
+import { FLOATING_NAV_SPACE, useWide } from "@/lib/layout";
 
 export function Screen({
   children,
   scroll = true,
   refreshControl,
   padded = true,
+  tabs = false,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   padded?: boolean;
+  /** A tab screen: on phones leave room at the bottom for the floating navigation bar. */
+  tabs?: boolean;
 }) {
-  const inner = <View style={[styles.inner, padded && styles.padded]}>{children}</View>;
+  const wide = useWide();
+  const inner = <View style={[styles.inner, padded && styles.padded, tabs && !wide && { paddingBottom: FLOATING_NAV_SPACE + 16 }]}>{children}</View>;
   return (
     <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
       {scroll ? (
@@ -201,13 +206,13 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
 }
 
 /** Round floating action button, bottom right (e.g. add employee). */
-export function Fab({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
+export function Fab({ icon, label, onPress, lift = 0 }: { icon: React.ReactNode; label: string; onPress: () => void; lift?: number }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.fab, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
+      style={({ pressed }) => [styles.fab, lift ? { bottom: 20 + lift } : null, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
     >
       {icon}
     </Pressable>

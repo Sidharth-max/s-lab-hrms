@@ -13,7 +13,8 @@ import { statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
-import { employeeBalance, outstandingAdvances, todayStatus } from "@/lib/services";
+import { employeeBalance, outstandingAdvances, salaryDue, todayStatus } from "@/lib/services";
+import { payAllDue } from "@/app/actions/payroll";
 import { listLeaves } from "@/lib/leaves";
 import { LeavePanel } from "@/components/LeavePanel";
 import { dbToDateKey, formatDateKey, formatMonth, istDateKey, istMonthKey } from "@/lib/time";
@@ -25,13 +26,14 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
-  const [advances, pendingAdvances, balance, lines, today, leaves] = await Promise.all([
+  const [advances, pendingAdvances, balance, lines, today, leaves, due] = await Promise.all([
     outstandingAdvances(emp.id),
     db.advance.findMany({ where: { employeeId: emp.id, status: "PENDING_APPROVAL" } }),
     employeeBalance(emp),
     db.payrollLine.findMany({ where: { employeeId: emp.id }, include: { run: true }, orderBy: { run: { month: "desc" } }, take: 12 }),
     emp.active ? todayStatus(emp) : Promise.resolve(null),
     listLeaves(actor, { employeeId: emp.id }),
+    salaryDue(emp.id),
   ]);
   const manage = can(actor, "employees.manage");
   const thisMonth = istMonthKey(new Date());
@@ -146,6 +148,27 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   );
 
   const salary = (
+    <div className="flex flex-col gap-4">
+    {(due.total > 0 || emp.holdSalary) && (
+      <section className="card flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold">Salary due</h2>
+          {emp.holdSalary && <span className="badge badge-amber">Salary on hold</span>}
+        </div>
+        <div className="text-2xl font-semibold tracking-tight">{formatRs(due.total)}</div>
+        <p className="muted">
+          {due.months.length ? due.months.map((m) => `${formatMonth(m.month)} ${formatRs(m.due)}`).join(" · ") : "Nothing due yet. Months count here once their salary is approved and locked."}
+        </p>
+        {can(actor, "payroll.lock") && due.total > 0 && (
+          <ActionForm action={payAllDue} className="flex flex-wrap items-end gap-2" submitLabel={`Pay all due (${formatRs(due.total)})`} confirm={`Pay ${formatRs(due.total)} to ${emp.name}? This marks ${due.months.length} month(s) as paid.`}>
+            <input type="hidden" name="employeeId" value={emp.id} />
+            <div className="w-40"><label className="label">Paid by</label><Select name="mode" defaultValue="CASH" ariaLabel="Payment mode" options={[{ value: "CASH", label: "Cash" }, { value: "BANK", label: "Bank transfer" }, { value: "UPI", label: "UPI" }, { value: "CHEQUE", label: "Cheque" }]} /></div>
+            <div className="w-44"><label className="label">Paid on</label><DateInput name="paidOn" defaultValue={istDateKey(new Date())} max={istDateKey(new Date())} /></div>
+            <div className="w-44"><label className="label">Reference (optional)</label><input name="ref" className="input" /></div>
+          </ActionForm>
+        )}
+      </section>
+    )}
     <section className="card overflow-x-auto">
       <h2 className="mb-3 font-semibold">Salary history</h2>
       <table className="table table-cards">
@@ -166,6 +189,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
         </tbody>
       </table>
     </section>
+    </div>
   );
 
   const account = manage ? (
@@ -226,6 +250,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
                 <h1 className="h1 truncate">{emp.name}</h1>
                 {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
                 {emp.inHouse && <span className="badge badge-neutral">In-house</span>}
+                {emp.holdSalary && <span className="badge badge-amber">Salary on hold</span>}
                 {today && (
                   <span className={statusBadgeClass(today.status)}>
                     Today: {today.label}

@@ -48,6 +48,7 @@ function parsePay(form: FormData) {
       basicPercent,
       pfEnabled,
       esiEnabled,
+      holdSalary: form.get("holdSalary") === "on",
       uanNumber: pfEnabled ? uanNumber : null,
       esicNumber: esiEnabled ? esicNumber : null,
     } as const,
@@ -73,7 +74,7 @@ export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData):
   const pay = parsePay(form);
   if ("error" in pay) return { error: pay.error };
   // Without salary permission a manager can add the person but PF/ESIC stay off.
-  const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false, uanNumber: null, esicNumber: null };
+  const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false, uanNumber: null, esicNumber: null, holdSalary: false };
   if (await db.employee.findFirst({ where: { businessId: actor.businessId, code } })) return { error: "This employee code is already used" };
 
   const emp = await db.employee.create({
