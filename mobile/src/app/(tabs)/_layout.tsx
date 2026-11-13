@@ -39,7 +39,7 @@ function MoreSheet() {
         <Pressable accessible accessibilityLabel="Close menu" onPress={closeMore} style={{ position: "absolute", inset: 0 }} />
       </Animated.View>
       <Animated.View
-        entering={SlideInDown.springify().damping(22)}
+        entering={SlideInDown.duration(220)}
         exiting={SlideOutDown.duration(180)}
         style={{
           position: "absolute",
