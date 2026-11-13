@@ -1,0 +1,11 @@
+# Local-only: the real database lives on the shared Postgres server
+# (15.207.31.179), not in the compose `db` container. This override repoints
+# app + migrate at it. deploy.sh still starts the unused local `db`; harmless.
+# Not committed (holds no secrets itself, but is machine-specific).
+services:
+  app:
+    environment:
+      DATABASE_URL: ${HRMS_DATABASE_URL:?set HRMS_DATABASE_URL in .env.production}
+  migrate:
+    environment:
+      DATABASE_URL: ${HRMS_DATABASE_URL:?set HRMS_DATABASE_URL in .env.production}
