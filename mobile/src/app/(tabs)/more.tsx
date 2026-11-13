@@ -1,11 +1,11 @@
 import { router, type Href } from "expo-router";
 import { useState } from "react";
-import { Linking, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { BadgeCheck, CalendarRange, ChevronRight, Download, HandCoins, History, IndianRupee, LogOut, ScanFace, Settings, Smartphone, UserCog, type LucideIcon } from "lucide-react-native";
 import { Card, Muted, Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { C } from "@/lib/theme";
-import { checkForUpdate, installedVersion, useAppUpdate } from "@/lib/update";
+import { checkForUpdate, installedVersion, startUpdate, useAppUpdate } from "@/lib/update";
 import { useDialog } from "@/components/dialog";
 
 function Item({ icon: Icon, label, onPress, badge, danger }: { icon: LucideIcon; label: string; onPress: () => void; badge?: number; danger?: boolean }) {
@@ -77,12 +77,12 @@ export default function More() {
           label={update ? `Update to version ${update.name}` : checking ? "Checking for updates…" : "Check for updates"}
           badge={update ? 1 : undefined}
           onPress={async () => {
-            if (update) return void Linking.openURL(update.url);
+            if (update) return startUpdate(update);
             setChecking(true);
             const u = await checkForUpdate(true);
             setChecking(false);
             if (u) {
-              if (await dialog.confirm({ title: `New version ${u.name}`, message: "Download and install it now? Your login and data stay.", cancelText: "Later", confirmText: "Download" })) void Linking.openURL(u.url);
+              startUpdate(u);
             } else await dialog.notify({ title: "You have the latest version", message: `Version ${installedVersion.name}`, tone: "green" });
           }}
         />

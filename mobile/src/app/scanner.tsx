@@ -4,7 +4,7 @@ import { router, useIsFocused } from "expo-router";
 import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "lucide-react-native";
 import { Button } from "@/components/ui";
@@ -12,7 +12,7 @@ import { api, type ScanConfig } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCameraSession } from "@/lib/camera";
 import { capture } from "@/lib/photo";
-import { useAppUpdate } from "@/lib/update";
+import { startUpdate, useAppUpdate } from "@/lib/update";
 import { C } from "@/lib/theme";
 
 type Result = { ok: boolean; title: string; detail?: string };
@@ -176,7 +176,7 @@ export default function Scanner() {
                 <Text style={styles.actionText}>Manager / owner login</Text>
               </Pressable>
               {update ? (
-                <Pressable onPress={() => Linking.openURL(update.url)} hitSlop={8} style={[styles.action, { backgroundColor: C.green, borderColor: C.green }]} accessibilityRole="button">
+                <Pressable onPress={() => startUpdate(update)} hitSlop={8} style={[styles.action, { backgroundColor: C.green, borderColor: C.green }]} accessibilityRole="button">
                   <Download color={C.white} size={18} strokeWidth={1.75} />
                   <Text style={styles.actionText}>Update app ({update.name})</Text>
                 </Pressable>

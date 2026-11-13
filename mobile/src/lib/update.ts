@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import { useEffect, useState } from "react";
+import { Linking, Platform } from "react-native";
 import { API_URL } from "./api";
 
 export interface AppUpdate {
@@ -49,4 +50,71 @@ export function useAppUpdate() {
     };
   }, []);
   return update;
+}
+
+/* ───────── In-app download and install ─────────
+ * The APK is downloaded inside the app (from hrms.s-lab.dev/download) with a progress bar, then
+ * Android's installer opens on it. One shared state, so the pop-up, the scanner button and More
+ * all show the same progress. */
+
+export type InstallPhase = "idle" | "downloading" | "installing" | "error";
+export interface InstallState {
+  phase: InstallPhase;
+  progress: number; // 0..1
+  error: string | null;
+  /** Bumped to ask the update pop-up to show (e.g. after "Later" was pressed earlier). */
+  showToken: number;
+  /** The update being installed (set by startUpdate). */
+  target: AppUpdate | null;
+}
+
+let state: InstallState = { phase: "idle", progress: 0, error: null, showToken: 0, target: null };
+const listeners = new Set<(s: InstallState) => void>();
+function set(patch: Partial<InstallState>) {
+  state = { ...state, ...patch };
+  listeners.forEach((l) => l(state));
+}
+
+export function useInstallState() {
+  const [s, setS] = useState(state);
+  useEffect(() => {
+    listeners.add(setS);
+    return () => {
+      listeners.delete(setS);
+    };
+  }, []);
+  return s;
+}
+
+/** Shows the update pop-up and starts downloading right away. */
+export function startUpdate(update: AppUpdate) {
+  set({ showToken: state.showToken + 1, target: update });
+  void installUpdate(update);
+}
+
+export async function installUpdate(update: AppUpdate) {
+  if (state.phase === "downloading" || state.phase === "installing") return;
+  if (Platform.OS !== "android") {
+    await Linking.openURL(update.url);
+    return;
+  }
+  set({ phase: "downloading", progress: 0, error: null });
+  try {
+    const FS = await import("expo-file-system/legacy");
+    const IntentLauncher = await import("expo-intent-launcher");
+    const file = `${FS.cacheDirectory}s-lab-hrms-${update.name}.apk`;
+    await FS.deleteAsync(file, { idempotent: true });
+    const task = FS.createDownloadResumable(update.url, file, {}, (p) => {
+      if (p.totalBytesExpectedToWrite > 0) set({ progress: p.totalBytesWritten / p.totalBytesExpectedToWrite });
+    });
+    const res = await task.downloadAsync();
+    if (!res || res.status !== 200) throw new Error(`Download failed (${res?.status ?? "no answer"}). Try again.`);
+    set({ phase: "installing", progress: 1 });
+    const uri = await FS.getContentUriAsync(res.uri);
+    // FLAG_GRANT_READ_URI_PERMISSION so the installer can read the file.
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", { data: uri, flags: 1, type: "application/vnd.android.package-archive" });
+    set({ phase: "idle" });
+  } catch (e) {
+    set({ phase: "error", error: (e as Error).message || "Download failed. Check the internet and try again." });
+  }
 }

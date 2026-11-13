@@ -23,7 +23,8 @@ const config: ExpoConfig = {
       backgroundImage: "./assets/android-icon-background.png",
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
-    permissions: ["android.permission.CAMERA"],
+    // REQUEST_INSTALL_PACKAGES: the app downloads its own update and opens the installer.
+    permissions: ["android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES"],
     predictiveBackGestureEnabled: false,
   },
   plugins: [
