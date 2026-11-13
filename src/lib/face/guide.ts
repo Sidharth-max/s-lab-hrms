@@ -81,9 +81,8 @@ export interface Judgement {
 }
 
 /**
- * `mirrored` = the picture is mirrored like the selfie preview, so "face is on the left of the
- * image" means the person should move to their right... which on a mirrored preview also moves
- * the face to the right of the screen. Hints are worded for what the person sees on screen.
+ * Hints are worded for what the person sees on the (mirrored, selfie-style) preview: if their face
+ * sits on the left of the picture, "move a little to the right" brings it back to the centre.
  */
 export function judge(step: GuideStep, r: FaceReading, ref = 0): Judgement {
   const fail = (fix: FixCode, progress = 0): Judgement => ({ accept: false, fix, hint: FIX_TEXT[fix], progress });

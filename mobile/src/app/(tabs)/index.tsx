@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import { dateLabel, rs } from "@/lib/format";
 import { C, shadow, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
-import { FLOATING_NAV_SPACE, useWindowLayout } from "@/lib/layout";
+import { FLOATING_NAV_SPACE, RAIL_WIDTH, useWindowLayout } from "@/lib/layout";
 import { useLive } from "@/lib/live";
 import { useAuth } from "@/lib/auth";
 import { rememberNames } from "@/lib/names";
@@ -60,7 +60,7 @@ function PersonRow({ r, date, i }: { r: Dashboard["rows"][number]; date: string;
         <Avatar name={r.name} size={40} />
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }} numberOfLines={1}>{r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}</Text></Text>
-          <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={1}>
+          <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={2}>
             {r.site} · In <Text style={{ color: r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text> · Out{" "}
             <Text style={{ color: r.outAt ? C.ink.blue : r.inside ? C.ink.teal : C.muted, fontWeight: r.outAt || r.inside ? "600" : "400" }}>{r.outAt ?? (r.inside ? "inside" : "—")}</Text>
             {r.manual ? " · manual" : ""}
@@ -183,7 +183,7 @@ export default function Today() {
             <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 15 }}>{dateLabel(data.date)}</Text>
             <LiveDot light />
           </View>
-          <View style={{ flexDirection: layout.width >= 700 ? "row" : "column", gap: 16, alignItems: "flex-start" }}>
+          <View style={{ flexDirection: layout.width - RAIL_WIDTH >= 560 ? "row" : "column", gap: 16, alignItems: "flex-start" }}>
             {/* Left panel: attendance now + who is in */}
             <View style={{ flex: layout.foldLike ? 1 : 1.25, gap: 16, alignSelf: "stretch" }}>
               <Card style={{ borderRadius: 28, padding: 20, gap: 8, ...shadow(2) }}>
@@ -217,7 +217,7 @@ export default function Today() {
                   </View>
                   <Clock size={20} color={C.muted} />
                 </View>
-                <DotGauge value={rate} size={220} label={`${Math.round(rate * 100)}%`} sub={`${data.counts.present} present · ${data.counts.notIn} to come`} />
+                <DotGauge value={rate} size={Math.min(220, Math.round((layout.width - RAIL_WIDTH) / 2) - 64)} label={`${Math.round(rate * 100)}%`} sub={`${data.counts.present} present · ${data.counts.notIn} to come`} />
               </Card>
               {data.payroll ? <PayrollCard p={data.payroll} /> : null}
               <Alerts data={data} />

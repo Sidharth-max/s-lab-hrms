@@ -1,5 +1,7 @@
 import { cancelLeave, endLeave, scheduleLeave } from "@/app/actions/leaves";
 import { ActionForm } from "./ActionForm";
+import { PopupForm } from "./PopupForm";
+import { CalendarCheck } from "./icons";
 import { DateInput, Select } from "./controls";
 import type { LeaveRow } from "@/lib/leaves";
 import { formatDateKey, istDateKey } from "@/lib/time";
@@ -17,13 +19,10 @@ export function LeavePanel({ rows, people, employeeId, canEdit }: { rows: LeaveR
   return (
     <div className="flex flex-col gap-4">
       {canEdit && (
-        <details className="card" open={rows.length === 0 && !!employeeId}>
-          <summary className="flex cursor-pointer items-center justify-between gap-2 font-semibold">
-            Schedule leave
-            <span className="btn-primary !h-9">New leave</span>
-          </summary>
-          <p className="muted mt-2">Every working day in the range is marked as leave. If they come back early and scan in, the leave ends the day before by itself.</p>
-          <ActionForm action={scheduleLeave} className="mt-4 grid gap-3 @container @md:grid-cols-2" submitLabel="Schedule leave" resetOnSuccess>
+        <div className="flex">
+          <PopupForm label={<><CalendarCheck size={16} aria-hidden />Schedule leave</>} title="Schedule leave">
+          <p className="muted">Every working day in the range is marked as leave. If they come back early and scan in, the leave ends the day before by itself.</p>
+          <ActionForm action={scheduleLeave} className="grid gap-3 @container @md:grid-cols-2" submitLabel="Schedule leave" resetOnSuccess>
             {employeeId ? (
               <input type="hidden" name="employeeId" value={employeeId} />
             ) : (
@@ -40,7 +39,8 @@ export function LeavePanel({ rows, people, employeeId, canEdit }: { rows: LeaveR
             </div>
             <div><label className="label">Reason (optional)</label><input name="reason" className="input" placeholder="e.g. family function…" /></div>
           </ActionForm>
-        </details>
+          </PopupForm>
+        </div>
       )}
       <div className="card overflow-x-auto !p-0">
         <table className="table table-cards">

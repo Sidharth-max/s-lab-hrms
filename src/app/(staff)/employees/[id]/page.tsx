@@ -124,7 +124,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           action={setEmployeeLeft}
           submitLabel={emp.active ? "Archive employee" : "Restore employee"}
           submitClass={emp.active ? "btn-danger" : "btn-primary"}
-          confirm={emp.active ? `Archive this employee? Their face will be deleted and planned leave ends. Attendance and salary history are kept.${h.balance !== 0 ? ` Hisaab: ${balanceText(h.balance)}.` : ""}` : undefined}
+          confirm={emp.active ? `Archive this employee? Their face will be deleted and planned leave ends. Attendance and salary history are kept.${h.balance !== 0 ? ` Salary ledger: ${balanceText(h.balance)}.` : ""}` : undefined}
           className="flex flex-col gap-3"
         >
           <input type="hidden" name="id" value={emp.id} />
@@ -138,7 +138,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
 
   const tabs = [
     { id: "details", label: "Overview", content: details },
-    { id: "hisaab", label: "Hisaab", content: hisaab },
+    { id: "ledger", label: "Ledger", content: hisaab },
     { id: "face", label: "Face", content: face },
     { id: "leave", label: "Leave", content: <LeavePanel rows={leaves} employeeId={emp.id} canEdit={can(actor, "attendance.edit") && emp.active} /> },
     ...(account ? [{ id: "account", label: "Access & archive", content: account }] : []),
@@ -195,7 +195,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           {"Employee added. Now enroll the face in the Face tab."}
         </div>
       )}
-      <Tabs tabs={tabs} initial={sp.advance || sp.tab === "hisaab" ? "hisaab" : sp.created ? "face" : undefined} />
+      <Tabs tabs={tabs} initial={sp.advance || sp.tab === "ledger" || sp.tab === "hisaab" ? "ledger" : sp.created ? "face" : undefined} />
     </div>
   );
 }

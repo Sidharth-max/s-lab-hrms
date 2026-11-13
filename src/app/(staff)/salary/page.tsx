@@ -1,71 +1,84 @@
 import Link from "next/link";
 import { ShowTabs } from "@/components/ShowTabs";
+import { ArrowDownLeft, ArrowUpRight, Download } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { hisaabFor } from "@/lib/ledger";
 import { formatRs } from "@/lib/money";
-import { employeeScope } from "@/lib/scope";
-import { parseShow, showWhere } from "@/lib/show-filter";
+import { buildSalaryView } from "@/lib/salary-view";
+import { parseShow } from "@/lib/show-filter";
 import { formatDateKey } from "@/lib/time";
 
-// Everyone's salary hisaab: one running balance per person, no salary months.
+// Salary: who needs to be paid and how much. Same data model and the same sections as the app's
+// Salary tab (src/lib/salary-view.ts): total to pay, paid / advances this month, then one row per
+// person with earned (violet), advances (orange), paid (blue) and the balance (green, red if owed).
 export default async function SalaryPage({ searchParams }: PageProps<"/salary">) {
   const actor = await requireStaff();
   const sp = await searchParams;
   const show = parseShow(sp.show);
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
-  const employees = await db.employee.findMany({
-    where: { ...employeeScope(actor), ...showWhere(show), ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { code: { contains: q, mode: "insensitive" } }] } : {}) },
-    orderBy: { name: "asc" },
-  });
-  const all = await hisaabFor(actor.businessId, employees);
-  const rows = employees.map((e) => ({ e, h: all.get(e.id)! }));
-  const toPay = rows.reduce((s, r) => s + Math.max(0, r.h.balance), 0);
-  const owed = rows.reduce((s, r) => s + Math.max(0, -r.h.balance), 0);
+  const v = await buildSalaryView(actor, show, q);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="h1">Salary</h1>
-          <p className="muted">One running hisaab per person: salary earned since joining, minus advances and salary paid. Open a person to pay or clear it.</p>
+          <p className="muted">
+            <b className="ink-violet">Earned</b> minus <b className="ink-orange">advances</b> and <b className="ink-blue">salary paid</b> = <b className="ink-green">to pay</b>. Open a person to pay them.
+          </p>
         </div>
-        <a className="btn-secondary" href={`/salary/csv?show=${show}`}>Download CSV</a>
+        <a className="btn-secondary" href={`/salary/csv?show=${show}`}><Download size={16} aria-hidden />Download CSV</a>
       </div>
-      <div className="grid grid-cols-2 gap-2 @lg:grid-cols-3">
-        <div className="card !p-3"><div className="text-xs text-[var(--muted)]">Total to pay</div><div className="mt-0.5 text-lg font-semibold tabular-nums">{formatRs(toPay)}</div></div>
-        <div className="card !p-3"><div className="text-xs text-[var(--muted)]">Owed by employees (advance more than salary)</div><div className={`mt-0.5 text-lg font-semibold tabular-nums ${owed ? "text-[var(--red)]" : ""}`}>{formatRs(owed)}</div></div>
-      </div>
+
+      <section className="card rise grid gap-4 @lg:grid-cols-[1.3fr_1fr_1fr] @lg:items-center">
+        <div>
+          <div className="text-sm font-semibold text-[var(--muted)]">Total to pay now</div>
+          <div className="ink-green text-4xl font-bold tracking-tight tabular-nums">{formatRs(v.toPay)}</div>
+          <div className="muted text-sm">
+            {v.due} {v.due === 1 ? "person is" : "people are"} due{v.owed > 0 && <> · <b className="ink-red">{formatRs(v.owed)}</b> owed by staff</>}
+          </div>
+        </div>
+        <div className="rounded-2xl p-3" style={{ background: "var(--tint-blue)" }}>
+          <div className="ink-blue flex items-center gap-1.5 text-xs font-semibold"><ArrowUpRight size={15} aria-hidden />Salary paid · this month</div>
+          <div className="ink-blue text-lg font-bold tabular-nums">{formatRs(v.paidThisMonth)}</div>
+        </div>
+        <div className="rounded-2xl p-3" style={{ background: "var(--tint-orange)" }}>
+          <div className="ink-orange flex items-center gap-1.5 text-xs font-semibold"><ArrowDownLeft size={15} aria-hidden />Advances · this month</div>
+          <div className="ink-orange text-lg font-bold tabular-nums">{formatRs(v.advancesThisMonth)}</div>
+        </div>
+      </section>
+
       <div className="flex flex-wrap items-center gap-2">
         <ShowTabs show={show} params={{ q: q || undefined }} />
-        <form className="flex min-w-0 flex-1 gap-2">
+        {/* Desktop filter. On phones, search lives in the round button next to the bottom bar. */}
+        <form className="hidden min-w-0 flex-1 gap-2 sm:flex">
           {show !== "active" && <input type="hidden" name="show" value={show} />}
           <input name="q" defaultValue={q} className="input min-w-0 flex-1" placeholder="Search name or code…" aria-label="Search employee" />
         </form>
       </div>
+
       <div className="card overflow-x-auto !p-0">
         <table className="table table-cards">
           <thead>
-            <tr><th>Employee</th><th>Salary earned</th><th>Advances</th><th>Paid</th><th>Last paid</th><th>Balance</th></tr>
+            <tr><th>Employee</th><th>Earned</th><th>Advances</th><th>Paid</th><th>Last paid</th><th>Balance</th></tr>
           </thead>
-          <tbody>
-            {rows.map(({ e, h }) => (
-              <tr key={e.id}>
+          <tbody className="rise-list">
+            {v.rows.map((r) => (
+              <tr key={r.employeeId}>
                 <td className="card-title">
-                  <Link className="font-medium text-[var(--text)] hover:underline" href={`/employees/${e.id}?tab=hisaab`}>{e.name}</Link>{" "}
-                  <span className="muted text-xs">{e.code}</span>
-                  {!e.active && <span className="badge badge-neutral ml-2">Archived</span>}
+                  <Link className="font-medium text-[var(--text)] hover:underline" href={`/employees/${r.employeeId}?tab=ledger`}>{r.name}</Link>{" "}
+                  <span className="muted text-xs">{r.code}</span>
+                  {!r.active && <span className="badge badge-neutral ml-2">Archived</span>}
                 </td>
-                <td data-label="Salary earned" className="tabular-nums">{formatRs(h.earned + h.extras)}</td>
-                <td data-label="Advances" className="tabular-nums">{formatRs(h.advances)}</td>
-                <td data-label="Paid" className="tabular-nums">{formatRs(h.payments)}</td>
-                <td data-label="Last paid">{h.lastPaidOn ? formatDateKey(h.lastPaidOn) : "—"}</td>
-                <td data-label="Balance" className={`font-semibold tabular-nums ${h.balance < 0 ? "text-[var(--red)]" : ""}`}>
-                  {h.balance === 0 ? <span className="badge badge-green">Clear</span> : h.balance < 0 ? `Owes ${formatRs(-h.balance)}` : formatRs(h.balance)}
+                <td data-label="Earned" className="ink-violet font-semibold tabular-nums">{formatRs(r.earned)}</td>
+                <td data-label="Advances" className="ink-orange font-semibold tabular-nums">{formatRs(r.advances)}</td>
+                <td data-label="Paid" className="ink-blue font-semibold tabular-nums">{formatRs(r.payments)}</td>
+                <td data-label="Last paid">{r.lastPaidOn ? formatDateKey(r.lastPaidOn) : "Never"}</td>
+                <td data-label="Balance" className={`font-bold tabular-nums ${r.balance < 0 ? "ink-red" : "ink-green"}`}>
+                  {r.balance === 0 ? <span className="badge badge-green">Clear</span> : r.balance < 0 ? `Owes ${formatRs(-r.balance)}` : <Link href={`/employees/${r.employeeId}?tab=ledger`} className="hover:underline">{formatRs(r.balance)} to pay</Link>}
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={6} className="muted">No employees.</td></tr>}
+            {v.rows.length === 0 && <tr><td colSpan={6} className="muted">No employees.</td></tr>}
           </tbody>
         </table>
       </div>

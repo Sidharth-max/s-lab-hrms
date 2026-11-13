@@ -155,7 +155,7 @@ export async function describeHistory(businessId: string, logs: AuditLog[]): Pro
       case "leave.cancel":
         return r("attendance", `Cancelled the leave of ${subject}`, `${date(d.from)} to ${date(d.to)}`);
       case "salary.pay":
-        return r("salary", `Paid salary of ${formatRs(n(d.amount))} to ${subject}`, join(s(d.mode), d.paidOn ? `on ${date(d.paidOn)}` : null, d.cleared ? "hisaab cleared" : null));
+        return r("salary", `Paid salary of ${formatRs(n(d.amount))} to ${subject}`, join(s(d.mode), d.paidOn ? `on ${date(d.paidOn)}` : null, d.cleared ? "ledger settled" : null));
       case "salary.void":
         return r("salary", `Removed a salary payment of ${formatRs(n(d.amount))} to ${subject}`, d.paidOn ? `Was paid on ${date(d.paidOn)}` : null);
       case "salary.adjustment": {

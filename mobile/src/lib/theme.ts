@@ -61,7 +61,7 @@ const light = {
   brand: "#4f46e5",
   brandSoft: "#eef0ff",
   brandInk: "#4338ca",
-  gradient: ["#5b4cf0", "#4f7cff", "#38bdf8"] as [string, string, string],
+  gradient: ["#6a1bff", "#4a3cff", "#1f6bff"] as [string, string, string],
   glass: "rgba(255,255,255,0.18)",
   // Text inks (amounts and labels). Paired soft tints for the small chips behind icons.
   ink: {
@@ -122,7 +122,7 @@ const dark: typeof light = {
   brand: "#8b8cff",
   brandSoft: "#1f2140",
   brandInk: "#a5b4fc",
-  gradient: ["#3b2fb8", "#2f5fd6", "#1d8fc7"] as [string, string, string],
+  gradient: ["#5214d6", "#3a2ee0", "#1856e0"] as [string, string, string],
   glass: "rgba(255,255,255,0.12)",
   ink: {
     green: "#4ade80",

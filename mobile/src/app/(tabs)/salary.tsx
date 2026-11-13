@@ -53,11 +53,11 @@ export default function SalaryScreen() {
               <Text style={{ fontSize: 13, color: C.muted }}>{data.due} {data.due === 1 ? "person is" : "people are"} due{data.owed > 0 ? <Text> · <Text style={{ color: C.ink.red, fontWeight: "600" }}>{rs(data.owed)}</Text> owed by staff</Text> : null}</Text>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
                 <View style={{ flex: 1, backgroundColor: C.tint.blue, borderRadius: 16, padding: 12, gap: 2 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><ArrowUpRight size={15} color={C.ink.blue} /><Text style={{ fontSize: 12, fontWeight: "600", color: C.ink.blue }}>Salary paid · this month</Text></View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><ArrowUpRight size={15} color={C.ink.blue} /><Text style={{ fontSize: 12, fontWeight: "600", color: C.ink.blue }}>Paid this month</Text></View>
                   <Text style={{ fontSize: 17, fontWeight: "700", color: C.ink.blue, fontVariant: ["tabular-nums"] }}>{rs(data.paidThisMonth)}</Text>
                 </View>
                 <View style={{ flex: 1, backgroundColor: C.tint.orange, borderRadius: 16, padding: 12, gap: 2 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><ArrowDownLeft size={15} color={C.ink.orange} /><Text style={{ fontSize: 12, fontWeight: "600", color: C.ink.orange }}>Advances · this month</Text></View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><ArrowDownLeft size={15} color={C.ink.orange} /><Text style={{ fontSize: 12, fontWeight: "600", color: C.ink.orange }}>Advances this month</Text></View>
                   <Text style={{ fontSize: 17, fontWeight: "700", color: C.ink.orange, fontVariant: ["tabular-nums"] }}>{rs(data.advancesThisMonth)}</Text>
                 </View>
               </View>

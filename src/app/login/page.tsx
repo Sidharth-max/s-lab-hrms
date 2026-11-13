@@ -24,7 +24,7 @@ export default async function LoginPage() {
             {"Back to face scan"} ({device.name})
           </Link>
         )}
-        <a href="/download" className="link">
+        <a href="/get-app" className="link">
           {"Download Android app"}
         </a>
       </div>

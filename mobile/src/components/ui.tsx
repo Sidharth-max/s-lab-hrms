@@ -235,7 +235,7 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
 /** Round floating action button, bottom right, in the thumb zone (e.g. add employee). */
 export function Fab({ icon, label, onPress, lift = 0, extended }: { icon: React.ReactNode; label: string; onPress: () => void; lift?: number; extended?: boolean }) {
   return (
-    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.94} style={[styles.fab, extended && { width: undefined, paddingHorizontal: 20, flexDirection: "row", gap: 8 }, lift ? { bottom: 20 + lift } : null]}>
+    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.94} style={[styles.fab, extended && { width: "auto", minWidth: 58, paddingHorizontal: 20, flexDirection: "row", gap: 8 }, lift ? { bottom: 20 + lift } : null]}>
       {icon}
       {extended ? <Text style={{ color: C.headText, fontWeight: "600", fontSize: 15 }}>{label}</Text> : null}
     </PressScale>

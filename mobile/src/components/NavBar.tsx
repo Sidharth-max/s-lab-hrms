@@ -48,8 +48,8 @@ function Dot({ n }: { n?: number }) {
  * Phones: a floating pill bar in the thumb zone. The open tab grows into a tinted pill with its
  * label; the others are icons. The round Search button sits right next to it, so search is
  * reachable with one thumb. More opens a bottom sheet (it is not a page, so Back just closes it).
- * Open foldable / tablet: the same items as a vertical navigation rail (Samsung: "use a navigation
- * rail on Z Fold in portrait"), on the right edge as in the dual-screen reference (image 5).
+ * Open foldable / tablet: the same items as a vertical navigation rail on the left (leading) edge
+ * (Samsung: "use a navigation rail on Z Fold in portrait"; Material: rail at the leading edge).
  */
 export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: BottomTabBarProps & { rail: boolean }) {
   const insets = useSafeAreaInsets();
@@ -73,7 +73,7 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
 
   if (rail) {
     return (
-      <View style={{ width: RAIL_WIDTH, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, backgroundColor: C.card, borderLeftWidth: 1, borderLeftColor: C.hairline, alignItems: "center", gap: 6 }}>
+      <View style={{ width: RAIL_WIDTH, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, backgroundColor: C.card, borderRightWidth: 1, borderRightColor: C.hairline, alignItems: "center", gap: 6 }}>
         <PressScale onPress={openSearch} accessibilityRole="button" accessibilityLabel="Search" style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: C.head, alignItems: "center", justifyContent: "center", marginBottom: 18, ...shadow(2) }}>
           <Search size={24} color={C.headText} />
         </PressScale>
@@ -99,10 +99,10 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
 
   if (keyboard) return null;
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: Math.max(insets.bottom, 10) + 8, flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <View style={{ flex: 1, height: 64, borderRadius: 32, backgroundColor: C.card, borderWidth: 1, borderColor: C.hairline, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, ...shadow(3) }}>
+    <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: Math.max(insets.bottom, 10) + 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <View style={{ flex: 1, maxWidth: 460, height: 64, borderRadius: 32, backgroundColor: C.card, borderWidth: 1, borderColor: C.hairline, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, ...shadow(3) }}>
         {items.map(({ route, focused, t, Icon }) => (
-          <Animated.View key={route.key} layout={LAYOUT} style={{ flexGrow: focused ? 1 : 0 }}>
+          <Animated.View key={route.key} layout={LAYOUT} style={{ flexGrow: focused ? 1 : 0, maxWidth: focused ? 170 : 52 }}>
             <Pressable
               onPress={() => press(route.key, focused)}
               accessibilityRole="tab"

@@ -14,10 +14,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  themeColor: "#f3f4f7",
 };
 
-const THEME_SCRIPT = `(function(){try{var p=localStorage.getItem("hrms.theme");var d=p==="dark"||(p!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";if(d){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#0a0a0a")}}catch(e){}})();`;
+const THEME_SCRIPT = `(function(){try{var p=localStorage.getItem("hrms.theme");var d=p==="dark"||(p!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";if(d){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content","#0b0c10")}}catch(e){}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -23,7 +23,9 @@ ENV APP_VERSION=$APP_VERSION
 RUN groupadd -g 1001 app && useradd -u 1001 -g app -m app
 COPY --from=builder --chown=app:app /app/.next/standalone ./
 COPY --from=builder --chown=app:app /app/.next/static ./.next/static
-RUN mkdir -p ./public /data/apk && chown app:app ./public /data/apk
+# public/ holds the app icons used by the download page (standalone output does not include it).
+COPY --from=builder --chown=app:app /app/public ./public
+RUN mkdir -p /data/apk && chown app:app /data/apk
 USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

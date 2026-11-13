@@ -19,7 +19,6 @@
     "@aws-amplify/ui-react-liveness": "^3.7.0",
     "@aws-sdk/client-rekognition": "^3.1167.0",
     "@aws-sdk/client-sts": "^3.1167.0",
-    "@phosphor-icons/react": "^2.1.10",
     "@prisma/client": "^6.19.3",
     "@tabler/icons-react": "3.49.0",
     "aws-amplify": "^6.22.2",

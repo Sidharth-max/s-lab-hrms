@@ -25,7 +25,7 @@ export default function TabsLayout() {
         backBehavior="firstRoute"
         tabBar={(props) => <AppTabBar {...props} rail={layout.rail} />}
         screenOptions={{
-          tabBarPosition: layout.rail ? "right" : "bottom",
+          tabBarPosition: layout.rail ? "left" : "bottom",
           animation: "shift",
           headerStyle: { backgroundColor: C.bg },
           headerBackground: () => <View style={{ flex: 1, backgroundColor: C.bg }} />,

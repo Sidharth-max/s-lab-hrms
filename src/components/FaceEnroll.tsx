@@ -3,19 +3,27 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { enrollFace } from "@/app/actions/employees";
 import { Camera, type CameraHandle } from "./Camera";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CircleCheck, ScanFace, type IconType } from "./icons";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CircleCheckFilled, ScanFace, type IconType } from "./icons";
 
-// Guided face scan: one continuous session. The page shows where to look (straight, right, left,
-// up, down) and takes each picture by itself once the head is turned the right way (checked on
-// the server). Nobody presses a shutter button.
+// Guided, direction-aware face scan (same rules as the app). Each frame goes to the server's face
+// guide (src/lib/face/guide.ts), which checks the face is alone, close enough, centred, level, and
+// turned the way the step asks. A photo is kept only after two such frames in a row that barely
+// differ (stable), so a face that drifts to the side is never saved.
 const STEPS: { key: string; text: string; Icon: IconType }[] = [
   { key: "straight", text: "Look straight at the camera", Icon: ScanFace },
-  { key: "side1", text: "Slowly turn your head to the right", Icon: ArrowRight },
-  { key: "side2", text: "Now turn your head to the left", Icon: ArrowLeft },
+  { key: "side1", text: "Slowly turn your head to the left", Icon: ArrowLeft },
+  { key: "side2", text: "Now turn your head to the right", Icon: ArrowRight },
   { key: "vert1", text: "Look up a little", Icon: ArrowUp },
   { key: "vert2", text: "Look down a little", Icon: ArrowDown },
 ];
-const MAX_TRIES = 9;
+const MAX_TRIES = 40; // about 20 s per step
+
+type Reading = { yaw: number; pitch: number; box: { left: number; top: number; width: number; height: number } };
+function stable(a: Reading, b: Reading) {
+  const ca = [a.box.left + a.box.width / 2, a.box.top + a.box.height / 2];
+  const cb = [b.box.left + b.box.width / 2, b.box.top + b.box.height / 2];
+  return Math.abs(a.yaw - b.yaw) < 6 && Math.abs(a.pitch - b.pitch) < 6 && Math.hypot(ca[0] - cb[0], ca[1] - cb[1]) < 0.05;
+}
 
 export function FaceEnroll({ employeeId, enrolled }: { employeeId: string; enrolled: boolean }) {
   const [open, setOpen] = useState(false);
@@ -40,22 +48,31 @@ export function FaceEnroll({ employeeId, enrolled }: { employeeId: string; enrol
       setStep(i);
       setHint(null);
       let accepted = false;
+      let prev: Reading | null = null;
       for (let t = 0; t < MAX_TRIES && !accepted; t++) {
-        await new Promise((r) => setTimeout(r, t === 0 ? 900 : 450));
+        await new Promise((r) => setTimeout(r, t === 0 ? 900 : 350));
         if (run.current !== me) return;
         const image = cam.current?.capture();
         if (!image) continue;
         const s = STEPS[i].key;
         try {
           const res = await fetch("/api/m/face/pose", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image, step: s, ref: s === "side2" ? signs.side1 : s === "vert2" ? signs.vert1 : 0 }) });
-          const r = (await res.json()) as { accept?: boolean; hint?: string; sign?: number; error?: string };
+          const r = (await res.json()) as { accept?: boolean; verified?: boolean; hint?: string; sign?: number; error?: string; face?: Reading | null };
           if (run.current !== me) return;
-          if (r.accept) {
+          // Not verified = the server cannot read faces (test mode): keep the frame as before.
+          const ok = r.accept && (r.verified === false || (r.face && prev && stable(prev, r.face)));
+          if (ok) {
             if (r.sign) signs[s] = r.sign;
             kept.push(image);
             setPhotos([...kept]);
             accepted = true;
-          } else setHint(r.hint ?? r.error ?? "Hold still");
+          } else if (r.accept && r.face) {
+            prev = r.face;
+            setHint("Hold still…");
+          } else {
+            prev = null;
+            setHint(r.hint ?? r.error ?? "Adjust your position");
+          }
         } catch {
           setHint("No connection. Trying again…");
         }
@@ -103,7 +120,7 @@ export function FaceEnroll({ employeeId, enrolled }: { employeeId: string; enrol
             <Camera ref={cam} className="aspect-[3/4] w-full" />
             {phase === "scanning" && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 bg-black/55 p-4 text-center text-white" aria-live="polite">
-                <Current.Icon size={40} weight="bold" aria-hidden />
+                <Current.Icon size={40} stroke={2.4} aria-hidden />
                 <p className="text-lg font-semibold">{Current.text}</p>
                 {hint && <p className="text-sm text-white/80">{hint}</p>}
               </div>
@@ -127,7 +144,7 @@ export function FaceEnroll({ employeeId, enrolled }: { employeeId: string; enrol
       ) : (
         <>
           <div className="flex flex-col items-center gap-1 py-2 text-center">
-            <CircleCheck size={48} weight="fill" className="text-[var(--green)]" aria-hidden />
+            <CircleCheckFilled size={48} className="text-[var(--green)]" aria-hidden />
             <p className="font-semibold">Scan complete</p>
             <p className="muted">{photos.length} of {STEPS.length} angles captured</p>
           </div>

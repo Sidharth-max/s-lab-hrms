@@ -14,12 +14,13 @@ const config: ExpoConfig = {
   icon: "./assets/icon.png",
   // Follows the phone's light / dark setting (the app also has its own choice in More).
   userInterfaceStyle: "automatic",
-  backgroundColor: "#ffffff",
+  backgroundColor: "#f3f4f7",
   android: {
     package: "dev.slab.hrms",
     versionCode,
+    // Icon: face-scan frame with a check mark on the indigo-to-blue brand gradient (design/icon.svg).
     adaptiveIcon: {
-      backgroundColor: "#171717",
+      backgroundColor: "#4a3cff",
       foregroundImage: "./assets/android-icon-foreground.png",
       backgroundImage: "./assets/android-icon-background.png",
       monochromeImage: "./assets/android-icon-monochrome.png",
@@ -33,6 +34,16 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/splash-icon.png",
+        imageWidth: 180,
+        resizeMode: "contain",
+        backgroundColor: "#f3f4f7",
+        dark: { image: "./assets/splash-icon.png", backgroundColor: "#0b0c10" },
+      },
+    ],
     "expo-secure-store",
     "expo-system-ui",
     [
