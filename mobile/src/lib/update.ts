@@ -23,7 +23,8 @@ export function checkForUpdate(force = false): Promise<AppUpdate | null> {
     pending = fetch(`${API_URL}/api/app-version`, { headers: { "Cache-Control": "no-cache" } })
       .then((r) => r.json())
       .then((d: { latest?: { versionCode: number; versionName: string } | null; downloadUrl?: string; apkUrl?: string }) => {
-        const url = d.apkUrl ?? d.downloadUrl;
+        // The website serves the APK itself (hrms.s-lab.dev/download), so phones do not depend on GitHub.
+        const url = d.downloadUrl ?? d.apkUrl;
         return d.latest && url && d.latest.versionCode > installedVersion.code ? { name: d.latest.versionName, url } : null;
       })
       .catch(() => {
