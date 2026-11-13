@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { BackHandler, Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/Text";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +19,16 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
-
+  // On a face-scanner device the login page opens over the scanner. Hardware back
+  // should return to the scan screen, not pop to a dead screen below.
+  useEffect(() => {
+    if (!scannerMode) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      router.replace("/scanner");
+      return true;
+    });
+    return () => sub.remove();
+  }, [scannerMode]);
   async function sendCode() {
     setBusy(true);
     setError(null);
