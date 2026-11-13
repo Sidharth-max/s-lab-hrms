@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { dateLabel, rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
+import { FLOATING_NAV_SPACE } from "@/lib/layout";
 
 interface Row { employeeId: string; name: string; code: string; active: boolean; earned: number; advances: number; payments: number; balance: number; lastPaidOn: string | null }
 
@@ -29,7 +30,7 @@ export default function SalaryScreen() {
         data={rows}
         keyExtractor={(r) => r.employeeId}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
-        contentContainerStyle={{ padding: 16, gap: 10 }}
+        contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 96 + FLOATING_NAV_SPACE }}
         ListHeaderComponent={
           <View style={{ gap: 10 }}>
             <Card>
