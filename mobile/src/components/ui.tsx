@@ -6,7 +6,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, isDark, R, shadow, type Ink } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 import { FLOATING_NAV_SPACE } from "@/lib/layout";
-import { CountUp, NOTICE_IN, NOTICE_OUT, PressScale, SkeletonList, SMOOTH_LAYOUT, StaggerScope, useRiseIn } from "@/lib/motion";
+import { CountUp, NOTICE_IN, PressScale, SkeletonList, StaggerScope, useRiseIn } from "@/lib/motion";
 import Reanimated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { GradientFill } from "./Viz";
 import { BlurFrame, useHeaderPad } from "./BlurFrame";
@@ -70,10 +70,13 @@ export function refreshProps(refreshing: boolean, onRefresh: () => void) {
   };
 }
 
-/** Card: rises in when the page opens (one after another), and slides smoothly when things above it change. */
+/**
+ * Card: rises in when the page opens (one after another). No layout (height) animation: on Android a
+ * layout transition inside a scrolling page reset the scroll to the top on every edit (shift editor).
+ */
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   const enter = useRiseIn();
-  return <Reanimated.View entering={enter} layout={SMOOTH_LAYOUT} style={[styles.card, style]}>{children}</Reanimated.View>;
+  return <Reanimated.View entering={enter} style={[styles.card, style]}>{children}</Reanimated.View>;
 }
 
 export function H1({ children }: { children: React.ReactNode }) {
@@ -396,7 +399,7 @@ export function Notice({ text, tone = "neutral" }: { text: string; tone?: "neutr
     green: { bg: C.greenSoft, fg: C.greenInk, border: C.greenLine },
   }[tone];
   return (
-    <Reanimated.View entering={NOTICE_IN} exiting={NOTICE_OUT} layout={SMOOTH_LAYOUT} style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]} accessibilityLiveRegion="polite">
+    <Reanimated.View entering={NOTICE_IN} style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]} accessibilityLiveRegion="polite">
       <Text style={{ color: map.fg, fontSize: 14, lineHeight: 20 }}>{text}</Text>
     </Reanimated.View>
   );

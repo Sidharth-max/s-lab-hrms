@@ -223,5 +223,8 @@ export const NOTICE_OUT = FadeOut.duration(160).reduceMotion(ReduceMotion.System
 export const SWAP_IN = FadeIn.duration(220).reduceMotion(ReduceMotion.System);
 /** Sticky bottom bar slides up into place. */
 export const BAR_IN = SlideInDown.duration(320).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
-/** Sizes animate smoothly when content above or inside changes (sections opening, notices appearing). */
+/**
+ * Sizes animate smoothly when content changes. Not for views inside a scrolling page on Android
+ * (it reset the scroll position to the top); fine for fixed bars.
+ */
 export const SMOOTH_LAYOUT = LinearTransition.duration(220).reduceMotion(ReduceMotion.System);
