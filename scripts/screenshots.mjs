@@ -171,7 +171,7 @@ async function appRun(browser, d, device, theme, tokens) {
     } catch (e) {
       errors.push(`app ${device} ${theme} ${name}: ${String(e.message).split("\n")[0]}`);
     }
-    await ctx.close();
+    await ctx.close().catch(() => {});
     done++;
   }
   console.log(`done app ${device} ${theme}`);
@@ -216,7 +216,7 @@ async function webRun(browser, d, device, theme, states) {
     } catch (e) {
       errors.push(`web ${device} ${theme} ${name}: ${String(e.message).split("\n")[0]}`);
     }
-    await ctx.close();
+    await ctx.close().catch(() => {});
     done++;
   }
   console.log(`done website ${device} ${theme}`);
