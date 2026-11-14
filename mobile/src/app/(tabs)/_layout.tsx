@@ -7,6 +7,7 @@ import { useWindowLayout } from "@/lib/layout";
 import { AppTabBar } from "@/components/NavBar";
 import { MoreSheet } from "@/components/MoreSheet";
 import { SearchSheet } from "@/components/SearchSheet";
+import { TabFade } from "@/lib/motion";
 
 /**
  * Main tabs. Back behaviour:
@@ -23,10 +24,12 @@ export default function TabsLayout() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Tabs
         backBehavior="firstRoute"
+        // No cross-fade (it overlapped both tabs); the opened tab fades in by itself.
+        screenLayout={({ children, navigation }) => <TabFade navigation={navigation}>{children}</TabFade>}
         tabBar={(props) => <AppTabBar {...props} rail={layout.rail} />}
         screenOptions={{
           tabBarPosition: layout.rail ? "left" : "bottom",
-          animation: "shift",
+          animation: "none",
           // Hidden tabs do not re-render on live updates (keeps the open tab smooth).
           freezeOnBlur: true,
           // Transparent header: the list scrolls underneath and BlurFrame frosts the header + status bar.

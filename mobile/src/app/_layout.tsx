@@ -43,6 +43,8 @@ function RootStack() {
         headerTintColor: C.text,
         // Bold title on the page background, like the tab screens (no separate white bar).
         headerTitleStyle: { fontFamily: FONT.bold, fontSize: 20, color: C.text },
+        // Page title in the middle of the header, between Back and the screen's own button (e.g. Edit).
+        headerTitleAlign: "center",
         headerShadowVisible: false,
         contentStyle: { backgroundColor: C.bg },
         // Smooth slide in from the right, the page behind sliding a little (native, on the UI thread).

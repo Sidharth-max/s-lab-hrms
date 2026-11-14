@@ -228,3 +228,21 @@ export const BAR_IN = SlideInDown.duration(320).easing(EASE_OUT).reduceMotion(Re
  * (it reset the scroll position to the top); fine for fixed bars.
  */
 export const SMOOTH_LAYOUT = LinearTransition.duration(220).reduceMotion(ReduceMotion.System);
+
+/**
+ * Tab switch: the tab you open fades in on its own (the old one is simply gone). The navigator's
+ * cross-fade drew both tabs on top of each other for a moment, which looked like dark grey smears.
+ */
+export function TabFade({ navigation, children }: { navigation: { addListener: (e: "focus", cb: () => void) => () => void }; children: React.ReactNode }) {
+  const o = useSharedValue(1);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (reduce) return;
+    return navigation.addListener("focus", () => {
+      o.set(0.35);
+      o.set(withTiming(1, { duration: 170, easing: Easing.out(Easing.quad) }));
+    });
+  }, [navigation, o, reduce]);
+  const a = useAnimatedStyle(() => ({ opacity: o.value }));
+  return <Animated.View style={[{ flex: 1, backgroundColor: C.bg }, a]}>{children}</Animated.View>;
+}

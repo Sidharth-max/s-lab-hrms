@@ -171,7 +171,7 @@ export function LedgerActions({ h, can, active, name, onOpen }: { h: Hisaab; can
   // Narrow places (a Fold's detail panel in portrait): Pay gets its own full-width row so its amount
   // and "Advance" are never cut off.
   const [width, setWidth] = useState(0);
-  const narrow = width > 0 && width < 400;
+  const narrow = width > 0 && width < 330;
   const pay = can.pay && h.balance > 0 ? (
     <View style={{ flex: narrow ? undefined : 1.4, minWidth: 0 }}>
       <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color="#ffffff" />} onPress={() => onOpen("pay")} />
