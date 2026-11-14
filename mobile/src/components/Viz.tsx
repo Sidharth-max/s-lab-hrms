@@ -1,22 +1,37 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { View, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { Text } from "./Text";
 import { C, type Ink } from "@/lib/theme";
 
-/** Brand gradient behind hero areas (react-native-svg, no extra native module). */
+/**
+ * Brand gradient behind hero areas (react-native-svg, no extra native module).
+ * The SVG is drawn at the measured size of its box, not "100%": on Android a percentage-sized SVG
+ * kept its first size after unfolding / rotating the Fold, so the purple stopped short of the
+ * card's right edge. onLayout fires on every size change and the gradient is redrawn to fit.
+ */
 export function GradientFill({ colors = C.gradient, style, angle = "diagonal" }: { colors?: readonly string[]; style?: ViewStyle; angle?: "diagonal" | "vertical" }) {
   const id = useId().replace(/:/g, "");
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   return (
-    <View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, style]}>
-      <Svg width="100%" height="100%" preserveAspectRatio="none">
-        <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2={angle === "diagonal" ? "1" : "0"} y2="1">
-            {colors.map((c, i) => <Stop key={i} offset={String(i / Math.max(1, colors.length - 1))} stopColor={c} />)}
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />
-      </Svg>
+    <View
+      pointerEvents="none"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        if (!size || Math.round(width) !== Math.round(size.w) || Math.round(height) !== Math.round(size.h)) setSize({ w: width, h: height });
+      }}
+      style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors[Math.floor(colors.length / 2)] }, style]}
+    >
+      {size ? (
+        <Svg key={`${Math.round(size.w)}x${Math.round(size.h)}`} width={size.w} height={size.h}>
+          <Defs>
+            <LinearGradient id={id} x1="0" y1="0" x2={angle === "diagonal" ? "1" : "0"} y2="1">
+              {colors.map((c, i) => <Stop key={i} offset={String(i / Math.max(1, colors.length - 1))} stopColor={c} />)}
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width={size.w} height={size.h} fill={`url(#${id})`} />
+        </Svg>
+      ) : null}
     </View>
   );
 }

@@ -76,7 +76,7 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
  * One employee. Used as its own screen, and (embedded) as the right-hand panel next to the
  * employee list on wide screens such as an open foldable.
  */
-export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: string; created?: string; embedded?: boolean; initialTab?: "ledger" }) {
+export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }: { id: string; created?: string; embedded?: boolean; initialTab?: "ledger"; /** Panel version: edit inside the panel instead of opening the edit screen. */ onEdit?: () => void }) {
   const dialog = useDialog();
   const { can } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "salary", "attendance"]);
@@ -125,8 +125,14 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
         }}
       />}
 
-      <Pressable onPress={() => setTab("ledger")} accessibilityRole="button" accessibilityLabel="Open ledger">
+      <Pressable onPress={() => setTab("ledger")} accessibilityLabel="Open ledger">
         <Hero
+          right={embedded && manage && onEdit ? (
+            <Pressable onPress={onEdit} hitSlop={8} accessibilityRole="button" accessibilityLabel="Edit employee" style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.2)" }}>
+              <Pencil size={15} color="#ffffff" />
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Edit</Text>
+            </Pressable>
+          ) : undefined}
           avatar={e.name}
           eyebrow={`${e.code} · ${e.site}`}
           title={e.name}
@@ -204,7 +210,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab }: { id: 
             <Row label="ESIC" value={e.esiEnabled ? (e.esicNumber ? `IP ${e.esicNumber}` : "On · IP number not added") : "Off"} />
             <Row label="Attendance" value={e.inHouse ? "In-house (automatic)" : "Face scan"} />
             <Row label="Weekly off" value={weeklyOff} />
-            {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } })} /> : null}
+            {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => (onEdit ? onEdit() : router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } }))} /> : null}
           </Card>
         </>
       ) : null}

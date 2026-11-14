@@ -23,6 +23,7 @@ export default function AdvancesScreen() {
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
+  const live = data.advances.filter((a) => a.status !== "CANCELLED" && a.status !== "REJECTED");
   const total = data.advances.filter((a) => a.status === "ACTIVE").reduce((s, a) => s + a.amount, 0);
   return (
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
@@ -58,8 +59,9 @@ export default function AdvancesScreen() {
       ) : null}
       <Card style={{ padding: 0, gap: 0 }}>
         <View style={{ padding: 14, paddingBottom: 6 }}><SectionHead icon={<HandCoins size={18} color={C.ink.orange} />} ink="orange" title="All advances" /></View>
-        {data.advances.length === 0 ? <View style={{ padding: 16 }}><Muted>No advances.</Muted></View> : null}
-        {data.advances.map((a, i) => (
+        {/* Cancelled and rejected advances are not listed (they stay in History). */}
+        {live.length === 0 ? <View style={{ padding: 16 }}><Muted>No advances.</Muted></View> : null}
+        {live.map((a, i) => (
           <Pressable key={a.id} onPress={() => router.push({ pathname: "/advance/[id]", params: { id: a.id } })} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderTopWidth: 1, borderTopColor: C.hairline, opacity: a.status === "CANCELLED" || a.status === "REJECTED" ? 0.55 : 1, backgroundColor: pressed ? C.soft : "transparent" })}>
             <Avatar name={a.employee} size={40} muted={a.status === "CANCELLED" || a.status === "REJECTED"} />
             <View style={{ flex: 1, gap: 3 }}>

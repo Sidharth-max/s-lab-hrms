@@ -24,7 +24,6 @@ export default async function DevicesPage() {
         eyebrow="Scanner devices"
         title={`${devices.filter((d) => !d.revokedAt).length} active scanner${devices.filter((d) => !d.revokedAt).length === 1 ? "" : "s"}`}
         subtitle="Phones and tablets that take face attendance."
-        stats={[{ label: "Active", value: devices.filter((d) => !d.revokedAt).length }, { label: "Removed", value: devices.filter((d) => d.revokedAt).length }]}
       />
       <section className="card flex flex-col gap-3">
         <SectionTitle icon={<ScanFace size={18} />} ink="blue">This device</SectionTitle>
@@ -59,8 +58,9 @@ export default async function DevicesPage() {
             <tr><th>Name</th><th>Site</th><th>Registered by</th><th>Last scan</th><th /></tr>
           </thead>
           <tbody>
-            {devices.map((d) => (
-              <tr key={d.id} className={d.revokedAt ? "text-[var(--muted)]" : ""}>
+            {/* Removed scanners are not listed (they stay in History). */}
+            {devices.filter((d) => !d.revokedAt).map((d) => (
+              <tr key={d.id}>
                 <td className="card-title">
                   <span className={`icon-badge mr-2 !h-8 !w-8 align-middle ${d.revokedAt ? "bg-[var(--tint-red)] text-[var(--ink-red)]" : "bg-[var(--tint-blue)] text-[var(--ink-blue)]"}`} aria-hidden><Smartphone size={16} /></span>
                   {d.name}{current?.id === d.id && <span className="badge badge-neutral ml-1">this device</span>}

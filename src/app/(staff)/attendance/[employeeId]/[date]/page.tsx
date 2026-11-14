@@ -65,8 +65,9 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
         <table className="table table-cards">
           <thead><tr><th>Type</th><th>Time</th><th>How</th><th /></tr></thead>
           <tbody>
-            {punches.map((p) => (
-              <tr key={p.id} className={p.voidedAt ? "text-[var(--muted)] line-through" : ""}>
+            {/* Removed punches are not shown (they stay in History); only the ones that count. */}
+            {punches.filter((p) => !p.voidedAt).map((p) => (
+              <tr key={p.id}>
                 <td className="card-title font-semibold">{p.type === "IN" ? "IN" : "OUT"}</td>
                 <td data-label={"Time"}>{formatIstTime(p.at)}{istDateKey(p.at) !== date ? ` (${formatDateKey(istDateKey(p.at))})` : ""}</td>
                 <td data-label={"How"}>
@@ -74,7 +75,6 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
                     {p.source === "FACE"
                       ? `${"Face scan"}${p.score ? ` (${p.score.toFixed(1)}%)` : ""}`
                       : `${"Manual by"} ${users.get(p.createdBy ?? "") ?? "?"}: ${p.reason}`}
-                    {p.voidedAt && <span className="block text-xs">{"Removed by"} {users.get(p.voidedBy ?? "") ?? "?"}: {p.voidReason}</span>}
                   </span>
                 </td>
                 <td>
@@ -86,7 +86,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
                 </td>
               </tr>
             ))}
-            {punches.length === 0 && <tr><td colSpan={4} className="muted">No punches.</td></tr>}
+            {punches.every((p) => p.voidedAt) && <tr><td colSpan={4} className="muted">No punches.</td></tr>}
           </tbody>
         </table>
       </section>

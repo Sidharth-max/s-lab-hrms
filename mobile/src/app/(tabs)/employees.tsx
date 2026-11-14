@@ -15,6 +15,7 @@ import { useLoad } from "@/lib/useLoad";
 import { FLOATING_NAV_SPACE, useWide } from "@/lib/layout";
 import { PanePlaceholder, TwoPane } from "@/components/TwoPane";
 import { EmployeeDetailView } from "@/components/EmployeeDetailView";
+import { EditEmployeeView, NewEmployeeView } from "@/components/EmployeeFormViews";
 
 interface Emp { id: string; name: string; code: string; phone: string | null; site: string; active: boolean; wageType: "MONTHLY" | "DAILY"; wage: number; face: boolean; inHouse?: boolean }
 
@@ -24,6 +25,13 @@ export default function Employees() {
   const [show, setShow] = useState<"working" | "left">("working");
   const wide = useWide();
   const [selected, setSelected] = useState<string | null>(null);
+  // Right panel on an open Fold / tablet: an employee, the add form, or the edit form. Adding and
+  // editing stay in this panel; after saving it shows that employee (no full-screen jump).
+  const [pane, setPane] = useState<"view" | "new" | "edit">("view");
+  const [created, setCreated] = useState<string | null>(null);
+  const startAdd = () => {
+    if (wide) { setSelected(null); setPane("new"); } else router.push("/employee/new");
+  };
 
   // Searching moved to the round Search button next to the navigation bar (one-hand reach).
   const list = useMemo(() => (data?.employees ?? []).filter((e) => e.active === (show === "working")), [data, show]);
@@ -54,13 +62,13 @@ export default function Employees() {
       ListEmptyComponent={
         <View style={{ gap: 12, alignItems: "flex-start" }}>
           <Muted>{show === "left" ? "No archived employees." : "No employees yet. Add the first one to start marking attendance."}</Muted>
-          {show === "working" && can("employees.manage") ? <Button title="Add employee" icon={<Plus size={18} color={C.white} />} onPress={() => router.push("/employee/new")} /> : null}
+          {show === "working" && can("employees.manage") ? <Button title="Add employee" icon={<Plus size={18} color="#ffffff" />} onPress={startAdd} /> : null}
         </View>
       }
       renderItem={({ item: e, index }) => (
         <Animated.View entering={enterAt(index)}>
         <Pressable
-          onPress={() => { if (wide) setSelected(e.id); else router.push({ pathname: "/employee/[id]", params: { id: e.id, name: e.name } }); }}
+          onPress={() => { if (wide) { setSelected(e.id); setPane("view"); } else router.push({ pathname: "/employee/[id]", params: { id: e.id, name: e.name } }); }}
           style={({ pressed }) => [
             { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: pressed || (wide && selected === e.id) ? C.soft : C.card, borderColor: C.hairline, borderLeftWidth: 1, borderRightWidth: 1, borderTopWidth: 1 },
             index === 0 && { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
@@ -82,14 +90,28 @@ export default function Employees() {
       )}
     />
     )}</BlurFrame>
-    {can("employees.manage") ? <Fab extended icon={<Plus size={22} color="#ffffff" />} label="Add" lift={wide ? 0 : FLOATING_NAV_SPACE - 8} onPress={() => router.push("/employee/new")} /> : null}
+    {can("employees.manage") ? <Fab extended icon={<Plus size={22} color="#ffffff" />} label="Add" lift={wide ? 0 : FLOATING_NAV_SPACE - 8} onPress={startAdd} /> : null}
     </View>
   );
   if (!wide) return list_;
   return (
     <TwoPane
       left={list_}
-      right={selected ? <EmployeeDetailView key={selected} id={selected} embedded /> : <PanePlaceholder icon={<Users size={40} color={C.faint} />} text="Choose an employee to see their details" />}
+      right={
+        pane === "new" ? (
+          <NewEmployeeView
+            embedded
+            onClose={() => setPane("view")}
+            onCreated={(id) => { setSelected(id); setCreated(id); setPane("view"); void reload(); }}
+          />
+        ) : pane === "edit" && selected ? (
+          <EditEmployeeView key={`edit-${selected}`} id={selected} embedded onClose={() => setPane("view")} onSaved={() => { setPane("view"); void reload(); }} />
+        ) : selected ? (
+          <EmployeeDetailView key={selected} id={selected} embedded created={created === selected ? "1" : undefined} onEdit={() => setPane("edit")} />
+        ) : (
+          <PanePlaceholder icon={<Users size={40} color={C.faint} />} text="Choose an employee to see their details" />
+        )
+      }
     />
   );
 }

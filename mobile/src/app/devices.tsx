@@ -2,7 +2,7 @@ import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { ChevronDown, ChevronUp, Pencil, ScanFace, Smartphone } from "@/components/icons";
+import { Pencil, ScanFace, Smartphone } from "@/components/icons";
 import { Badge, Button, Card, ChoiceChip, ErrorView, Field, Hero, IconChip, Loading, Muted, Notice, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -81,12 +81,10 @@ export default function DevicesScreen() {
   const { scannerMode, me } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<{ devices: Device[] }>("/api/m/devices"), [], ["device", "attendance"]);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  const [showRemoved, setShowRemoved] = useState(false);
 
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
   const active = data.devices.filter((d) => !d.revoked);
-  const removed = data.devices.filter((d) => d.revoked);
   const done = async (m: { text: string; ok: boolean }) => {
     setMsg(m);
     await reload();
@@ -99,19 +97,12 @@ export default function DevicesScreen() {
         eyebrow="Scanner devices"
         title={`${active.length} active scanner${active.length === 1 ? "" : "s"}`}
         subtitle="Phones and tablets that take face attendance."
-        stats={[{ label: "Active", value: String(active.length) }, { label: "Removed", value: String(removed.length) }]}
       />
       <Button title={scannerMode ? "This device is a scanner" : "Use this device as face scanner"} icon={<ScanFace size={18} color="#ffffff" />} onPress={() => router.push("/scanner-setup")} />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       {active.length === 0 ? <Card><Muted>No active scanners.</Muted></Card> : null}
       {active.map((d) => <DeviceCard key={d.id} d={d} sites={me?.sites ?? []} onDone={done} />)}
-      {removed.length ? (
-        <Pressable onPress={() => setShowRemoved((x) => !x)} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 }}>
-          {showRemoved ? <ChevronUp size={16} color={C.muted} /> : <ChevronDown size={16} color={C.muted} />}
-          <Muted>{showRemoved ? "Hide" : "Show"} removed scanners ({removed.length})</Muted>
-        </Pressable>
-      ) : null}
-      {showRemoved ? removed.map((d) => <DeviceCard key={d.id} d={d} sites={me?.sites ?? []} onDone={done} />) : null}
+      {/* Removed scanners are not listed (they stay in History). */}
     </Screen>
   );
 }

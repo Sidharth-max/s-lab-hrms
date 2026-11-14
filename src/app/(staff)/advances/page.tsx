@@ -12,13 +12,11 @@ import { formatRs } from "@/lib/money";
 import { employeeScope } from "@/lib/scope";
 import { dbToDateKey, formatDateKey, istDateKey } from "@/lib/time";
 
-export default async function AdvancesPage({ searchParams }: PageProps<"/advances">) {
+export default async function AdvancesPage() {
   const actor = await requireStaff();
-  const sp = await searchParams;
-  const all = sp.all === "1";
   // Advances come straight off the salary balance. "Given" = counted; cancelled / rejected are kept for the record.
   const advances = await db.advance.findMany({
-    where: { employee: employeeScope(actor), ...(all ? {} : { status: { in: ["ACTIVE", "CLEARED", "PENDING_APPROVAL"] } }) },
+    where: { employee: employeeScope(actor), status: { in: ["ACTIVE", "CLEARED", "PENDING_APPROVAL"] } }, // cancelled / rejected stay in History only
     include: { employee: true },
     orderBy: { givenOn: "desc" },
     take: 500,
@@ -47,11 +45,6 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
           { label: "Waiting approval", value: advances.filter((a) => a.status === "PENDING_APPROVAL").length, alert: advances.some((a) => a.status === "PENDING_APPROVAL") },
         ]}
       />
-      <div className="flex justify-end">
-        <Link href={all ? "/advances" : "/advances?all=1"} className="btn-secondary">
-          {all ? "Hide cancelled" : "Show cancelled and rejected too"}
-        </Link>
-      </div>
       {canGive && (
         <details className="card">
           <summary className="flex cursor-pointer items-center justify-between gap-3"><span className="section-title"><span className="icon-badge bg-[var(--tint-orange)] text-[var(--ink-orange)]" aria-hidden><HandCoins size={18} /></span>Give advance</span><span className="btn-primary !h-8">New advance</span></summary>

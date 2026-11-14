@@ -153,7 +153,8 @@ export function LeaveSection({ employeeId, employees, active = true }: { employe
     if (m.ok) setAdding(false);
     await reload();
   };
-  const leaves = data?.leaves ?? [];
+  // Cancelled leave is not listed (it stays in History).
+  const leaves = (data?.leaves ?? []).filter((l) => l.state !== "cancelled");
   return (
     <View style={{ gap: 12 }}>
       {employeeId ? null : (

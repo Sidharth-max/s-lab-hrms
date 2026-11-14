@@ -131,8 +131,9 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
 
       <Card style={{ gap: 0 }}>
         <SectionHead icon={<Clock size={18} color={C.ink.teal} />} ink="teal" title="Punches" />
-        {data.punches.length === 0 ? <Muted style={{ paddingTop: 8 }}>No punches.</Muted> : null}
-        {data.punches.map((p) => (
+        {/* Removed punches are not shown here (they stay in History); only the ones that count. */}
+        {data.punches.every((p) => p.voided) ? <Muted style={{ paddingTop: 8 }}>No punches.</Muted> : null}
+        {data.punches.filter((p) => !p.voided).map((p) => (
           <View key={p.id} style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.line, opacity: p.voided ? 0.5 : 1, gap: 2 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ fontWeight: "600", color: C.text, textDecorationLine: p.voided ? "line-through" : "none" }}>{p.type} · {p.time}</Text>

@@ -14,7 +14,9 @@ const STATE: Record<LeaveRow["state"], { label: string; cls: string }> = {
 };
 
 /** Schedule leave and list leaves (one employee, or everyone with an employee picker). */
-export function LeavePanel({ rows, people, employeeId, canEdit }: { rows: LeaveRow[]; people?: { id: string; name: string; code: string }[]; employeeId?: string; canEdit: boolean }) {
+export function LeavePanel({ rows: allRows, people, employeeId, canEdit }: { rows: LeaveRow[]; people?: { id: string; name: string; code: string }[]; employeeId?: string; canEdit: boolean }) {
+  // Cancelled leave is not listed (it stays in History).
+  const rows = allRows.filter((l) => l.state !== "cancelled");
   const today = istDateKey(new Date());
   return (
     <div className="flex flex-col gap-4">
