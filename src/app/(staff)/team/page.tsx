@@ -1,4 +1,6 @@
-import { UserPlus } from "@/components/icons";
+import { UserCog, UserPlus } from "@/components/icons";
+import { PageHero, SectionTitle } from "@/components/PageHero";
+import { Avatar } from "@/components/Avatar";
 import { saveManager, toggleManager } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
 import { requireOwner } from "@/lib/auth";
@@ -64,12 +66,14 @@ export default async function TeamPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="h1">Managers</h1>
-      <p className="muted">
-        {"Owner (full control, approves by OTP):"} {owners.map((o) => `${o.name} (${o.phone})`).join(", ")}
-      </p>
+      <PageHero
+        icon={<UserCog size={24} />}
+        eyebrow="Managers"
+        title={`${managers.filter((m) => m.active).length} active manager${managers.filter((m) => m.active).length === 1 ? "" : "s"}`}
+        subtitle={`Owner (full control, approves by OTP): ${owners.map((o) => `${o.name} (${o.phone})`).join(", ")}`}
+      />
       <section className="card">
-        <h2 className="flex items-center gap-2 font-semibold"><UserPlus size={18} aria-hidden />Add manager</h2>
+        <SectionTitle icon={<UserPlus size={18} />} ink="violet">Add manager</SectionTitle>
         <ActionForm action={saveManager} className="mt-3 flex flex-col gap-3" submitLabel={"Add manager"} resetOnSuccess>
           <ManagerFields sites={sites} />
         </ActionForm>
@@ -77,7 +81,8 @@ export default async function TeamPage() {
       {managers.map((m) => (
         <details key={m.id} className="card">
           <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
-            <span className="font-semibold">
+            <span className="inline-flex items-center gap-2.5 font-semibold">
+              <Avatar name={m.name} size={34} muted={!m.active} />
               {m.name} <span className="muted">{m.phone}</span> {!m.active && <span className="badge badge-neutral">disabled</span>}
             </span>
             <span className="muted">

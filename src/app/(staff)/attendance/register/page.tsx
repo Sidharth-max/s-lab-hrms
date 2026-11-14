@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PageHero } from "@/components/PageHero";
+import { CalendarRange } from "@/components/icons";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { requireStaff } from "@/lib/auth";
@@ -36,8 +38,17 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="h1">{"Register"} · {formatMonth(month)}</h1>
+      <PageHero
+        icon={<CalendarRange size={24} />}
+        eyebrow="Monthly register"
+        title={formatMonth(month)}
+        stats={[
+          { label: "People", value: employees.length },
+          { label: "Present days", value: employees.reduce((s, e) => s + (days.get(e.id) ?? []).filter((d) => d.status === "PRESENT").length + (days.get(e.id) ?? []).filter((d) => d.status === "HALF_DAY").length / 2, 0) },
+          { label: "Absent days", value: employees.reduce((s, e) => s + (days.get(e.id) ?? []).filter((d) => d.status === "ABSENT").length, 0) },
+        ]}
+      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex gap-2">
           <Link className="btn-secondary" href={`?month=${addMonths(month, -1)}${only ? `&employee=${only}` : show !== "active" ? `&show=${show}` : ""}`}><ChevronLeft size={16} aria-hidden />Prev</Link>
           {month < current && <Link className="btn-secondary" href={`?month=${addMonths(month, 1)}${only ? `&employee=${only}` : show !== "active" ? `&show=${show}` : ""}`}>Next<ChevronRight size={16} aria-hidden /></Link>}

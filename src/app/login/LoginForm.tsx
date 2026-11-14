@@ -59,7 +59,8 @@ export function LoginForm() {
         ref={codeBox}
         id="code"
         name="code"
-        className="input tracking-[0.4em]"
+        className="input !h-14 text-center !text-2xl font-bold tracking-[0.5em] tabular-nums"
+        placeholder="••••••"
         inputMode="numeric"
         autoComplete="one-time-code"
         maxLength={6}
@@ -71,7 +72,7 @@ export function LoginForm() {
       />
       <button className="btn-primary" disabled={verifying}>{verifying ? "Checking…" : "Log in"}</button>
       {verified?.error && <p className="text-sm text-[var(--red)]">{verified.error}</p>}
-      <button type="button" className="text-sm link" onClick={() => setEditPhone(true)}>
+      <button type="button" className="text-sm font-semibold text-[var(--accent-ink)] hover:underline" onClick={() => setEditPhone(true)}>
         {"Change number / resend OTP"}
       </button>
     </form>

@@ -1,5 +1,7 @@
 import { addHoliday, addSite, removeHoliday, toggleSite, updateSettings } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
+import { SectionTitle } from "@/components/PageHero";
+import { Building, CalendarDays, Settings } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dbToDateKey, formatDateKey } from "@/lib/time";
@@ -23,7 +25,7 @@ export default async function SettingsPage() {
     <div className="flex flex-col gap-4">
       <h1 className="h1">Settings</h1>
       <section className="card">
-        <h2 className="mb-3 font-semibold">Business and attendance rules</h2>
+        <SectionTitle icon={<Settings size={18} />} ink="green">Business and attendance rules</SectionTitle>
         <ActionForm action={updateSettings} className="flex flex-col gap-4">
           <div className="grid gap-3 @2xl:grid-cols-2">
             <div><label className="label">Business name</label><input name="name" className="input" defaultValue={b.name} required /></div>
@@ -88,7 +90,7 @@ export default async function SettingsPage() {
 
       <div className="grid gap-4 @4xl:grid-cols-2">
         <section className="card flex flex-col gap-3">
-          <h2 className="font-semibold">Sites / branches</h2>
+          <SectionTitle icon={<Building size={18} />} ink="blue">Sites / branches</SectionTitle>
           <ul className="flex flex-col gap-2">
             {sites.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-2">
@@ -105,7 +107,7 @@ export default async function SettingsPage() {
         </section>
 
         <section className="card flex flex-col gap-3">
-          <h2 className="font-semibold">Holidays (paid for monthly staff)</h2>
+          <SectionTitle icon={<CalendarDays size={18} />} ink="orange">Holidays (paid for monthly staff)</SectionTitle>
           <ActionForm action={addHoliday} className="flex flex-wrap gap-2" submitLabel={"Add"} resetOnSuccess>
             <DateInput name="date" className="w-44" />
             <input name="name" className="input max-w-[14rem]" placeholder={"Holiday name"} required />

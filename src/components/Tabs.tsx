@@ -24,7 +24,7 @@ export function Tabs({
             role="tab"
             aria-selected={active === t.id}
             onClick={() => setActive(t.id)}
-            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${active === t.id ? "bg-[var(--brand)] text-[var(--on-brand)]" : "bg-[var(--track)] text-[var(--text)] hover:bg-[var(--track-hover)]"}`}
+            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${active === t.id ? "bg-[var(--accent-soft)] font-semibold text-[var(--accent-ink)] shadow-[inset_0_0_0_1px_var(--accent)]" : "bg-[var(--track)] text-[var(--text)] hover:bg-[var(--track-hover)]"}`}
           >
             {t.label}
           </button>

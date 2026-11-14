@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { PageHero } from "@/components/PageHero";
+import { Avatar } from "@/components/Avatar";
+import { Coins, HandCoins } from "@/components/icons";
 import { editAdvance, giveAdvance } from "@/app/actions/advances";
 import { DateInput, Select } from "@/components/controls";
 import { can } from "@/lib/permissions";
@@ -34,20 +37,24 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="h1">Advances</h1>
-          <p className="muted">
-            Advances shown: <b>{formatRs(total)}</b>. Each advance comes off that person&apos;s salary balance straight away (see Salary).
-          </p>
-        </div>
+      <PageHero
+        icon={<Coins size={24} />}
+        eyebrow="Advances"
+        title={formatRs(total)}
+        subtitle="Given. Each advance comes off that person's salary balance straight away (see Salary)."
+        stats={[
+          { label: "Given", value: advances.filter((a) => a.status === "ACTIVE" || a.status === "CLEARED").length },
+          { label: "Waiting approval", value: advances.filter((a) => a.status === "PENDING_APPROVAL").length, alert: advances.some((a) => a.status === "PENDING_APPROVAL") },
+        ]}
+      />
+      <div className="flex justify-end">
         <Link href={all ? "/advances" : "/advances?all=1"} className="btn-secondary">
           {all ? "Hide cancelled" : "Show cancelled and rejected too"}
         </Link>
       </div>
       {canGive && (
         <details className="card">
-          <summary className="flex cursor-pointer items-center justify-between font-semibold">Give advance<span className="btn-primary !h-8">New advance</span></summary>
+          <summary className="flex cursor-pointer items-center justify-between gap-3"><span className="section-title"><span className="icon-badge bg-[var(--tint-orange)] text-[var(--ink-orange)]" aria-hidden><HandCoins size={18} /></span>Give advance</span><span className="btn-primary !h-8">New advance</span></summary>
           <ActionForm action={giveAdvance} className="mt-4 grid gap-3 @container @md:grid-cols-2" submitLabel="Save advance" resetOnSuccess>
             <div className="@md:col-span-2">
               <label className="label">Employee</label>
@@ -72,9 +79,9 @@ export default async function AdvancesPage({ searchParams }: PageProps<"/advance
               const dead = a.status === "CANCELLED" || a.status === "REJECTED";
               return (
                 <tr key={a.id} className={dead ? "bg-[var(--soft)]/60 text-[var(--muted)] [&_a]:!text-[var(--muted)]" : ""}>
-                  <td className="card-title"><Link className="font-medium hover:underline" href={`/employees/${a.employeeId}?tab=ledger`}>{a.employee.name}</Link></td>
+                  <td className="card-title"><Link className="inline-flex items-center gap-2.5 font-semibold hover:underline" href={`/employees/${a.employeeId}?tab=ledger`}><Avatar name={a.employee.name} size={32} muted={dead} />{a.employee.name}</Link></td>
                   <td data-label={"Given"}>{formatDateKey(dbToDateKey(a.givenOn))}</td>
-                  <td data-label={"Amount"} className={dead ? "line-through" : ""}>{formatRs(a.amount)}</td>
+                  <td data-label={"Amount"} className={`font-semibold tabular-nums ${dead ? "line-through" : "ink-orange"}`}>{formatRs(a.amount)}</td>
                   <td data-label={"Note"}>{a.note ?? "—"}</td>
                   <td data-label={"Status"}>
                     <span className={`badge ${dead ? "badge-neutral opacity-70" : a.status === "PENDING_APPROVAL" ? "badge-amber" : "badge-neutral"}`}>{STATUS[a.status]}</span>

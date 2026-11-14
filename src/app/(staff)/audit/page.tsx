@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CalendarCheck, HandCoins, IndianRupee, Settings, Smartphone, UserCog, Users, type IconType } from "@/components/icons";
+import { CalendarCheck, HandCoins, History, IndianRupee, Settings, Smartphone, UserCog, Users, type IconType } from "@/components/icons";
+import { PageHero } from "@/components/PageHero";
 import { requireOwner } from "@/lib/auth";
 import { describeHistory, type HistoryArea } from "@/lib/audit-text";
 import { db } from "@/lib/db";
@@ -43,10 +44,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="h1">History</h1>
-        <p className="muted">Every change made by the owner and managers (latest 300).</p>
-      </div>
+      <PageHero icon={<History size={24} />} eyebrow="History" title="Every change" subtitle="Made by the owner and managers (latest 300)." />
       <div className="segmented overflow-x-auto">
         {AREAS.map((a) => (
           <Link
@@ -68,7 +66,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/audit">) {
               const Icon = ICON[i.area];
               return (
                 <li key={i.id} className="flex items-start gap-3 px-4 py-3">
-                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--line)]">
+                  <span className="icon-badge mt-0.5 !h-8 !w-8 bg-[var(--accent-soft)] text-[var(--accent-ink)]">
                     <Icon size={16} />
                   </span>
                   <div className="min-w-0 flex-1">

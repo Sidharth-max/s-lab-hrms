@@ -29,7 +29,9 @@ async function login(phone) {
   await page.click("text=Get OTP");
   const code = (await page.locator("b.tracking-widest").textContent()).trim();
   await page.fill("#code", code);
-  await page.click("button:has-text('Log in')");
+  // The form submits by itself once 6 digits are in (SMS autofill); press Log in only if it has not.
+  await page.waitForTimeout(1500);
+  if (page.url().includes("/login")) await page.click("button:has-text('Log in')", { timeout: 5000 }).catch(() => {});
 }
 
 try {

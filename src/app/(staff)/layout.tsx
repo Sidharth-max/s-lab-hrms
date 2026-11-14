@@ -35,10 +35,11 @@ export default async function StaffLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="min-h-dvh pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <header className="no-print sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--card)] pt-[env(safe-area-inset-top)]">
+      <header className="frosted no-print sticky top-0 z-30 border-b border-[var(--line)] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2 font-semibold tracking-tight">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--brand)] text-xs font-bold text-[var(--on-brand)]">{business.name.slice(0, 1).toUpperCase()}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- small static logo, same file as the app icon */}
+            <img src="/logo.png" alt="" width={30} height={30} className="h-[30px] w-[30px] shrink-0 rounded-[9px]" />
             <span className="truncate">{business.name}</span>
           </Link>
           <div className="flex items-center gap-2 text-sm">

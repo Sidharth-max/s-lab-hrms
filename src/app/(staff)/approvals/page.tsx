@@ -1,5 +1,7 @@
 import { decideApproval, sendApprovalOtp, verifyApprovalOtp } from "@/app/actions/advances";
 import { ActionForm } from "@/components/ActionForm";
+import { PageHero, SectionTitle } from "@/components/PageHero";
+import { BadgeCheck, CircleCheck, HandCoins, History } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
@@ -16,17 +18,29 @@ export default async function ApprovalsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="h1">Approvals</h1>
-      <p className="muted">
-        {"An advance that makes an employee's balance negative needs approval by the owner or a manager allowed to approve (Managers > Advances > Approve advances): here, or by an OTP sent to the owner's mobile."}
-      </p>
-      {pending.length === 0 && <div className="card muted">Nothing waiting.</div>}
+      <PageHero
+        icon={<BadgeCheck size={24} />}
+        eyebrow="Approvals"
+        title={pending.length ? `${pending.length} waiting` : "All clear"}
+        subtitle="An advance that makes an employee's balance negative needs approval: here, or by an OTP sent to the owner's mobile."
+        pills={[{ label: canDecide ? "You can approve" : "Needs the owner's OTP", tone: canDecide ? "ok" : undefined }]}
+      />
+      {pending.length === 0 && (
+        <div className="card flex flex-col items-center gap-2 py-8 text-center">
+          <span className="icon-badge !h-12 !w-12 bg-[var(--tint-green)] text-[var(--ink-green)]" aria-hidden><CircleCheck size={26} /></span>
+          <p className="font-bold">Nothing waiting</p>
+          <p className="muted">New requests show up here.</p>
+        </div>
+      )}
       {pending.map((r) => (
         <div key={r.id} className="card flex flex-col gap-3">
-          <div>
-            <div className="font-semibold">{r.summary}</div>
+          <div className="flex items-center gap-3">
+            <span className="icon-badge !h-10 !w-10 bg-[var(--tint-orange)] text-[var(--ink-orange)]" aria-hidden><HandCoins size={20} /></span>
+            <div className="min-w-0">
+            <div className="font-bold">{r.summary}</div>
             <div className="muted">
               {"Asked by"} {users.get(r.requestedBy) ?? "?"} · {r.createdAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
+            </div>
             </div>
           </div>
           {canDecide ? (
@@ -56,7 +70,7 @@ export default async function ApprovalsPage() {
       ))}
       {recent.length > 0 && (
         <section className="card overflow-x-auto">
-          <h2 className="mb-2 font-semibold">Recently decided</h2>
+          <SectionTitle icon={<History size={18} />} ink="violet">Recently decided</SectionTitle>
           <table className="table table-cards">
             <thead><tr><th>Request</th><th>Decision</th><th>By</th><th>When</th></tr></thead>
             <tbody>

@@ -301,7 +301,7 @@ export function TimeInput({ name, defaultValue = "", className = "", disabled }:
   const [h, mm] = /^\d{1,2}:\d{2}$/.test(value) ? value.split(":").map(Number) : [9, 0];
   const set = (hh: number, m: number) => setValue(`${pad(hh)}:${pad(m)}`);
   const pm = h >= 12;
-  const cell = (on: boolean) => `h-8 rounded-md text-sm font-medium border ${on ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]" : "border-[var(--line)] hover:bg-[var(--soft)]"}`;
+  const cell = (on: boolean) => `h-8 rounded-md text-sm font-medium border ${on ? "border-[var(--hero-2)] bg-[var(--hero-2)] text-white" : "border-[var(--line)] hover:bg-[var(--soft)]"}`;
   return (
     <div ref={ref} className={`relative ${className}`}>
       <input type="hidden" name={name} value={value} disabled={disabled} />

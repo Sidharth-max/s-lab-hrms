@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PageHero, SectionTitle } from "@/components/PageHero";
+import { ScanFace, Smartphone } from "@/components/icons";
 import { forgetThisDevice, registerDevice, renameDevice, revokeDevice } from "@/app/actions/admin";
 import { ActionForm } from "@/components/ActionForm";
 import { getDevice, requireStaff } from "@/lib/auth";
@@ -17,9 +19,15 @@ export default async function DevicesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="h1">Scanner devices</h1>
+      <PageHero
+        icon={<Smartphone size={24} />}
+        eyebrow="Scanner devices"
+        title={`${devices.filter((d) => !d.revokedAt).length} active scanner${devices.filter((d) => !d.revokedAt).length === 1 ? "" : "s"}`}
+        subtitle="Phones and tablets that take face attendance."
+        stats={[{ label: "Active", value: devices.filter((d) => !d.revokedAt).length }, { label: "Removed", value: devices.filter((d) => d.revokedAt).length }]}
+      />
       <section className="card flex flex-col gap-3">
-        <h2 className="font-semibold">This device</h2>
+        <SectionTitle icon={<ScanFace size={18} />} ink="blue">This device</SectionTitle>
         {current ? (
           <div className="flex flex-wrap items-center gap-3">
             <span>{"Registered as"} <b>{current.name}</b> ({current.site.name}).</span>
@@ -54,6 +62,7 @@ export default async function DevicesPage() {
             {devices.map((d) => (
               <tr key={d.id} className={d.revokedAt ? "text-[var(--muted)]" : ""}>
                 <td className="card-title">
+                  <span className={`icon-badge mr-2 !h-8 !w-8 align-middle ${d.revokedAt ? "bg-[var(--tint-red)] text-[var(--ink-red)]" : "bg-[var(--tint-blue)] text-[var(--ink-blue)]"}`} aria-hidden><Smartphone size={16} /></span>
                   {d.name}{current?.id === d.id && <span className="badge badge-neutral ml-1">this device</span>}
                   {d.model && <div className="muted text-xs font-normal">{d.model}</div>}
                 </td>

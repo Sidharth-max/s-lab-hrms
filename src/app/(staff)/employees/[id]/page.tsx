@@ -3,12 +3,11 @@ import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
 import { removeFace, setEmployeeLeft, setEmployeeLogin } from "@/app/actions/employees";
 import { ActionForm } from "@/components/ActionForm";
-import { Avatar } from "@/components/Avatar";
-import { CalendarRange, Pencil } from "@/components/icons";
+import { CalendarRange, LogIn, Pencil, ScanFace, Trash2, UserCog } from "@/components/icons";
+import { PageHero, SectionTitle } from "@/components/PageHero";
 import { FaceEnroll } from "@/components/FaceEnroll";
 import { Tabs } from "@/components/Tabs";
 import { requireStaff } from "@/lib/auth";
-import { statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
@@ -38,7 +37,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
 
   const face = (
     <section className="card flex flex-col gap-3">
-      <h2 className="font-semibold">Face for attendance</h2>
+      <SectionTitle icon={<ScanFace size={18} />} ink="blue">Face for attendance</SectionTitle>
       <p className="muted">
         {emp.faceId
           ? `Enrolled on ${emp.faceEnrolledAt?.toLocaleDateString("en-IN")}`
@@ -84,10 +83,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   ];
   const details = (
     <section className="card flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold">Details</h2>
-        {manage && <Link href={`/employees/${emp.id}/edit`} className="btn-secondary !h-8"><Pencil size={14} aria-hidden />Edit</Link>}
-      </div>
+      <SectionTitle icon={<UserCog size={18} />} ink="violet" right={manage && <Link href={`/employees/${emp.id}/edit`} className="btn-secondary !h-8"><Pencil size={14} aria-hidden />Edit</Link>}>Details</SectionTitle>
       <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm @md:grid-cols-2">
         {facts.map(([k, v]) => (
           <div key={k} className="flex items-baseline justify-between gap-3 border-b border-[var(--line)] pb-2 last:border-0">
@@ -102,7 +98,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const account = manage ? (
     <div className="flex flex-col gap-4">
       <section className="card flex flex-col gap-3">
-        <h2 className="font-semibold">Web login (view only)</h2>
+        <SectionTitle icon={<LogIn size={18} />} ink="blue">Web login (view only)</SectionTitle>
         <p className="muted">
           {emp.user?.active
             ? `On. ${emp.name} can log in at the website with ${emp.phone} and see salary, attendance and advances.`
@@ -114,7 +110,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
         </ActionForm>
       </section>
       <section className="card flex flex-col gap-3">
-        <h2 className="font-semibold">{emp.active ? "Archive employee" : "Archived"}</h2>
+        <SectionTitle icon={<Trash2 size={18} />} ink="red">{emp.active ? "Archive employee" : "Archived"}</SectionTitle>
         <p className="muted">
           {emp.active
             ? "When someone stops working here, archive them. Their face is deleted so they cannot scan; attendance, salary and advance history stay."
@@ -148,46 +144,34 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
         <BackLink href="/employees" label="Employees" className="fold:hidden" />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={emp.name} size={48} muted={!emp.active} />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="h1 truncate">{emp.name}</h1>
-                {emp.active ? <span className="badge badge-neutral">Active</span> : <span className="badge badge-neutral">Archived</span>}
-                {emp.inHouse && <span className="badge badge-neutral">In-house</span>}
-                {today && (
-                  <span className={statusBadgeClass(today.status)}>
-                    Today: {today.label}
-                  </span>
-                )}
-              </div>
-              <p className="muted">{emp.code} · {emp.site.name} · {pay}</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {manage && !emp.active && (
-              <ActionForm action={setEmployeeLeft} submitLabel="Restore employee" submitClass="btn-primary" confirm={`Restore ${emp.name}? They become active again; enroll the face again so they can scan.`}>
-                <input type="hidden" name="id" value={emp.id} />
-              </ActionForm>
-            )}
-            {manage && <Link className={emp.active ? "btn-primary" : "btn-secondary"} href={`/employees/${emp.id}/edit`}><Pencil size={15} aria-hidden />Edit</Link>}
-            <Link className="btn-secondary" href={`/attendance/register?month=${thisMonth}&employee=${emp.id}`}><CalendarRange size={15} aria-hidden />Attendance</Link>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
-          {[
-            ["Face", emp.faceId ? "Enrolled" : emp.inHouse ? "Not needed (in-house)" : "Not enrolled", emp.faceId || emp.inHouse ? "" : "text-[var(--red)]"],
-            ["Salary earned", formatRs(h.earned + h.extras), ""],
-            ["Advances and paid", formatRs(h.advances + h.payments), ""],
-            [h.balance < 0 ? "Employee owes" : "Balance to pay", formatRs(Math.abs(h.balance)), h.balance < 0 ? "text-[var(--red)]" : ""],
-          ].map(([k, v, cls]) => (
-            <div key={k} className="card !p-3">
-              <div className="text-xs text-[var(--muted)]">{k}</div>
-              <div className={`mt-0.5 text-base font-semibold tracking-tight ${cls}`}>{v}</div>
-            </div>
-          ))}
-        </div>
+        <PageHero
+          avatar={emp.name}
+          eyebrow={`${emp.code} · ${emp.site.name} · ${pay}`}
+          title={emp.name}
+          pills={[
+            emp.active ? { label: "Active", tone: "ok" as const } : { label: "Archived" },
+            ...(today ? [{ label: `Today: ${today.label}`, tone: today.status === "PRESENT" ? ("ok" as const) : today.status === "ABSENT" || today.status === "HALF_DAY" ? ("alert" as const) : undefined }] : []),
+            ...(emp.inHouse ? [{ label: "In-house" }] : []),
+            emp.faceId ? { label: "Face enrolled", tone: "ok" as const } : emp.inHouse ? { label: "Face not needed" } : { label: "No face", tone: "alert" as const },
+          ]}
+          valueLabel={h.balance < 0 ? "Employee owes" : "Salary to pay"}
+          value={h.balance === 0 ? "Settled" : formatRs(Math.abs(h.balance))}
+          stats={[
+            { label: "Salary earned", value: formatRs(h.earned + h.extras) },
+            { label: "Advances and paid", value: formatRs(h.advances + h.payments) },
+          ]}
+          actions={
+            <>
+              {manage && !emp.active && (
+                <ActionForm action={setEmployeeLeft} submitLabel="Restore employee" submitClass="btn-secondary" confirm={`Restore ${emp.name}? They become active again; enroll the face again so they can scan.`}>
+                  <input type="hidden" name="id" value={emp.id} />
+                </ActionForm>
+              )}
+              {manage && <Link className="btn-secondary" href={`/employees/${emp.id}/edit`}><Pencil size={15} aria-hidden />Edit</Link>}
+              <Link className="btn-secondary" href={`/attendance/register?month=${thisMonth}&employee=${emp.id}`}><CalendarRange size={15} aria-hidden />Attendance</Link>
+            </>
+          }
+        />
       </div>
       {sp.saved && <div className="notice-green">Changes saved.</div>}
       {sp.created && (

@@ -1,4 +1,6 @@
 import { LeavePanel } from "@/components/LeavePanel";
+import { PageHero } from "@/components/PageHero";
+import { Beach } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { listLeaves } from "@/lib/leaves";
@@ -14,10 +16,17 @@ export default async function LeavesPage() {
   ]);
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="h1">Leave</h1>
-        <p className="muted">Who is on leave now, upcoming leave, and the last 60 days.</p>
-      </div>
+      <PageHero
+        icon={<Beach size={24} />}
+        eyebrow="Leave"
+        title={rows.some((r) => r.state === "on_leave") ? `${rows.filter((r) => r.state === "on_leave").length} on leave now` : "Nobody on leave"}
+        subtitle="Who is on leave now, upcoming leave, and the last 60 days."
+        stats={[
+          { label: "On leave", value: rows.filter((r) => r.state === "on_leave").length },
+          { label: "Upcoming", value: rows.filter((r) => r.state === "upcoming").length },
+          { label: "Finished", value: rows.filter((r) => r.state === "done").length },
+        ]}
+      />
       <LeavePanel rows={rows} people={people} canEdit={canEdit} />
     </div>
   );

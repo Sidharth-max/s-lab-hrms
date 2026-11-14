@@ -1,9 +1,11 @@
 import { BackLink } from "@/components/BackLink";
+import { PageHero, SectionTitle } from "@/components/PageHero";
+import { CalendarCheck, Clock, History, Pencil } from "@/components/icons";
 import { notFound } from "next/navigation";
 import { clearDayStatus, markAttendance, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
+import { STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
@@ -41,15 +43,25 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
     <div className="flex flex-col gap-4">
       <div>
         <BackLink href={`/attendance?date=${date}`} label="Attendance" />
-        <h1 className="h1">{emp.name} · {formatDateKey(date)}</h1>
-        <p className="text-lg">
-          {STATUS_LABEL[day.status] ? <span className={`${statusBadgeClass(day.status)} !text-base`}>{STATUS_LABEL[day.status]}</span> : "—"} {day.overridden && <span className="badge badge-neutral">manual</span>}
-        </p>
       </div>
+      <PageHero
+        avatar={emp.name}
+        eyebrow={formatDateKey(date)}
+        title={emp.name}
+        pills={[
+          { label: STATUS_LABEL[day.status] ?? "—", tone: day.status === "PRESENT" ? "ok" : day.status === "ABSENT" || day.status === "HALF_DAY" || day.status === "UNPAID_LEAVE" ? "alert" : undefined },
+          ...(day.overridden ? [{ label: "Edited by hand" }] : []),
+        ]}
+        stats={[
+          { label: "In", value: punches.find((p) => p.type === "IN" && !p.voidedAt) ? formatIstTime(punches.find((p) => p.type === "IN" && !p.voidedAt)!.at) : "—" },
+          { label: "Out", value: [...punches].reverse().find((p) => p.type === "OUT" && !p.voidedAt) ? formatIstTime([...punches].reverse().find((p) => p.type === "OUT" && !p.voidedAt)!.at) : "—" },
+          { label: "Punches", value: punches.filter((p) => !p.voidedAt).length },
+        ]}
+      />
       {!can(actor, "attendance.edit") && <div className="card muted text-sm">You can view but not edit attendance.</div>}
 
       <section className="card">
-        <h2 className="mb-2 font-semibold">Punches</h2>
+        <SectionTitle icon={<Clock size={18} />} ink="teal">Punches</SectionTitle>
         <table className="table table-cards">
           <thead><tr><th>Type</th><th>Time</th><th>How</th><th /></tr></thead>
           <tbody>
@@ -82,7 +94,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
       {editable && (
         <div className="grid gap-4 @2xl:grid-cols-2">
           <section className="card">
-            <h2 className="font-semibold">Mark attendance</h2>
+            <SectionTitle icon={<Pencil size={18} />} ink="violet">Mark attendance</SectionTitle>
             <p className="muted mb-3">Full day is filled in ({hours.open} to {hours.close}). Change a time, or tick “no in / out time” for a missed punch.</p>
             <ActionForm action={markAttendance} className="flex flex-col gap-3" submitLabel="Save attendance">
               <input type="hidden" name="employeeId" value={emp.id} />
@@ -104,7 +116,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
             </ActionForm>
           </section>
           <section className="card">
-            <h2 className="font-semibold">Set day status</h2>
+            <SectionTitle icon={<CalendarCheck size={18} />} ink="blue">Set day status</SectionTitle>
             <p className="muted mb-3">For leave, absent or half day. This overrides scans and scheduled leave for this day. To record working times, use Mark attendance.</p>
             <ActionForm action={setDayStatus} className="flex flex-col gap-3" submitLabel={"Set status"} resetOnSuccess>
               <input type="hidden" name="employeeId" value={emp.id} />
@@ -126,7 +138,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
 
       {overrides.length > 0 && (
         <section className="card">
-          <h2 className="mb-2 font-semibold">Edit history</h2>
+          <SectionTitle icon={<History size={18} />} ink="violet">Edit history</SectionTitle>
           <ul className="flex flex-col gap-1 text-sm">
             {overrides.map((o) => (
               <li key={o.id}>
