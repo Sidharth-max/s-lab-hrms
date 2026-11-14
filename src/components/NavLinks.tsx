@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BadgeCheck,
   CalendarCheck,
@@ -87,25 +87,50 @@ export function NavLinks({ links }: { links: NavItem[] }) {
 /**
  * Opens an overlay as a history entry, so the phone's Back button / back swipe closes the overlay
  * instead of leaving the page (the same rule as the app: Back never drops you somewhere else).
+ *
+ * Returns `navigate(href)` for links inside the overlay. Closing the overlay steps back out of its
+ * history entry; a page opened at the same moment was undone by that step (tapping Settings in More
+ * did nothing). navigate() closes first and opens the page once the step back has finished.
  */
 function useBackClosable(open: boolean, close: () => void) {
+  const router = useRouter();
+  const pending = useRef<string | null>(null);
   useEffect(() => {
     if (!open) return;
-    history.pushState({ overlay: true }, "");
+    // Keep Next.js's own history state (only add a flag), so its router keeps working.
+    history.pushState({ ...(history.state ?? {}), overlay: true }, "");
     const onPop = () => close();
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
-      if (history.state?.overlay) history.back();
+      const href = pending.current;
+      pending.current = null;
+      if (history.state?.overlay) {
+        if (href) window.addEventListener("popstate", () => router.push(href), { once: true });
+        history.back();
+      } else if (href) {
+        router.push(href);
+      }
     };
-  }, [open, close]);
+  }, [open, close, router]);
+  return useCallback(
+    (href: string) => {
+      pending.current = href;
+      close();
+    },
+    [close],
+  );
+}
+
+/** Lets ctrl / cmd / middle clicks open a new tab as usual; plain taps go through navigate(). */
+function plainClick(e: React.MouseEvent) {
+  return !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
 }
 
 interface Person { id: string; name: string; code: string; phone: string | null; site: string; active: boolean }
 
 /** Search sheet: the search box sits at the bottom (thumb zone), results fill upwards. */
-function SearchSheet({ onClose, links }: { onClose: () => void; links: NavItem[] }) {
-  const router = useRouter();
+function SearchSheet({ onClose, links, navigate }: { onClose: () => void; links: NavItem[]; navigate: (href: string) => void }) {
   const path = usePathname();
   const [q, setQ] = useState("");
   const [people, setPeople] = useState<Person[] | null>(null);
@@ -121,7 +146,7 @@ function SearchSheet({ onClose, links }: { onClose: () => void; links: NavItem[]
   const found = (people ?? []).filter((e) => !s || e.name.toLowerCase().includes(s) || e.code.toLowerCase().includes(s) || (e.phone ?? "").includes(s)).slice(0, s ? 30 : 8);
   const pages = s ? links.filter((l) => l.label.toLowerCase().includes(s)) : [];
   const onSalary = path.startsWith("/salary");
-  const go = (href: string) => { onClose(); setTimeout(() => router.push(href), 0); };
+  const go = navigate;
   return (
     <div className="no-print fixed inset-0 z-[60] flex flex-col justify-end bg-black/40 sm:hidden" onClick={onClose}>
       <div className="rise flex max-h-[85dvh] flex-col rounded-t-[28px] bg-[var(--card)] pb-[calc(0.75rem+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Search">
@@ -174,7 +199,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
   const path = usePathname();
   const [open, setOpen] = useState<"more" | "search" | null>(null);
   const close = useCallback(() => setOpen(null), []);
-  useBackClosable(open !== null, close);
+  const navigate = useBackClosable(open !== null, close);
   const primary = links.filter((l) => l.primary);
   const rest = links.filter((l) => !l.primary);
   const restBadge = rest.reduce((sum, l) => sum + (l.badge ?? 0), 0);
@@ -182,7 +207,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
 
   return (
     <>
-      {open === "search" && <SearchSheet onClose={close} links={links} />}
+      {open === "search" && <SearchSheet onClose={close} links={links} navigate={navigate} />}
       {open === "more" && (
         <div className="no-print fixed inset-0 z-40 bg-black/40 sm:hidden" onClick={close}>
           <div
@@ -200,7 +225,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
                   <li key={l.href}>
                     <Link
                       href={l.href}
-                      onClick={close}
+                      onClick={(e) => { if (!plainClick(e)) return; e.preventDefault(); navigate(l.href); }}
                       className={`flex min-h-24 flex-col justify-between gap-2 rounded-[20px] p-3.5 text-sm font-semibold transition active:scale-[0.97] ${isActive(path, l.href) ? "bg-[var(--accent-soft)]" : "bg-[var(--soft)]"}`}
                     >
                       <span className="flex items-start justify-between">
@@ -216,7 +241,13 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
             {extra && (
               <div
                 className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] px-1 pt-3"
-                onClick={(e) => (e.target as HTMLElement).closest("button,a") && close()}
+                onClick={(e) => {
+                  const a = (e.target as HTMLElement).closest("a");
+                  if (a?.getAttribute("href")?.startsWith("/") && plainClick(e)) {
+                    e.preventDefault();
+                    navigate(a.getAttribute("href")!);
+                  } else if ((e.target as HTMLElement).closest("button,a")) close();
+                }}
               >
                 {extra}
               </div>
@@ -234,7 +265,7 @@ export function MobileNav({ links, moreLabel, extra }: { links: NavItem[]; moreL
               <Link
                 key={l.href}
                 href={l.href}
-                onClick={close}
+                onClick={(e) => { if (open && plainClick(e)) { e.preventDefault(); navigate(l.href); } }}
                 aria-label={l.label}
                 aria-current={active ? "page" : undefined}
                 className={`relative flex h-[52px] items-center justify-center gap-2 rounded-full transition-all duration-200 ${active ? "min-w-11 grow bg-[var(--accent-soft)] px-4 text-[var(--accent-ink)]" : "w-[52px] min-w-10 shrink text-[var(--muted)]"}`}
