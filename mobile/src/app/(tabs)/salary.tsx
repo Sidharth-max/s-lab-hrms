@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
+import { BlurFrame } from "@/components/BlurFrame";
 import { Text } from "@/components/Text";
 import { ArrowDownLeft, ArrowUpRight, Cash } from "@/components/icons";
 import { Avatar, Badge, Card, ErrorView, Loading, Muted, refreshProps, Tabs } from "@/components/ui";
@@ -40,11 +41,12 @@ export default function SalaryScreen() {
 
   return (
     <>
+      <BlurFrame>{(pad) => (
       <FlatList
         data={rows}
         keyExtractor={(r) => r.employeeId}
         refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}
-        contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 24 + FLOATING_NAV_SPACE }}
+        contentContainerStyle={{ padding: 16, paddingTop: 16 + pad, gap: 10, paddingBottom: 24 + FLOATING_NAV_SPACE }}
         ListHeaderComponent={
           <View style={{ gap: 12, marginBottom: 2 }}>
             <Card style={{ gap: 4, ...shadow(2) }}>
@@ -104,9 +106,9 @@ export default function SalaryScreen() {
                 <View style={{ flex: 1 }}><Text style={{ fontSize: 11, color: C.muted }}>Advances</Text><Text style={{ fontSize: 14, fontWeight: "600", color: C.ink.orange, fontVariant: ["tabular-nums"] }}>{rs(r.advances)}</Text></View>
                 <View style={{ flex: 1 }}><Text style={{ fontSize: 11, color: C.muted }}>Paid</Text><Text style={{ fontSize: 14, fontWeight: "600", color: C.ink.blue, fontVariant: ["tabular-nums"] }}>{rs(r.payments)}</Text></View>
                 {canPay && r.balance > 0 && r.active ? (
-                  <PressScale onPress={() => setPaying(r)} accessibilityRole="button" accessibilityLabel={`Pay ${rs(r.balance)} to ${r.name}`} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.head, borderRadius: 999, paddingHorizontal: 14, height: 38, alignSelf: "center" }}>
-                    <Cash size={17} color={C.headText} />
-                    <Text style={{ color: C.headText, fontWeight: "600", fontSize: 14 }}>Pay</Text>
+                  <PressScale onPress={() => setPaying(r)} accessibilityRole="button" accessibilityLabel={`Pay ${rs(r.balance)} to ${r.name}`} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.gradient[1], borderRadius: 999, paddingHorizontal: 14, height: 38, alignSelf: "center" }}>
+                    <Cash size={17} color="#ffffff" />
+                    <Text style={{ color: "#ffffff", fontWeight: "600", fontSize: 14 }}>Pay</Text>
                   </PressScale>
                 ) : null}
               </View>
@@ -114,6 +116,7 @@ export default function SalaryScreen() {
           </Animated.View>
         )}
       />
+      )}</BlurFrame>
       {paying ? (
         <PaySheet
           visible

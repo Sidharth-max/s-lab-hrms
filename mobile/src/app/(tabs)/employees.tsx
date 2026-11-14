@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
+import { BlurFrame } from "@/components/BlurFrame";
 import { Text } from "@/components/Text";
 import { ChevronRight, Plus, Users } from "@/components/icons";
 import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Tabs, Button, refreshProps } from "@/components/ui";
@@ -33,11 +34,12 @@ export default function Employees() {
 
   const list_ = (
     <View style={{ flex: 1 }}>
+    <BlurFrame>{(pad) => (
     <FlatList
       data={list}
       keyExtractor={(e) => e.id}
       refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}
-      contentContainerStyle={{ padding: 16, paddingBottom: 96 + FLOATING_NAV_SPACE }}
+      contentContainerStyle={{ padding: 16, paddingTop: 16 + pad, paddingBottom: 96 + FLOATING_NAV_SPACE }}
       ListHeaderComponent={
         <View style={{ gap: 10, marginBottom: 12 }}>
           <Tabs
@@ -80,6 +82,7 @@ export default function Employees() {
         </Animated.View>
       )}
     />
+    )}</BlurFrame>
     {can("employees.manage") ? <Fab extended icon={<Plus size={22} color="#ffffff" />} label="Add" lift={wide ? 0 : FLOATING_NAV_SPACE - 8} onPress={() => router.push("/employee/new")} /> : null}
     </View>
   );

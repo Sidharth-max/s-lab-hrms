@@ -27,8 +27,10 @@ export default function TabsLayout() {
         screenOptions={{
           tabBarPosition: layout.rail ? "left" : "bottom",
           animation: "shift",
-          headerStyle: { backgroundColor: C.bg },
-          headerBackground: () => <View style={{ flex: 1, backgroundColor: C.bg }} />,
+          // Transparent header: the list scrolls underneath and BlurFrame frosts the header + status bar.
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerBackground: () => null,
           headerTintColor: C.text,
           headerTitleStyle: { fontFamily: FONT.bold, fontSize: 24, color: C.text, letterSpacing: -0.6 },
           headerTitleAlign: "left",

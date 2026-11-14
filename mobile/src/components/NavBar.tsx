@@ -105,7 +105,7 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
     <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingBottom: Math.max(insets.bottom, 10) + 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
       <View style={{ flex: 1, minWidth: 0, maxWidth: 460, height: 64, borderRadius: 32, backgroundColor: C.card, borderWidth: 1, borderColor: C.hairline, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, ...shadow(3) }}>
         {items.map(({ route, focused, t, Icon }) => (
-          <Animated.View key={route.key} layout={LAYOUT} style={{ flexGrow: focused ? 1 : 0, flexShrink: 1, minWidth: 40, maxWidth: focused ? 170 : 52 }}>
+          <Animated.View key={route.key} layout={LAYOUT} style={{ flexGrow: focused && showLabel ? 1 : 0, flexShrink: 1, minWidth: 40, maxWidth: focused && showLabel ? 170 : 52 }}>
             <Pressable
               onPress={() => press(route.key, focused)}
               accessibilityRole="tab"

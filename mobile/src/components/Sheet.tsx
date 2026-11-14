@@ -93,7 +93,9 @@ export function Sheet({
       <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(8,10,16,0.5)" }, backdrop]}>
         <Pressable style={{ flex: 1 }} onPress={close} accessibilityLabel="Close" />
       </Animated.View>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+      {/* paddingTop keeps the sheet below the status bar; with the keyboard open the sheet shrinks
+          (flexShrink) and its content scrolls, instead of sliding up under the status bar. */}
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, justifyContent: "flex-end", paddingTop: insets.top + 8 }} pointerEvents="box-none">
         <Animated.View
           style={[
             {
@@ -105,6 +107,7 @@ export function Sheet({
               maxWidth,
               alignSelf: "center",
               maxHeight: height * 0.92,
+              flexShrink: 1,
               ...shadow(3),
             },
             sheetStyle,
@@ -121,7 +124,7 @@ export function Sheet({
               </View>
             ) : null}
           </View>
-          <Animated.ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, gap: 12 }} style={{ flexGrow: 0 }}>
+          <Animated.ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, gap: 12 }} style={{ flexGrow: 0, flexShrink: 1 }}>
             {children}
           </Animated.ScrollView>
           {footer ? <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>{footer}</View> : null}

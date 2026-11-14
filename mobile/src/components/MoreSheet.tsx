@@ -12,9 +12,9 @@ import { checkForUpdate, installedVersion, startUpdate, useAppUpdate } from "@/l
 import { closeOverlay, useOverlay } from "@/lib/moreSheet";
 import { PressScale } from "@/lib/motion";
 
-function Tile({ icon: Icon, label, ink, badge, onPress, minWidth }: { icon: IconType; label: string; ink: Ink; badge?: number; onPress: () => void; minWidth: `${number}%` }) {
+function Tile({ icon: Icon, label, ink, badge, onPress, width }: { icon: IconType; label: string; ink: Ink; badge?: number; onPress: () => void; width: number }) {
   return (
-    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={badge ? `${label}, ${badge} waiting` : label} style={{ flex: 1, minWidth, backgroundColor: C.soft, borderRadius: 20, padding: 14, gap: 10, minHeight: 96 }}>
+    <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={badge ? `${label}, ${badge} waiting` : label} style={{ width, backgroundColor: C.soft, borderRadius: 20, padding: 14, gap: 10, minHeight: 96 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
         <View style={{ width: 38, height: 38, borderRadius: 14, backgroundColor: C.tint[ink], alignItems: "center", justifyContent: "center" }}>
           <Icon size={21} color={C.ink[ink]} />
@@ -61,14 +61,16 @@ export function MoreSheet() {
   const shown = tiles.filter((t) => t.show);
   // Three tiles per row; two on narrow screens (closed Fold cover) so labels like "Approvals" do not break mid-word.
   const cols = useWindowDimensions().width < 380 ? 2 : 3;
-  const minWidth = cols === 2 ? "45%" : "30%";
+  // Exact tile widths from the grid's measured width. `flex: 1` tiles in a wrapping row are measured
+  // as zero wide by Android's layout engine (text stacked letter by letter = very tall tiles).
+  const [gridW, setGridW] = useState(0);
+  const GAP = 10;
+  const tileW = gridW ? Math.floor((gridW - GAP * (cols - 1)) / cols) : 0;
 
   return (
     <Sheet visible={overlay === "more"} onClose={closeOverlay} title="More">
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-        {shown.map((t) => <Tile key={String(t.href)} icon={t.icon} label={t.label} ink={t.ink} badge={t.badge} onPress={go(t.href)} minWidth={minWidth} />)}
-        {/* Fill the last row so tiles keep the same width. */}
-        {Array.from({ length: (cols - (shown.length % cols)) % cols }, (_, i) => <View key={`pad${i}`} style={{ flex: 1, minWidth }} />)}
+      <View onLayout={(e) => setGridW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", flexWrap: "wrap", gap: GAP, minHeight: 96 }}>
+        {tileW ? shown.map((t) => <Tile key={String(t.href)} icon={t.icon} label={t.label} ink={t.ink} badge={t.badge} onPress={go(t.href)} width={tileW} />) : null}
       </View>
 
       <View style={{ backgroundColor: C.soft, borderRadius: 20, padding: 14, gap: 10 }}>
@@ -94,7 +96,7 @@ export function MoreSheet() {
           style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.soft, borderRadius: 18, padding: 14 }}
         >
           <Download size={20} color={update ? C.ink.green : C.text} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: update ? C.ink.green : C.text }} numberOfLines={2}>
+          <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: update ? C.ink.green : C.text }} numberOfLines={2}>
             {update ? `Update to ${update.name}` : checking ? "Checking…" : "Check for updates"}
           </Text>
         </PressScale>
@@ -109,7 +111,7 @@ export function MoreSheet() {
           style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.tint.red, borderRadius: 18, padding: 14 }}
         >
           <LogOut size={20} color={C.ink.red} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: "600", color: C.ink.red }}>{scannerMode ? "Log out to scanner" : "Log out"}</Text>
+          <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: C.ink.red }} numberOfLines={2}>{scannerMode ? "Log out to scanner" : "Log out"}</Text>
         </PressScale>
       </View>
       <Text style={{ textAlign: "center", fontSize: 12, color: C.muted, paddingBottom: 4 }}>

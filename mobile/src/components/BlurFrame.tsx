@@ -1,7 +1,6 @@
-import { useContext, useRef, type ComponentRef } from "react";
+import { createContext, useContext, useRef, type ComponentRef } from "react";
 import { View, type ViewStyle } from "react-native";
 import { BlurTargetView, BlurView } from "expo-blur";
-import { useNavigation } from "expo-router";
 import { HeaderHeightContext } from "expo-router/react-navigation";
 import { C, isDark } from "@/lib/theme";
 
@@ -12,12 +11,17 @@ import { C, isDark } from "@/lib/theme";
  * that cannot blur get the same strip as a translucent tint, so the title always stays readable.
  */
 
-/** Height of the transparent header (status bar included) on a stack screen; 0 under the tabs. */
+/** True inside a BlurFrame whose scroll area already starts below the header. */
+const Covered = createContext(false);
+
+/**
+ * Height of the transparent header (status bar included) above this screen: stack pages and the
+ * Employees / Attendance / Salary tabs (both navigators use transparent headers). 0 for screens
+ * without a header (Today, login, scanner) and inside a frame that already made room for it.
+ */
 export function useHeaderPad() {
   const height = (useContext(HeaderHeightContext) as number | undefined) ?? 0;
-  const navigation = useNavigation();
-  // Embedded panels and tab screens sit under the tabs' own (opaque) header: no extra space.
-  return navigation.getState()?.type === "stack" ? height : 0;
+  return useContext(Covered) ? 0 : height;
 }
 
 /** Blur strip of the given height at the top of the screen, blurring `target`. */
@@ -37,7 +41,7 @@ export function BlurStrip({ height, target, visible = true }: { height: number; 
 }
 
 /**
- * Wraps a screen: children get the top padding to start below the header, and the header area
+ * Wraps one scroll area (a page, or one panel of the two-panel layout): children get the top padding to start below the header, and the header area
  * shows the blur of whatever scrolls under it.
  */
 export function BlurFrame({ children, style }: { children: (pad: number) => React.ReactNode; style?: ViewStyle }) {
@@ -46,7 +50,7 @@ export function BlurFrame({ children, style }: { children: (pad: number) => Reac
   return (
     <View style={[{ flex: 1 }, style]}>
       <BlurTargetView ref={target} style={{ flex: 1 }}>
-        {children(pad)}
+        <Covered.Provider value={pad > 0}>{children(pad)}</Covered.Provider>
       </BlurTargetView>
       <BlurStrip height={pad} target={target} />
     </View>
