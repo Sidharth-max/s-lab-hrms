@@ -6,10 +6,11 @@ import { requestLoginOtp, verifyLoginOtp } from "@/app/actions/auth";
 export function LoginForm() {
   const [sent, sendAction, sending] = useActionState(requestLoginOtp, null);
   const [verified, verifyAction, verifying] = useActionState(verifyLoginOtp, null);
-  const [editPhone, setEditPhone] = useState(false);
+  // "Change number" goes back to the phone step for the OTP that was sent; a new send shows the code step again.
+  const [editedFor, setEditedFor] = useState<typeof sent>(null);
   const phone = (sent?.data?.phone as string | undefined) ?? "";
   const devCode = sent?.data?.devCode as string | undefined;
-  const step = sent?.ok && !editPhone ? "code" : "phone";
+  const step = sent?.ok && editedFor !== sent ? "code" : "phone";
   const form = useRef<HTMLFormElement>(null);
   const codeBox = useRef<HTMLInputElement>(null);
 
@@ -36,7 +37,9 @@ export function LoginForm() {
 
   if (step === "phone") {
     return (
-      <form action={(f) => { setEditPhone(false); sendAction(f); }} className="flex flex-col gap-3">
+      // The server action is the form's own action, so Get OTP also works before (or without) the page
+      // script, e.g. on older iPhones where the script loads late.
+      <form action={sendAction} className="flex flex-col gap-3">
         <label className="label" htmlFor="phone">Mobile number</label>
         <input id="phone" name="phone" className="input" inputMode="numeric" autoComplete="tel" placeholder={"10 digit mobile"} defaultValue={phone} required autoFocus />
         <button className="btn-primary" disabled={sending}>{sending ? "Sending…" : "Get OTP"}</button>
@@ -72,7 +75,7 @@ export function LoginForm() {
       />
       <button className="btn-primary" disabled={verifying}>{verifying ? "Checking…" : "Log in"}</button>
       {verified?.error && <p className="text-sm text-[var(--red)]">{verified.error}</p>}
-      <button type="button" className="text-sm font-semibold text-[var(--accent-ink)] hover:underline" onClick={() => setEditPhone(true)}>
+      <button type="button" className="text-sm font-semibold text-[var(--accent-ink)] hover:underline" onClick={() => setEditedFor(sent)}>
         {"Change number / resend OTP"}
       </button>
     </form>
