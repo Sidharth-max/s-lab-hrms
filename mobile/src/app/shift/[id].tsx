@@ -1,7 +1,6 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
-import { Button, Card, ErrorView, Field, Loading, Notice, Screen, STICKY_BAR_SPACE, StickyBar } from "@/components/ui";
+import { Button, Card, ErrorView, Field, Loading, Notice, Screen, StickyBar } from "@/components/ui";
 import { dayFormBody, toDayForms, WeekEditor, type DayForm, type DayRule } from "@/components/WeekEditor";
 import { useDialog } from "@/components/dialog";
 import { api } from "@/lib/api";
@@ -70,8 +69,14 @@ function ShiftForm({ shift, business }: { shift: ShiftRow | null; business: { da
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <Screen bottomSpace={STICKY_BAR_SPACE + (error ? 56 : 0)}>
+      <Screen
+        footer={
+          <StickyBar>
+            {error ? <Notice tone="red" text={error} /> : null}
+            <Button title={shift ? "Save shift" : "Add shift"} loading={busy === "save"} disabled={!name.trim()} onPress={save} />
+          </StickyBar>
+        }
+      >
         <Stack.Screen options={{ title: shift ? shift.name : "New shift" }} />
         <Card>
           <Field label="Shift name" value={name} onChangeText={setName} placeholder="e.g. Morning, Night" maxLength={40} />
@@ -83,10 +88,5 @@ function ShiftForm({ shift, business }: { shift: ShiftRow | null; business: { da
           <Button title="Remove shift" variant="danger" loading={busy === "remove"} onPress={remove} />
         ) : null}
       </Screen>
-      <StickyBar>
-        {error ? <Notice tone="red" text={error} /> : null}
-        <Button title={shift ? "Save shift" : "Add shift"} loading={busy === "save"} disabled={!name.trim()} onPress={save} />
-      </StickyBar>
-    </View>
   );
 }

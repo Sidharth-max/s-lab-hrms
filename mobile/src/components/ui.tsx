@@ -20,8 +20,11 @@ export function Screen({
   padded = true,
   tabs = false,
   bottomSpace = 0,
+  footer,
 }: {
   children: React.ReactNode;
+  /** Sticky bottom bar (use <StickyBar>): pinned to the bottom with the header's frosted blur. */
+  footer?: React.ReactNode;
   scroll?: boolean;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   padded?: boolean;
@@ -31,14 +34,15 @@ export function Screen({
   bottomSpace?: number;
 }) {
   return (
-    <SafeAreaView style={styles.screen} edges={["left", "right", "bottom"]}>
+    // With a footer the bar itself covers the bottom inset (the page scrolls under it, blurred).
+    <SafeAreaView style={styles.screen} edges={footer ? ["left", "right"] : ["left", "right", "bottom"]}>
       {/* The page starts below the transparent, blurred header and scrolls underneath it. */}
-      <BlurFrame>
-        {(pad) => {
+      <BlurFrame footer={footer}>
+        {(pad, bottomPad) => {
           // The page content fades in once it is ready (instead of popping in after the loading placeholder).
-          const inner = <Reanimated.View entering={SCREEN_IN} style={[styles.inner, padded && styles.padded, { paddingTop: (padded ? 16 : 0) + pad, paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace }]}>{children}</Reanimated.View>;
+          const inner = <Reanimated.View entering={SCREEN_IN} style={[styles.inner, padded && styles.padded, { paddingTop: (padded ? 16 : 0) + pad, paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace + bottomPad }]}>{children}</Reanimated.View>;
           return scroll ? (
-            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }} scrollIndicatorInsets={{ top: pad }}>
+            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }} scrollIndicatorInsets={{ top: pad, bottom: bottomPad }}>
               {inner}
             </KeyboardAwareScrollView>
           ) : (
@@ -442,18 +446,11 @@ export const styles = StyleSheet.create({
   notice: { borderWidth: 1, borderRadius: R.md, padding: 12 },
 });
 
-/** Height to reserve at the bottom of a Screen (bottomSpace) when a StickyBar is shown. */
-export const STICKY_BAR_SPACE = 96;
-
 /**
- * Action bar pinned to the bottom of the screen (Save, Pay, Advance…): stays in reach while the page
- * scrolls. Put it next to the Screen inside a flex: 1 View, and give the Screen bottomSpace={STICKY_BAR_SPACE}.
+ * Content of a sticky bottom bar (Save, Pay, Advance…). Pass it as <Screen footer={…}>: the Screen pins it
+ * to the bottom with the same frosted blur as the header and keeps the page scrollable above it.
  */
-export function StickyBar({ children }: { children: React.ReactNode }) {
+export function StickyBar({ children, row }: { children: React.ReactNode; row?: boolean }) {
   const insets = useSafeAreaInsets();
-  return (
-    <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.hairline, gap: 8, ...shadow(3) }}>
-      {children}
-    </View>
-  );
+  return <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: row ? 10 : 8, flexDirection: row ? "row" : "column", alignItems: row ? "center" : "stretch" }}>{children}</View>;
 }

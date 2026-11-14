@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
 import { Beach, Building, ChevronDown, ChevronRight, ChevronUp, Clock, Coins, Plus, Trash2, type IconType } from "@/components/icons";
-import { Button, Card, ErrorView, Field, IconChip, Loading, Muted, Notice, refreshProps, Screen, Toggle } from "@/components/ui";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button, Card, ErrorView, Field, IconChip, Loading, Muted, Notice, refreshProps, Screen, StickyBar, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C, type Ink } from "@/lib/theme";
@@ -83,7 +82,6 @@ function SettingsForm({
   }
 
   const [open, setOpen] = useState<string | null>(null);
-  const insets = useSafeAreaInsets();
 
   function saveSettings() {
     const body: Record<string, unknown> = { name, ...nums, ...dayFormBody(days) };
@@ -100,7 +98,15 @@ function SettingsForm({
   const offNames = days.map((d, i) => (d.off ? DAYS[i].slice(0, 3) : null)).filter(Boolean).join(", ");
   return (
     <View style={{ flex: 1 }}>
-    <Screen refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} bottomSpace={dirty ? 90 : 0}>
+    <Screen
+      refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}
+      footer={dirty ? (
+        <StickyBar row>
+        <View style={{ flex: 1 }}><Button title="Undo" variant="secondary" onPress={() => { const o = JSON.parse(saved); setName(o.name); setDays(o.days); setNums(o.nums); }} /></View>
+        <View style={{ flex: 2 }}><Button title="Save changes" loading={busy === "settings"} onPress={saveSettings} /></View>
+        </StickyBar>
+      ) : undefined}
+    >
       <Stack.Screen options={{ title: "Settings" }} />
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
       <Muted>Tap a section to open it. Changes to the business, hours and rates are saved together with the button at the bottom.</Muted>
@@ -169,12 +175,6 @@ function SettingsForm({
         {num("esiEmployerPct", "ESIC employer %")}
       </Section>
     </Screen>
-    {dirty ? (
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: insets.bottom + 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.hairline, flexDirection: "row", gap: 10 }}>
-        <View style={{ flex: 1 }}><Button title="Undo" variant="secondary" onPress={() => { const o = JSON.parse(saved); setName(o.name); setDays(o.days); setNums(o.nums); }} /></View>
-        <View style={{ flex: 2 }}><Button title="Save changes" loading={busy === "settings"} onPress={saveSettings} /></View>
-      </View>
-    ) : null}
     </View>
   );
 }

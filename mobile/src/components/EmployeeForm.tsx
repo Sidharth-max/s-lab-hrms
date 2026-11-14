@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/Text";
-import { Button, Card, ChoiceChip, Field, Muted, Notice, Screen, Segmented, STICKY_BAR_SPACE, StickyBar, Toggle } from "./ui";
+import { Button, Card, ChoiceChip, Field, Muted, Notice, Screen, Segmented, StickyBar, Toggle } from "./ui";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { C } from "@/lib/theme";
@@ -77,9 +77,22 @@ export function EmployeeForm({
   const shift = shiftList.find((x) => x.id === v.shiftId);
 
   return (
-    // The Save button sits in a bar pinned to the bottom of the screen, so it is always in reach.
-    <View style={{ flex: 1 }}>
-    <Screen bottomSpace={STICKY_BAR_SPACE + (error ? 56 : 0)}>
+    // The Save button sits in a frosted bar pinned to the bottom of the screen, so it is always in reach.
+    <Screen footer={
+    <StickyBar>
+      {error ? <Notice tone="red" text={error} /> : null}
+      <Button
+        title={v.siteId ? submitTitle : "Choose a site first"}
+        disabled={!v.siteId}
+        loading={busy}
+        onPress={async () => {
+          setBusy(true);
+          setError(await onSubmit(wageChanged ? { ...v, wageFrom } : v, allowLeave));
+          setBusy(false);
+        }}
+      />
+    </StickyBar>
+    }>
     {header}
     <Card>
     <View style={{ gap: 14 }}>
@@ -200,20 +213,6 @@ export function EmployeeForm({
     </View>
     </Card>
     </Screen>
-    <StickyBar>
-      {error ? <Notice tone="red" text={error} /> : null}
-      <Button
-        title={v.siteId ? submitTitle : "Choose a site first"}
-        disabled={!v.siteId}
-        loading={busy}
-        onPress={async () => {
-          setBusy(true);
-          setError(await onSubmit(wageChanged ? { ...v, wageFrom } : v, allowLeave));
-          setBusy(false);
-        }}
-      />
-    </StickyBar>
-    </View>
   );
 }
 

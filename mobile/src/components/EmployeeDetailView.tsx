@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
 import { Beach, CalendarCheck, CalendarDays, Camera, HandCoins, LogIn, Pencil, RotateCcw, ScanFace, Trash2, UserCog } from "@/components/icons";
-import { Badge, Button, Card, ErrorView, Hero, Loading, Muted, Notice, refreshProps, Row, Screen, SectionHead, Tabs } from "@/components/ui";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Badge, Button, Card, ErrorView, Hero, Loading, Muted, Notice, refreshProps, Row, Screen, SectionHead, StickyBar, Tabs } from "@/components/ui";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
 import { SalaryExport } from "./SalaryExport";
@@ -13,7 +12,7 @@ import { LeaveSection } from "@/components/LeaveSection";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateLabel, rs } from "@/lib/format";
-import { C, shadow, statusTone } from "@/lib/theme";
+import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useDialog } from "@/components/dialog";
 
@@ -88,7 +87,6 @@ export function EmployeeDetailView({ id, created, saved, embedded, initialTab, o
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [form, setForm] = useState<LedgerForm>(null);
-  const insets = useSafeAreaInsets();
 
   async function run(name: string, body: Record<string, unknown>) {
     setBusy(name);
@@ -114,7 +112,10 @@ export function EmployeeDetailView({ id, created, saved, embedded, initialTab, o
   const showActions = (data.can.pay && data.hisaab.balance > 0 || data.can.advance && e.active || data.can.extras);
   return (
     <View style={{ flex: 1 }}>
-    <Screen refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} bottomSpace={showActions ? 90 : 0}>
+    <Screen
+      refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}
+      footer={showActions ? <StickyBar><LedgerActions h={data.hisaab} can={data.can} active={e.active} name={e.name} onOpen={setForm} /></StickyBar> : undefined}
+    >
       {embedded ? null : <Stack.Screen
         options={{
           title: e.name,
@@ -269,11 +270,6 @@ export function EmployeeDetailView({ id, created, saved, embedded, initialTab, o
         </>
       ) : null}
     </Screen>
-    {showActions ? (
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.hairline, ...shadow(3) }}>
-        <LedgerActions h={data.hisaab} can={data.can} active={e.active} name={e.name} onOpen={setForm} />
-      </View>
-    ) : null}
     <LedgerSheets employee={{ id: e.id, name: e.name }} h={data.hisaab} form={form} setForm={setForm} onDone={async (m) => { setMsg(m); await reload(); }} />
     </View>
   );
