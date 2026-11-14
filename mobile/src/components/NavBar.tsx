@@ -7,7 +7,6 @@ import type { Tabs } from "expo-router";
 import { Text } from "./Text";
 import { CalendarDays, Grid, House, HouseFilled, Search, Users, Wallet, type IconType } from "./icons";
 import { C, shadow } from "@/lib/theme";
-import { haptic } from "@/lib/haptics";
 import { RAIL_WIDTH } from "@/lib/layout";
 import { openMore, openSearch, useOverlay } from "@/lib/moreSheet";
 import { useAuth } from "@/lib/auth";
@@ -62,7 +61,6 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
   const routes = state.routes.filter((r) => TABS[r.name]);
 
   const press = (key: string, focused: boolean) => {
-    haptic.select();
     const event = emitter.emit({ type: "tabPress", target: key, canPreventDefault: true });
     if (!focused && !event.defaultPrevented) navigateToTab(key);
   };
@@ -89,7 +87,7 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
           </Pressable>
         ))}
         <View style={{ flex: 1 }} />
-        <Pressable onPress={() => { haptic.select(); openMore(); }} accessibilityRole="button" accessibilityLabel="More" style={{ alignItems: "center", gap: 4, paddingVertical: 6, width: RAIL_WIDTH }}>
+        <Pressable onPress={() => { openMore(); }} accessibilityRole="button" accessibilityLabel="More" style={{ alignItems: "center", gap: 4, paddingVertical: 6, width: RAIL_WIDTH }}>
           <View style={{ width: 56, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: overlay === "more" ? C.brandSoft : "transparent" }}>
             <Grid size={22} color={overlay === "more" ? C.brandInk : C.muted} />
             <Dot n={me?.pendingApprovals} />
@@ -122,7 +120,7 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
             </Pressable>
           </Animated.View>
         ))}
-        <Pressable onPress={() => { haptic.select(); openMore(); }} accessibilityRole="button" accessibilityLabel={me?.pendingApprovals ? `More, ${me.pendingApprovals} waiting for approval` : "More"} style={{ height: 52, width: 52, minWidth: 40, flexShrink: 1, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: overlay === "more" ? C.brandSoft : "transparent" }}>
+        <Pressable onPress={() => { openMore(); }} accessibilityRole="button" accessibilityLabel={me?.pendingApprovals ? `More, ${me.pendingApprovals} waiting for approval` : "More"} style={{ height: 52, width: 52, minWidth: 40, flexShrink: 1, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: overlay === "more" ? C.brandSoft : "transparent" }}>
           <View>
             <Grid size={23} color={overlay === "more" ? C.brandInk : C.muted} />
             <Dot n={me?.pendingApprovals} />

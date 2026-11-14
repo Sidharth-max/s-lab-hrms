@@ -6,7 +6,6 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Text } from "./Text";
 import { X } from "./icons";
 import { C, shadow } from "@/lib/theme";
-import { haptic } from "@/lib/haptics";
 
 /**
  * Bottom sheet used for menus, forms and pickers. Opens from the bottom (thumb zone) and closes on:
@@ -44,7 +43,6 @@ export function Sheet({
   useEffect(() => {
     if (visible) {
       closing.current = false;
-      haptic.open();
       y.set(withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System }));
       fade.set(withTiming(1, { duration: 220, reduceMotion: ReduceMotion.System }));
       return;

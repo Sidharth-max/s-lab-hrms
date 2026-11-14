@@ -27,7 +27,7 @@ export function PressScale({
   children,
   style,
   scaleTo = 0.97,
-  haptics = true,
+  haptics = false,
   onPress,
   ...rest
 }: Omit<PressableProps, "style"> & { style?: StyleProp<ViewStyle>; scaleTo?: number; haptics?: boolean; children: React.ReactNode }) {

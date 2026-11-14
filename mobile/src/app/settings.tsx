@@ -5,7 +5,6 @@ import { Text } from "@/components/Text";
 import { Beach, Building, ChevronDown, ChevronUp, Clock, Coins, Plus, Trash2, type IconType } from "@/components/icons";
 import { Button, Card, ErrorView, Field, IconChip, Loading, Muted, Notice, refreshProps, Screen, Toggle } from "@/components/ui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { haptic } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C, type Ink } from "@/lib/theme";
@@ -206,7 +205,7 @@ function Section({ id, open, setOpen, icon: Icon, ink, title, summary, children 
   const isOpen = open === id;
   return (
     <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
-      <Pressable onPress={() => { haptic.select(); setOpen(isOpen ? null : id); }} accessibilityRole="button" accessibilityState={{ expanded: isOpen }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 16, backgroundColor: pressed ? C.soft : "transparent" })}>
+      <Pressable onPress={() => { setOpen(isOpen ? null : id); }} accessibilityRole="button" accessibilityState={{ expanded: isOpen }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 16, backgroundColor: pressed ? C.soft : "transparent" })}>
         <IconChip ink={ink}><Icon size={20} color={C.ink[ink]} /></IconChip>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{title}</Text>

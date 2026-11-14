@@ -10,7 +10,6 @@ import { rs } from "@/lib/format";
 import { C } from "@/lib/theme";
 import { closeOverlay, useOverlay } from "@/lib/moreSheet";
 import { rememberNames } from "@/lib/names";
-import { haptic } from "@/lib/haptics";
 
 interface Emp { id: string; name: string; code: string; phone: string | null; site: string; active: boolean; face: boolean; inHouse?: boolean; wage: number; wageType: "MONTHLY" | "DAILY" }
 
@@ -54,7 +53,6 @@ export function SearchSheet() {
   const onSalary = path.startsWith("/salary");
 
   const openEmp = (e: Emp) => {
-    haptic.tap();
     setQ("");
     closeOverlay();
     router.push({ pathname: "/employee/[id]", params: { id: e.id, name: e.name, ...(onSalary ? { tab: "ledger" } : {}) } });

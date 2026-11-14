@@ -105,7 +105,7 @@ export default function Attendance() {
         {data.rows.map((r, i) => (
           <Pressable
             key={r.employeeId}
-            onPress={() => { haptic.tap(); if (wide) setSelected({ employeeId: r.employeeId, date: data.date }); else router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: r.employeeId, date: data.date, name: r.name } }); }}
+            onPress={() => { if (wide) setSelected({ employeeId: r.employeeId, date: data.date }); else router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId: r.employeeId, date: data.date, name: r.name } }); }}
             style={({ pressed }) => [{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }, (pressed || (wide && selected?.employeeId === r.employeeId && selected.date === data.date)) && { backgroundColor: C.soft }]}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>

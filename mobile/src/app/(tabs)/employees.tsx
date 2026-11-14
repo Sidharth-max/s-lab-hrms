@@ -6,7 +6,6 @@ import { Text } from "@/components/Text";
 import { ChevronRight, Plus, Users } from "@/components/icons";
 import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Tabs, Button, refreshProps } from "@/components/ui";
 import { rememberNames } from "@/lib/names";
-import { haptic } from "@/lib/haptics";
 import { Animated, enterAt } from "@/lib/motion";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -61,7 +60,7 @@ export default function Employees() {
       renderItem={({ item: e, index }) => (
         <Animated.View entering={enterAt(index)}>
         <Pressable
-          onPress={() => { haptic.tap(); if (wide) setSelected(e.id); else router.push({ pathname: "/employee/[id]", params: { id: e.id, name: e.name } }); }}
+          onPress={() => { if (wide) setSelected(e.id); else router.push({ pathname: "/employee/[id]", params: { id: e.id, name: e.name } }); }}
           style={({ pressed }) => [
             { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: pressed || (wide && selected === e.id) ? C.soft : C.card, borderColor: C.hairline, borderLeftWidth: 1, borderRightWidth: 1, borderTopWidth: 1 },
             index === 0 && { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
