@@ -2,8 +2,7 @@ import { STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { apiError, json, staff } from "@/lib/api";
 import { can, canSeeSite } from "@/lib/permissions";
-import { monthAttendance } from "@/lib/services";
-import { parseDayRules } from "@/lib/day-rules";
+import { monthAttendance, rulesForEmployee } from "@/lib/services";
 import { dateKeyToDb, formatIstTime, istDateKey, weekday } from "@/lib/time";
 
 // One employee's day: punches, manual edits and whether it can still be edited.
@@ -21,6 +20,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/attendance/[e
     const ids = [...new Set([...punches.flatMap((p) => [p.createdBy, p.voidedBy]), ...overrides.map((o) => o.createdBy)].filter(Boolean) as string[])];
     const users = new Map((await db.user.findMany({ where: { id: { in: ids } } })).map((u) => [u.id, u.name]));
     const day = days.get(emp.id)!.find((d) => d.date === date)!;
+    const rule = (await rulesForEmployee(business, emp.id))[weekday(date)];
     return json({
       employee: { id: emp.id, name: emp.name, code: emp.code },
       date,
@@ -29,9 +29,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/attendance/[e
       manual: day.overridden,
       late: day.late,
       lateMins: day.lateMins,
+      early: day.early,
+      earlyMins: day.earlyMins,
       locked: false, // salary months are no longer locked; kept for older app versions
       // Store hours for that weekday: the default "full day" for marking attendance by hand.
-      hours: (() => { const r = parseDayRules(business.dayRules)[weekday(date)]; return { open: r.open, close: r.close }; })(),
+      hours: { open: rule.open, close: rule.close },
       editable: can(actor, "attendance.edit") && date <= istDateKey(new Date()),
       punches: punches.map((p) => ({
         id: p.id,

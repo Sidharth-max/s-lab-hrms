@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { Pressable, View } from "react-native";
 import { Text } from "./Text";
 import { X } from "./icons";
-import { Card, ErrorView, Loading, Notice, Screen } from "./ui";
+import { ErrorView, Loading, Notice } from "./ui";
 import { EmployeeForm, employeeBody, type EmployeeValues } from "./EmployeeForm";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -39,18 +39,20 @@ export function NewEmployeeView({ embedded, onCreated, onClose }: { embedded?: b
   const { data, error } = useLoad(() => api.get<{ nextCode: string }>("/api/m/employees"));
   if (!data && !error) return <Loading />;
   return (
-    <Screen>
-      {embedded ? <PaneTitle title="Add employee" onClose={onClose} /> : <Stack.Screen options={{ title: "Add employee" }} />}
-      {sites.length === 0 ? <Notice tone="red" text="Add a site first in More > Settings." /> : null}
-      <Card>
         <EmployeeForm
+          header={
+            <>
+              {embedded ? <PaneTitle title="Add employee" onClose={onClose} /> : <Stack.Screen options={{ title: "Add employee" }} />}
+              {sites.length === 0 ? <Notice tone="red" text="Add a site first in More > Settings." /> : null}
+            </>
+          }
           isNew
           canSalary={can("salary.edit")}
           sites={sites}
           submitTitle="Add employee"
           initial={{
-            name: "", code: data?.nextCode ?? "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", cashWage: "", basicPercent: "100",
-            pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [], inHouse: false,
+            name: "", code: data?.nextCode ?? "", phone: "", siteId: "", joinedOn: today(), wageType: "MONTHLY", wage: "", cashWage: "", basicPercent: "100",
+            pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [], inHouse: false, shiftId: "",
           }}
           onSubmit={async (v, allowLeave) => {
             try {
@@ -65,15 +67,13 @@ export function NewEmployeeView({ embedded, onCreated, onClose }: { embedded?: b
             }
           }}
         />
-      </Card>
-    </Screen>
   );
 }
 
 interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; joinedOn: string;
-    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[]; inHouse: boolean;
+    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[]; inHouse: boolean; shiftId?: string | null;
     cashWage?: number; bankAccountName?: string | null; bankAccountNumber?: string | null; bankIfsc?: string | null; bankName?: string | null; bankBranch?: string | null; upiId?: string | null;
   };
 }
@@ -89,13 +89,11 @@ export function EditEmployeeView({ id, embedded, onSaved, onClose }: { id: strin
     wage: String((e.wage - (e.cashWage ?? 0)) / 100), cashWage: e.cashWage ? String(e.cashWage / 100) : "", basicPercent: String(e.basicPercent),
     bankAccountName: e.bankAccountName ?? "", bankAccountNumber: e.bankAccountNumber ?? "", bankAccountNumber2: e.bankAccountNumber ?? "", bankIfsc: e.bankIfsc ?? "", upiId: e.upiId ?? "",
     bankName: e.bankName ? `${e.bankName}${e.bankBranch ? ` · ${e.bankBranch}` : ""}` : "", pfEnabled: e.pfEnabled, esiEnabled: e.esiEnabled, uanNumber: e.uanNumber ?? "", esicNumber: e.esicNumber ?? "",
-    customWeeklyOff: e.customWeeklyOff, weeklyOffDays: e.weeklyOffDays, inHouse: e.inHouse,
+    customWeeklyOff: e.customWeeklyOff, weeklyOffDays: e.weeklyOffDays, inHouse: e.inHouse, shiftId: e.shiftId ?? "",
   };
   return (
-    <Screen>
-      {embedded ? <PaneTitle title={`Edit · ${e.name}`} onClose={onClose} /> : <Stack.Screen options={{ title: `Edit · ${e.code}` }} />}
-      <Card>
         <EmployeeForm
+          header={embedded ? <PaneTitle title={`Edit · ${e.name}`} onClose={onClose} /> : <Stack.Screen options={{ title: `Edit · ${e.code}` }} />}
           isNew={false}
           canSalary={can("salary.edit")}
           sites={me?.sites ?? []}
@@ -112,7 +110,5 @@ export function EditEmployeeView({ id, embedded, onSaved, onClose }: { id: strin
             }
           }}
         />
-      </Card>
-    </Screen>
   );
 }

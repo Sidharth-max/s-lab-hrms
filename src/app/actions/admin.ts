@@ -10,7 +10,7 @@ import { env } from "@/lib/env";
 import { isPermission } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { dateKeyToDb } from "@/lib/time";
-import { halfDayLimit, isTime, type DayRule } from "@/lib/day-rules";
+import { readDayRulesForm } from "@/lib/day-rules";
 import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 
@@ -29,19 +29,9 @@ export const updateSettings = safe(async (_p: ActionResult, form: FormData): Pro
   const pct = (k: string, label: string) => Math.round(intIn(form, k, 0, 100, label) * 100);
 
   // Weekly schedule: one row per weekday (0 = Sunday).
-  const weeklyOffDays: number[] = [];
-  const dayRules: DayRule[] = [];
-  for (let i = 0; i < 7; i++) {
-    const open = str(form, `open_${i}`);
-    const close = str(form, `close_${i}`);
-    if (!isTime(open) || !isTime(close)) return { error: "Enter open and close times as HH:MM" };
-    // Grace period in minutes: a first scan-in after open + grace is tagged "Late" (full pay).
-    const grace = Number(str(form, `grace_${i}`) || "0");
-    if (!Number.isInteger(grace) || grace < 0 || grace > 240) return { error: "Grace period must be 0 to 240 minutes" };
-    if (form.get(`off_${i}`) === "on") weeklyOffDays.push(i);
-    // Half day is always under 50% of the day's hours; the minutes are stored for older readers.
-    dayRules.push({ open, close, halfDayBelowMins: halfDayLimit({ open, close }), anyScanFullDay: form.get(`any_${i}`) === "on", graceMins: grace });
-  }
+  const week = readDayRulesForm((k) => str(form, k), (k) => form.get(k) === "on");
+  if ("error" in week) return { error: week.error };
+  const { weeklyOffDays, dayRules } = week;
 
   const data = {
     name,
@@ -59,6 +49,56 @@ export const updateSettings = safe(async (_p: ActionResult, form: FormData): Pro
   await audit(actor.businessId, actor.id, "settings.update", "Business", actor.businessId, data);
   revalidatePath("/", "layout");
   return { ok: true, message: "Saved" };
+});
+
+// ---------- Shifts ----------
+
+/** Creates a shift, or updates one when shiftId is sent. Same per-day fields as the business hours. */
+export const saveShift = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+  const actor = await assertStaff("settings.manage");
+  const name = str(form, "name");
+  if (!name) return { error: "Enter the shift name" };
+  if (name.length > 40) return { error: "Shift name: up to 40 letters" };
+  const week = readDayRulesForm((k) => str(form, k), (k) => form.get(k) === "on");
+  if ("error" in week) return { error: week.error };
+  const id = str(form, "shiftId");
+  const clash = await db.shift.findFirst({ where: { businessId: actor.businessId, name, ...(id ? { NOT: { id } } : {}) } });
+  if (clash) return { error: "A shift with this name exists" };
+  const data = { name, dayRules: week.dayRules as unknown as Prisma.InputJsonValue, weeklyOffDays: week.weeklyOffDays, active: true };
+  let shiftId = id;
+  if (id) {
+    const cur = await db.shift.findFirst({ where: { id, businessId: actor.businessId } });
+    if (!cur) return { error: "Shift not found" };
+    await db.shift.update({ where: { id }, data });
+    await audit(actor.businessId, actor.id, "shift.update", "Shift", id, data);
+  } else {
+    shiftId = (await db.shift.create({ data: { businessId: actor.businessId, ...data } })).id;
+    await audit(actor.businessId, actor.id, "shift.create", "Shift", shiftId, data);
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: id ? "Shift saved" : "Shift added", data: { id: shiftId } };
+});
+
+/** Website: save the shift and go back to Settings. */
+export async function saveShiftAndReturn(prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const r = await saveShift(prev, form);
+  if (r?.ok) redirect("/settings?shift=saved#shifts");
+  return r;
+}
+
+/** Removes a shift. Its staff go back to the business hours. Past attendance is worked out again with those hours. */
+export const removeShift = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
+  const actor = await assertStaff("settings.manage");
+  const shift = await db.shift.findFirst({ where: { id: str(form, "shiftId"), businessId: actor.businessId } });
+  if (!shift) return { error: "Shift not found" };
+  await db.$transaction([
+    db.employee.updateMany({ where: { shiftId: shift.id }, data: { shiftId: null } }),
+    // Renamed so the name can be used again for a new shift.
+    db.shift.update({ where: { id: shift.id }, data: { active: false, name: `${shift.name} (removed ${shift.id.slice(-4)})` } }),
+  ]);
+  await audit(actor.businessId, actor.id, "shift.remove", "Shift", shift.id, { name: shift.name });
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Shift removed" };
 });
 
 export const addSite = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {

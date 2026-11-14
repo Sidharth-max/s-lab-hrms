@@ -15,6 +15,8 @@ export function ActionForm({
   confirm,
   resetOnSuccess = false,
   hideSubmit = false,
+  sticky = false,
+  extraActions,
 }: {
   action: (prev: ActionResult, form: FormData) => Promise<ActionResult>;
   children?: React.ReactNode;
@@ -24,6 +26,9 @@ export function ActionForm({
   confirm?: string;
   resetOnSuccess?: boolean;
   hideSubmit?: boolean;
+  /** Keep the submit button (and extraActions) pinned to the bottom of the screen while scrolling. */
+  sticky?: boolean;
+  extraActions?: React.ReactNode;
 }) {
   // Toast as soon as the server answers, before the page refreshes and maybe removes this form.
   const [state, formAction, pending] = useActionState(async (prev: ActionResult, form: FormData) => {
@@ -73,10 +78,11 @@ export function ActionForm({
       <fieldset disabled={pending} className="contents">
         {children}
         {!hideSubmit && (
-          <div className="flex items-center gap-3">
-            <button type="submit" className={submitClass}>
+          <div className={sticky ? "sticky-actions" : "flex items-center gap-3"}>
+            <button type="submit" className={`${submitClass}${sticky ? " flex-1 sm:flex-none" : ""}`}>
               {pending ? "Please wait…" : (submitLabel ?? "Save")}
             </button>
+            {extraActions}
             {state?.error && <p className="text-sm text-[var(--red)]">{state.error}</p>}
             {state?.ok && state.message && <p className="text-sm text-[var(--green-ink)]">{state.message}</p>}
           </div>

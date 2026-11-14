@@ -4,7 +4,7 @@ import { deriveMonth, type PunchInput, type OverrideInput } from "./attendance";
 import { db } from "./db";
 import { effectiveWeeklyOff, parseDayRules } from "./day-rules";
 import { bankShare, dayFactor, dayRate, statutory, wageOn, type WageRate } from "./payroll";
-import { leaveDays } from "./services";
+import { leaveDays, shiftsOf } from "./services";
 import { addMonths, dateKeyToDb, daysInMonth, dbToDateKey, istDateKey } from "./time";
 
 // The salary "hisaab": one running balance per employee, no salary months and no locking.
@@ -106,7 +106,7 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
   const from = dateKeyToDb(starts[0]);
   const to = dateKeyToDb(ends[ends.length - 1]);
 
-  const [business, holidays, punches, overrides, plans, rates, advances, payments, adjustments] = await Promise.all([
+  const [business, holidays, punches, overrides, plans, rates, advances, payments, adjustments, shifts] = await Promise.all([
     tx.business.findUniqueOrThrow({ where: { id: businessId } }),
     tx.holiday.findMany({ where: { businessId, date: { gte: from, lte: to } }, select: { date: true } }),
     tx.attendancePunch.findMany({ where: { employeeId: { in: ids }, workDate: { gte: from, lte: to }, voidedAt: null }, select: { employeeId: true, type: true, at: true, workDate: true } }),
@@ -116,6 +116,7 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
     tx.advance.findMany({ where: { employeeId: { in: ids }, status: { in: ["ACTIVE", "CLEARED", "PENDING_APPROVAL"] } } }),
     tx.salaryPayment.findMany({ where: { employeeId: { in: ids }, voidedAt: null } }),
     tx.adjustment.findMany({ where: { employeeId: { in: ids } } }),
+    shiftsOf(ids, tx),
   ]);
 
   const rules = {
@@ -138,7 +139,8 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
     if (wage.length === 0) wage.push({ effectiveFrom: since, wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage, cashWage: e.cashWage });
     const leaves = leaveDays(planBy.get(e.id) ?? []);
     const ctx = { today, joinedOn: since, leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null, inHouse: e.inHouse };
-    const dayRules = { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e) };
+    const shift = shifts.get(e.id);
+    const dayRules = { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e, shift), byWeekday: shift?.dayRules ?? rules.byWeekday };
 
     const months: HisaabMonth[] = [];
     if (since <= upTo) {

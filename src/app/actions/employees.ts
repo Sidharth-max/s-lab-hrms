@@ -22,6 +22,16 @@ function parseWeeklyOff(form: FormData) {
   return { customWeeklyOff, weeklyOffDays };
 }
 
+/** Shift chosen on the form: "" = business hours. Undefined when the form has no shift field (older app versions). */
+async function parseShift(form: FormData, businessId: string): Promise<{ shiftId?: string | null } | { error: string }> {
+  if (!form.has("shiftId")) return {};
+  const id = str(form, "shiftId");
+  if (!id) return { shiftId: null };
+  const shift = await db.shift.findFirst({ where: { id, businessId, active: true } });
+  if (!shift) return { error: "Choose a shift" };
+  return { shiftId: shift.id };
+}
+
 async function loadEmployee(id: string, businessId: string) {
   const e = await db.employee.findFirst({ where: { id, businessId } });
   if (!e) throw new Error("Employee not found");
@@ -124,10 +134,12 @@ export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData):
   if (await db.employee.findFirst({ where: { businessId: actor.businessId, code } })) return { error: "This employee code is already used" };
   const bank = can(actor, "salary.edit") ? await parseBank(form) : { data: null };
   if ("error" in bank) return { error: bank.error };
+  const shift = await parseShift(form, actor.businessId);
+  if ("error" in shift) return { error: shift.error };
 
   const emp = await db.$transaction(async (tx) => {
     const e = await tx.employee.create({
-      data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...payData, ...(bank.data ?? {}), ...parseWeeklyOff(form) },
+      data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...payData, ...(bank.data ?? {}), ...parseWeeklyOff(form), ...shift },
     });
     await setWageFrom(e.id, joinedOn, { wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage, cashWage: e.cashWage }, actor.id, tx);
     return e;
@@ -158,7 +170,10 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   const site = await db.site.findFirst({ where: { id: siteId, businessId: actor.businessId } });
   if (!site || !canSeeSite(actor, site.id)) return { error: "Choose a site" };
 
+  const shift = await parseShift(form, actor.businessId);
+  if ("error" in shift) return { error: shift.error };
   const data: Prisma.EmployeeUpdateInput = { name, phone, site: { connect: { id: siteId } }, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...parseWeeklyOff(form) };
+  if (shift.shiftId !== undefined) data.shift = shift.shiftId ? { connect: { id: shift.shiftId } } : { disconnect: true };
   // A new salary applies from a chosen day; days before it keep the old salary.
   let wageChange: { from: string; rate: { wageType: "MONTHLY" | "DAILY"; monthlyWage: number; dailyWage: number; cashWage: number } } | null = null;
   if (form.has("wage") || form.has("bankWage") || form.has("cashWage")) {

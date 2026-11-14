@@ -27,6 +27,8 @@ export default function TabsLayout() {
         screenOptions={{
           tabBarPosition: layout.rail ? "left" : "bottom",
           animation: "shift",
+          // Hidden tabs do not re-render on live updates (keeps the open tab smooth).
+          freezeOnBlur: true,
           // Transparent header: the list scrolls underneath and BlurFrame frosts the header + status bar.
           headerTransparent: true,
           headerStyle: { backgroundColor: "transparent" },

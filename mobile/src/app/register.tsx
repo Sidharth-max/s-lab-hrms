@@ -15,7 +15,7 @@ interface Reg {
   month: string;
   current: string;
   dates: string[];
-  rows: { employeeId: string; name: string; days: GridDay[]; present: number; absent: number; leave: number; late?: number }[];
+  rows: { employeeId: string; name: string; days: GridDay[]; present: number; absent: number; leave: number; late?: number; early?: number }[];
 }
 
 /** Monthly register on a phone: one card per employee with their month calendar (no wide table). */
@@ -34,7 +34,7 @@ export default function Register() {
     <>
       <Stack.Screen options={{ title: "Attendance register" }} />
       <BlurFrame>{(pad) => (
-      <FlatList
+      <FlatList showsVerticalScrollIndicator={false}
         data={rows}
         keyExtractor={(r) => r.employeeId}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}
@@ -74,7 +74,7 @@ export default function Register() {
               <Badge label={`Present ${r.present}`} tone="green" dot />
               <Badge label={`Absent ${r.absent}`} tone="red" dot />
               <Badge label={`Leave ${r.leave}`} />
-            {r.late ? <Badge label={`Late ${r.late}`} tone="red" /> : null}
+            {r.late ? <Badge label={`Late ${r.late}`} tone="red" /> : null}{r.early ? <Badge label={`Left early ${r.early}`} tone="red" /> : null}
             </View>
             <MonthGrid employeeId={r.employeeId} month={data.month} days={r.days} compact />
           </View>

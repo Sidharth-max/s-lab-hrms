@@ -13,6 +13,7 @@ import { formatRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { todayStatus } from "@/lib/services";
 import { hisaabOf } from "@/lib/ledger";
+import { SalaryExport } from "@/components/SalaryExport";
 import { balanceText, HisaabPanel } from "@/components/HisaabPanel";
 import { listLeaves } from "@/lib/leaves";
 import { LeavePanel } from "@/components/LeavePanel";
@@ -23,7 +24,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
   const actor = await requireStaff();
   const { id } = await params;
   const sp = await searchParams;
-  const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
+  const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true, shift: true } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
   const [h, wageRows, today, leaves] = await Promise.all([
     hisaabOf(emp),
@@ -57,14 +58,18 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     </section>
   );
 
+  const todayKey = istDateKey(new Date());
   const hisaab = (
-    <HisaabPanel
-      h={h}
-      employee={{ id: emp.id, name: emp.name, active: emp.active }}
-      wages={wages}
-      openAdvance={!!sp.advance}
-      can={{ pay: can(actor, "payroll.lock"), extras: can(actor, "payroll.run"), advance: can(actor, "advances.manage"), owner: actor.role === "OWNER" }}
-    />
+    <div className="flex flex-col gap-4">
+      <HisaabPanel
+        h={h}
+        employee={{ id: emp.id, name: emp.name, active: emp.active }}
+        wages={wages}
+        openAdvance={!!sp.advance}
+        can={{ pay: can(actor, "payroll.lock"), extras: can(actor, "payroll.run"), advance: can(actor, "advances.manage"), owner: actor.role === "OWNER" }}
+      />
+      {can(actor, "payroll.run") && <SalaryExport employeeId={emp.id} from={`${todayKey.slice(0, 7)}-01`} to={todayKey} min={dbToDateKey(emp.joinedOn)} />}
+    </div>
   );
 
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -82,7 +87,8 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     ["PF", emp.pfEnabled ? `On${emp.uanNumber ? ` · UAN ${emp.uanNumber}` : " · UAN not added"}` : "Off"],
     ["ESIC", emp.esiEnabled ? `On${emp.esicNumber ? ` · IP ${emp.esicNumber}` : " · IP number not added"}` : "Off"],
     ["Attendance", emp.inHouse ? "In-house: present automatically on working days" : "Face scan"],
-    ["Weekly off", emp.customWeeklyOff ? (emp.weeklyOffDays.map((d) => DAYS[d]).join(", ") || "None") : "Same as business"],
+    ["Shift", emp.shift?.active ? emp.shift.name : "Business hours"],
+    ["Weekly off", emp.customWeeklyOff ? (emp.weeklyOffDays.map((d) => DAYS[d]).join(", ") || "None") : emp.shift?.active ? "Same as shift" : "Same as business"],
     // Bank details only for people allowed to see salary.
     ...(can(actor, "salary.edit") && (emp.bankAccountNumber || emp.upiId)
       ? ([
@@ -184,7 +190,7 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
           }
         />
       </div>
-      {sp.saved && <div className="notice-green">Changes saved.</div>}
+      {sp.saved && <div className="notice-green">{sp.saved === "day" ? "Attendance saved." : "Changes saved."}</div>}
       {sp.created && (
         <div className="notice-green">
           {"Employee added. Now enroll the face in the Face tab."}

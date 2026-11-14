@@ -62,7 +62,7 @@ export default function Login() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {/* The page shrinks to the space above the keyboard, so the number and OTP boxes stay visible. */}
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-      <ScrollView keyboardShouldPersistTaps="handled" bounces={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 20 }}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" bounces={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 20 }}>
         {/* Gradient hero with the app logo (same look as the Today screen). */}
         <View style={{ paddingTop: insets.top + 40, paddingBottom: 72, paddingHorizontal: 24, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, overflow: "hidden", alignItems: "center", gap: 14 }}>
           <GradientFill />

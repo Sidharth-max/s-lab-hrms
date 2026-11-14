@@ -32,7 +32,7 @@ export interface DayRules {
   holidays: Set<string>;
   halfDayBelowMins: number; // used when a weekday has no rule of its own
   /** Optional per-weekday rules (index 0 = Sunday). With open/close the half-day limit is half the day's hours. */
-  byWeekday?: { halfDayBelowMins: number; anyScanFullDay: boolean; open?: string; close?: string; graceMins?: number }[];
+  byWeekday?: { halfDayBelowMins: number; anyScanFullDay: boolean; open?: string; close?: string; graceMins?: number; graceOutMins?: number }[];
 }
 
 export interface DayResult {
@@ -49,6 +49,9 @@ export interface DayResult {
   /** First scan-in after opening time + grace (working days only, not in-house). A tag only: full pay. */
   late: boolean;
   lateMins: number;
+  /** Last scan-out before closing time - grace out (working days only, not in-house). A tag only: full pay. */
+  early: boolean;
+  earlyMins: number;
 }
 
 /** IST minutes after midnight. */
@@ -74,6 +77,15 @@ export function isHalfByShift(firstIn: Date | null, lastOut: Date | null, open: 
   if (rel(firstIn) > mid) return true; // came after half the shift was over
   if (lastOut && rel(lastOut) < mid) return true; // left before half the shift was done
   return false;
+}
+
+/** Minutes the last scan-out was before closing time minus the grace (0 = not early). Handles shifts past midnight. */
+export function earlyMinutes(lastOut: Date, open: string, close: string, graceOutMins: number) {
+  const shift = shiftMinutes({ open, close });
+  const openMin = Number(open.slice(0, 2)) * 60 + Number(open.slice(3, 5));
+  let rel = (istMinutes(lastOut) - openMin + 1440) % 1440;
+  if (rel > (shift + 1440) / 2) rel -= 1440; // before opening time
+  return Math.max(0, shift - graceOutMins - rel);
 }
 
 export function deriveDay(
@@ -111,7 +123,12 @@ export function deriveDay(
     const inMin = istMinutes(firstIn);
     lateMins = Math.max(0, inMin - lateAfterMinutes({ open: lateRule.open, graceMins: lateRule.graceMins ?? 0 }));
   }
-  const base = { date, inAt: firstIn, outAt: lastOut, workedMins, missingOut, offDay, auto: false, late: lateMins > 0, lateMins };
+  // Left early: last scan-out before close - grace out (only when they did not come back in).
+  let earlyMins = 0;
+  if (lastOut && !openIn && !offDay && !ctx.inHouse && lateRule?.open && lateRule.close && !lateRule.anyScanFullDay) {
+    earlyMins = earlyMinutes(lastOut, lateRule.open, lateRule.close, lateRule.graceOutMins ?? 0);
+  }
+  const base = { date, inAt: firstIn, outAt: lastOut, workedMins, missingOut, offDay, auto: false, late: lateMins > 0, lateMins, early: earlyMins > 0, earlyMins };
 
   if (date < ctx.joinedOn || (ctx.leftOn && date > ctx.leftOn)) {
     return { ...base, status: "NOT_EMPLOYED", overridden: false };
@@ -268,4 +285,11 @@ export function lateLabel(mins: number) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `late ${h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`}`;
+}
+
+/** "left 20m early" */
+export function earlyLabel(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `left ${h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`} early`;
 }

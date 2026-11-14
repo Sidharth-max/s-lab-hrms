@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  serverExternalPackages: ["@prisma/client", "prisma"],
+  serverExternalPackages: ["@prisma/client", "prisma", "exceljs"],
   experimental: {
     // Face photos are sent to server actions as base64 JPEG.
     serverActions: { bodySizeLimit: "6mb" },

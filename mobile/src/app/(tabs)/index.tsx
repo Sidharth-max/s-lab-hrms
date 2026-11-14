@@ -9,7 +9,7 @@ import { ArrowUpRight, BadgeCheck, Building, Camera, ChevronRight, Clock, UserPl
 import { Avatar, Badge, Button, Card, ErrorView, InkText, Loading, Muted, refreshProps, SectionLabel } from "@/components/ui";
 import { ArrivalsChart, DotGauge, GradientFill, SegmentBar, siteInk } from "@/components/Viz";
 import { api } from "@/lib/api";
-import { dateLabel, lateLabel, rs } from "@/lib/format";
+import { dateLabel, earlyLabel, lateLabel, rs } from "@/lib/format";
 import { C, shadow, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { FLOATING_NAV_SPACE, RAIL_WIDTH, useWindowLayout } from "@/lib/layout";
@@ -28,7 +28,7 @@ interface Dashboard {
   sites: { id: string; name: string; total: number; present: number; inside: number; notIn: number }[];
   arrivals: { hour: number; count: number }[];
   payroll: { toPay: number; owed: number; people: number } | null;
-  rows: { id: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; inside: boolean; manual: boolean; needsFace: boolean; late?: boolean; lateMins?: number }[];
+  rows: { id: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; inside: boolean; manual: boolean; needsFace: boolean; late?: boolean; lateMins?: number; early?: boolean; earlyMins?: number }[];
   noFace: { id: string; name: string }[];
 }
 
@@ -66,7 +66,8 @@ function PersonRow({ r, date, i }: { r: Dashboard["rows"][number]; date: string;
           <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={2}>
             {r.site} · In <Text style={{ color: r.late ? C.ink.red : r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text>
             {r.late ? <Text style={{ color: C.ink.red, fontWeight: "600" }}>{` (${lateLabel(r.lateMins ?? 0)})`}</Text> : null} · Out{" "}
-            <Text style={{ color: r.outAt ? C.ink.blue : r.inside ? C.ink.teal : C.muted, fontWeight: r.outAt || r.inside ? "600" : "400" }}>{r.outAt ?? (r.inside ? "inside" : "—")}</Text>
+            <Text style={{ color: r.early ? C.ink.red : r.outAt ? C.ink.blue : r.inside ? C.ink.teal : C.muted, fontWeight: r.outAt || r.inside ? "600" : "400" }}>{r.outAt ?? (r.inside ? "inside" : "—")}</Text>
+            {r.early ? <Text style={{ color: C.ink.red, fontWeight: "600" }}>{` (${earlyLabel(r.earlyMins ?? 0)})`}</Text> : null}
             {r.manual ? " · manual" : ""}
           </Text>
         </View>
@@ -183,7 +184,7 @@ export default function Today() {
       <View style={{ flex: 1 }}>
         <GradientFill />
         <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
-        <ScrollView onScroll={onScroll} scrollEventThrottle={32} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 16 }}>
+        <ScrollView showsVerticalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={32} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} contentContainerStyle={{ paddingTop: insets.top + 18, paddingBottom: insets.bottom + 24, paddingHorizontal: 20, gap: 16 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>{(me?.user.name ?? "?").slice(0, 1).toUpperCase()}</Text>
@@ -247,7 +248,7 @@ export default function Today() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
     <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} onScroll={onScroll} scrollEventThrottle={32} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} progressViewOffset={insets.top} />} contentContainerStyle={{ paddingBottom: FLOATING_NAV_SPACE + insets.bottom + 16 }}>
+    <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, backgroundColor: C.bg }} onScroll={onScroll} scrollEventThrottle={32} refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} progressViewOffset={insets.top} />} contentContainerStyle={{ paddingBottom: FLOATING_NAV_SPACE + insets.bottom + 16 }}>
       <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 18, paddingBottom: 22, gap: 16, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: "hidden" }}>
         <GradientFill />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>

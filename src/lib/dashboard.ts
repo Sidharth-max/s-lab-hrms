@@ -30,6 +30,8 @@ export interface DashboardRow {
   needsFace: boolean;
   late: boolean;
   lateMins: number;
+  early: boolean;
+  earlyMins: number;
 }
 
 export interface DashboardSite {
@@ -95,6 +97,8 @@ export async function buildDashboard(actor: Actor): Promise<Dashboard> {
       manual: d.overridden,
       late: d.late,
       lateMins: d.lateMins,
+      early: d.early,
+      earlyMins: d.earlyMins,
       // In-house staff are marked present automatically, so they do not need a face.
       // Faces enrolled in test mode must be enrolled again once real AWS face recognition is on.
       needsFace: !e.inHouse && (!e.faceId || (env.faceProvider === "aws" && e.faceId.startsWith("mock-"))),

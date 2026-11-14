@@ -1,10 +1,10 @@
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { BlurFrame } from "@/components/BlurFrame";
 import { Text } from "@/components/Text";
 import { ChevronRight, Plus, Users } from "@/components/icons";
-import { Avatar, Badge, ErrorView, Fab, Loading, Muted, Tabs, Button, refreshProps } from "@/components/ui";
+import { Avatar, Badge, ChoiceChip, ErrorView, Fab, Loading, Muted, Tabs, Button, refreshProps } from "@/components/ui";
 import { rememberNames } from "@/lib/names";
 import { Animated, enterAt } from "@/lib/motion";
 import { api } from "@/lib/api";
@@ -34,7 +34,10 @@ export default function Employees() {
   };
 
   // Searching moved to the round Search button next to the navigation bar (one-hand reach).
-  const list = useMemo(() => (data?.employees ?? []).filter((e) => e.active === (show === "working")), [data, show]);
+  const [site, setSite] = useState(""); // "" = all sites
+  const sites = useMemo(() => [...new Set((data?.employees ?? []).map((e) => e.site))].sort(), [data]);
+  const list = useMemo(() => (data?.employees ?? []).filter((e) => e.active === (show === "working") && (!site || e.site === site)), [data, show, site]);
+  const inSite = (e: Emp) => !site || e.site === site;
 
   if (!data && error) return <ErrorView message={error} onRetry={reload} />;
   if (!data) return <Loading />;
@@ -42,17 +45,23 @@ export default function Employees() {
   const list_ = (
     <View style={{ flex: 1 }}>
     <BlurFrame>{(pad) => (
-    <FlatList
+    <FlatList showsVerticalScrollIndicator={false}
       data={list}
       keyExtractor={(e) => e.id}
       refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}
       contentContainerStyle={{ padding: 16, paddingTop: 16 + pad, paddingBottom: 96 + FLOATING_NAV_SPACE }}
       ListHeaderComponent={
         <View style={{ gap: 10, marginBottom: 12 }}>
+          {/* Site filter: All sites, or one site. */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} accessibilityLabel="Filter by site">
+            {["", ...sites].map((x) => (
+              <ChoiceChip key={x || "all"} label={`${x || "All sites"} · ${data.employees.filter((e) => e.active === (show === "working") && (!x || e.site === x)).length}`} selected={site === x} onPress={() => setSite(x)} />
+            ))}
+          </ScrollView>
           <Tabs
             options={[
-              { value: "working", label: `Active · ${data.employees.filter((e) => e.active).length}` },
-              { value: "left", label: `Archived · ${data.employees.filter((e) => !e.active).length}` },
+              { value: "working", label: `Active · ${data.employees.filter((e) => e.active && inSite(e)).length}` },
+              { value: "left", label: `Archived · ${data.employees.filter((e) => !e.active && inSite(e)).length}` },
             ]}
             value={show}
             onChange={setShow}

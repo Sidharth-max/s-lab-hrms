@@ -1,26 +1,23 @@
-import { addHoliday, addSite, removeHoliday, toggleSite, updateSettings } from "@/app/actions/admin";
+import Link from "next/link";
+import { addHoliday, addSite, removeHoliday, removeShift, toggleSite, updateSettings } from "@/app/actions/admin";
+import { scheduleSummary, SCHEDULE_HELP, WeekSchedule } from "@/components/WeekSchedule";
 import { ActionForm } from "@/components/ActionForm";
 import { SectionTitle } from "@/components/PageHero";
-import { Building, CalendarDays, Settings } from "@/components/icons";
+import { Building, CalendarDays, Clock, Plus, Settings } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dbToDateKey, formatDateKey } from "@/lib/time";
-import { parseDayRules, shiftMiddle, shiftMinutes } from "@/lib/day-rules";
+import { parseDayRules } from "@/lib/day-rules";
 
-const hm = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}`;
-const time12 = (t: string) => { const h = Number(t.slice(0, 2)); return `${((h + 11) % 12) + 1}:${t.slice(3)} ${h >= 12 ? "pm" : "am"}`; };
-import { DateInput, TimeInput } from "@/components/controls";
+import { DateInput } from "@/components/controls";
 
 export default async function SettingsPage() {
   const actor = await requireStaff("settings.manage");
-  const DAYS = [
-    "Sunday", "Monday", "Tuesday", "Wednesday",
-    "Thursday", "Friday", "Saturday",
-  ];
-  const [b, sites, holidays] = await Promise.all([
+  const [b, sites, holidays, shifts] = await Promise.all([
     db.business.findUniqueOrThrow({ where: { id: actor.businessId } }),
     db.site.findMany({ where: { businessId: actor.businessId }, orderBy: { name: "asc" } }),
     db.holiday.findMany({ where: { businessId: actor.businessId }, orderBy: { date: "desc" }, take: 60 }),
+    db.shift.findMany({ where: { businessId: actor.businessId, active: true }, orderBy: { name: "asc" }, include: { _count: { select: { employees: { where: { active: true } } } } } }),
   ]);
   const dayRules = parseDayRules(b.dayRules);
 
@@ -29,7 +26,7 @@ export default async function SettingsPage() {
       <h1 className="h1">Settings</h1>
       <section className="card">
         <SectionTitle icon={<Settings size={18} />} ink="green">Business and attendance rules</SectionTitle>
-        <ActionForm action={updateSettings} className="flex flex-col gap-4">
+        <ActionForm action={updateSettings} className="flex flex-col gap-4" submitLabel="Save settings" sticky>
           <div className="grid gap-3 @2xl:grid-cols-2">
             <div><label className="label">Business name</label><input name="name" className="input" defaultValue={b.name} required /></div>
             <div>
@@ -41,46 +38,9 @@ export default async function SettingsPage() {
               <input name="maxShiftHours" type="number" min={4} max={24} className="input" defaultValue={b.maxShiftHours} />
             </div>
           </div>
-          <h3 className="font-semibold">Weekly schedule</h3>
-          <p className="muted -mt-3">
-            {"Weekly off: paid day off for monthly staff (an employee can have their own days, set on the employee). Grace: minutes after opening time that still count as on time; a later first scan is tagged Late (full pay, no cut). Half day: punched in after the middle of that day's shift, or punched out before it (shown per day). Any scan = full day: for short days like Sunday."}
-          </p>
-          <div className="overflow-x-auto">
-            <table className="table table-cards">
-              <thead>
-                <tr>
-                  <th>Day</th>
-                  <th>Weekly off</th>
-                  <th>Opens</th>
-                  <th>Closes</th>
-                  <th>Grace (minutes)</th>
-                  <th>Half day if in after / out before</th>
-                  <th>Any scan = full day</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dayRules.map((r, i) => (
-                  <tr key={i}>
-                    <td className="card-title font-medium">{DAYS[i]}</td>
-                    <td data-label={"Weekly off"}>
-                      <input type="checkbox" name={`off_${i}`} defaultChecked={b.weeklyOffDays.includes(i)} className="h-5 w-5" />
-                    </td>
-                    <td data-label={"Opens"}><TimeInput name={`open_${i}`} defaultValue={r.open} className="w-36" /></td>
-                    <td data-label={"Closes"}><TimeInput name={`close_${i}`} defaultValue={r.close} className="w-36" /></td>
-                    <td data-label={"Grace (minutes)"}>
-                      <input type="number" name={`grace_${i}`} step="5" min={0} max={240} defaultValue={r.graceMins} className="input !w-24" aria-label={`Grace minutes on ${DAYS[i]}`} />
-                    </td>
-                    <td data-label={"Half day if in after / out before"} className="muted tabular-nums">
-                      {r.anyScanFullDay ? "Never (any scan = full day)" : `${time12(shiftMiddle(r))} (middle of ${hm(shiftMinutes(r))})`}
-                    </td>
-                    <td data-label={"Any scan = full day"}>
-                      <input type="checkbox" name={`any_${i}`} defaultChecked={r.anyScanFullDay} className="h-5 w-5" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <h3 className="font-semibold">Business hours (staff without a shift)</h3>
+          <p className="muted -mt-3">{SCHEDULE_HELP} An employee can have their own weekly off, set on the employee.</p>
+          <WeekSchedule rules={dayRules} weeklyOff={b.weeklyOffDays} />
           <h3 className="font-semibold">PF and ESIC rates</h3>
           <p className="muted -mt-3">
             {"Used only for employees with PF / ESIC switched on. Check the current official rates with your accountant."}
@@ -93,6 +53,31 @@ export default async function SettingsPage() {
             <div><label className="label">ESIC employer %</label><input name="esiEmployerPct" type="number" step="0.01" className="input" defaultValue={b.esiEmployerBps / 100} /></div>
           </div>
         </ActionForm>
+      </section>
+
+      <section id="shifts" className="card flex flex-col gap-3 scroll-mt-24">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SectionTitle icon={<Clock size={18} />} ink="teal">Shifts</SectionTitle>
+          <Link href="/settings/shifts/new" className="btn-primary"><Plus size={18} /> New shift</Link>
+        </div>
+        <p className="muted">{"Create shifts with their own times, grace in / out and weekly off (e.g. Morning, Night). Choose a shift on each employee; staff without one follow the business hours above."}</p>
+        <ul className="flex flex-col gap-2">
+          {shifts.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--line)] p-3">
+              <Link href={`/settings/shifts/${s.id}`} className="min-w-0 flex-1">
+                <span className="font-semibold">{s.name}</span>
+                <span className="muted block text-sm">{scheduleSummary(parseDayRules(s.dayRules), s.weeklyOffDays)} · {s._count.employees} staff</span>
+              </Link>
+              <div className="flex gap-2">
+                <Link href={`/settings/shifts/${s.id}`} className="btn-secondary !py-1">Edit</Link>
+                <ActionForm action={removeShift} submitLabel="Remove" submitClass="btn-secondary !py-1" confirm={`Remove ${s.name}? Its ${s._count.employees} staff go back to the business hours, and their past days are worked out again with those hours.`}>
+                  <input type="hidden" name="shiftId" value={s.id} />
+                </ActionForm>
+              </div>
+            </li>
+          ))}
+          {shifts.length === 0 && <li className="muted">{"No shifts yet. Everyone follows the business hours."}</li>}
+        </ul>
       </section>
 
       <div className="grid gap-4 @4xl:grid-cols-2">

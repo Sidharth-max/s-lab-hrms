@@ -1,34 +1,20 @@
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
-import { Beach, Building, ChevronDown, ChevronUp, Clock, Coins, Plus, Trash2, type IconType } from "@/components/icons";
+import { Beach, Building, ChevronDown, ChevronRight, ChevronUp, Clock, Coins, Plus, Trash2, type IconType } from "@/components/icons";
 import { Button, Card, ErrorView, Field, IconChip, Loading, Muted, Notice, refreshProps, Screen, Toggle } from "@/components/ui";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/lib/api";
 import { dateLabel } from "@/lib/format";
 import { C, type Ink } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
-import { DateField, TimeField } from "@/components/pickers";
+import { DateField } from "@/components/pickers";
+import { dayFormBody, toDayForms, WeekEditor, weekSummary, DAYS, type DayForm, type DayRule } from "@/components/WeekEditor";
 import { useDialog } from "@/components/dialog";
 import { useUnsavedGuard } from "@/lib/unsaved";
 
-/** Middle of the shift (same rule as the server): punched in after it or out before it = half day. */
-function shiftMiddle(open: string, close: string) {
-  const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-  let span = m(close) - m(open);
-  if (span <= 0) span += 1440;
-  return fmt12((m(open) + Math.floor(span / 2)) % 1440);
-}
-function addMins(t: string, n: number) {
-  return fmt12((Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) + n) % 1440);
-}
-function fmt12(min: number) {
-  const h = Math.floor(min / 60);
-  return `${((h + 11) % 12) + 1}:${String(min % 60).padStart(2, "0")} ${h >= 12 ? "pm" : "am"}`;
-}
-
-interface DayRule { open: string; close: string; halfDayBelowMins: number; anyScanFullDay: boolean; graceMins?: number }
+interface ShiftRow { id: string; name: string; dayRules: DayRule[]; weeklyOffDays: number[]; staff: number }
 interface Settings {
   name: string; weeklyOffDays: number[]; dayRules: DayRule[]; duplicateScanMins: number; maxShiftHours: number;
   pfEmployeePct: number; pfEmployerPct: number; pfWageCeiling: number; esiEmployeePct: number; esiEmployerPct: number;
@@ -36,9 +22,6 @@ interface Settings {
   holidays: { id: string; date: string; name: string }[];
 }
 
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-interface DayForm { off: boolean; open: string; close: string; grace: string; any: boolean }
 
 export default function SettingsScreen() {
   const { data, error, refreshing, reload } = useLoad(() => api.get<Settings>("/api/m/settings"), [], ["settings"]);
@@ -65,9 +48,8 @@ function SettingsForm({
 }) {
   const dialog = useDialog();
   const [name, setName] = useState(data.name);
-  const [days, setDays] = useState<DayForm[]>(() =>
-    data.dayRules.map((r, i) => ({ off: data.weeklyOffDays.includes(i), open: r.open, close: r.close, grace: String(r.graceMins ?? 0), any: r.anyScanFullDay })),
-  );
+  const [days, setDays] = useState<DayForm[]>(() => toDayForms(data.dayRules, data.weeklyOffDays));
+  const shifts = useLoad(() => api.get<{ shifts: ShiftRow[] }>("/api/m/shifts"), [], ["settings", "shifts"]);
   const [nums, setNums] = useState<Record<string, string>>({
     duplicateScanMins: String(data.duplicateScanMins),
     maxShiftHours: String(data.maxShiftHours),
@@ -102,17 +84,9 @@ function SettingsForm({
 
   const [open, setOpen] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
-  const setDay = (i: number, patch: Partial<DayForm>) => setDays((d) => d.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   function saveSettings() {
-    const body: Record<string, unknown> = { name, ...nums };
-    days.forEach((d, i) => {
-      body[`open_${i}`] = d.open;
-      body[`close_${i}`] = d.close;
-      body[`grace_${i}`] = d.grace || "0";
-      body[`off_${i}`] = d.off;
-      body[`any_${i}`] = d.any;
-    });
+    const body: Record<string, unknown> = { name, ...nums, ...dayFormBody(days) };
     const snapshot = JSON.stringify({ name, days, nums });
     void run("settings", "updateSettings", body, () => setSaved(snapshot));
   }
@@ -137,33 +111,22 @@ function SettingsForm({
         {num("maxShiftHours", "Longest shift (hours)")}
       </Section>
 
-      <Section id="hours" open={open} setOpen={setOpen} icon={Clock} ink="teal" title="Working hours" summary={`${workDays} working days${offNames ? ` · off ${offNames}` : ""}`}>
-        <Muted>Weekly off is paid for monthly staff. Grace: minutes after opening that still count as on time; a later first scan is tagged Late (full pay). Half day: punched in after the middle of the shift, or out before it. Any scan = full day: for short days like Sunday.</Muted>
-        {days.map((d, i) => (
-          <View key={i} style={{ borderTopWidth: 1, borderTopColor: C.hairline, paddingTop: 10, gap: 8 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ fontWeight: "600", color: d.off ? C.muted : C.text, fontSize: 15 }}>{DAYS[i]}{d.off ? " · off" : <Text style={{ color: C.ink.teal, fontWeight: "500" }}>{`  ${d.open} – ${d.close}`}</Text>}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ color: C.muted, fontSize: 13 }}>Off</Text>
-                <Toggle value={d.off} onValueChange={(b) => setDay(i, { off: b })} label={`${DAYS[i]} weekly off`} />
-              </View>
+      <Section id="hours" open={open} setOpen={setOpen} icon={Clock} ink="teal" title="Business hours" summary={`${workDays} working days${offNames ? ` · off ${offNames}` : ""} · staff without a shift`}>
+        <WeekEditor days={days} setDays={setDays} />
+      </Section>
+
+      <Section id="shifts" open={open} setOpen={setOpen} icon={Clock} ink="green" title="Shifts" summary={shifts.data ? (shifts.data.shifts.length ? shifts.data.shifts.map((x) => x.name).join(", ") : "None yet · everyone follows business hours") : "Loading…"}>
+        <Muted>Shifts have their own times, grace in / out and weekly off (e.g. Morning, Night). Choose a shift on each employee; staff without one follow the business hours.</Muted>
+        {shifts.data?.shifts.map((x) => (
+          <Pressable key={x.id} onPress={() => router.push({ pathname: "/shift/[id]", params: { id: x.id } })} accessibilityRole="button" style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: C.hairline, backgroundColor: pressed ? C.soft : "transparent" })}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontWeight: "600", color: C.text, fontSize: 15 }}>{x.name}</Text>
+              <Text style={{ color: C.muted, fontSize: 13 }} numberOfLines={2}>{`${weekSummary(toDayForms(x.dayRules, x.weeklyOffDays))} · ${x.staff} staff`}</Text>
             </View>
-            {!d.off ? (
-              <>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}><TimeField compact label="Opens" value={d.open} onChange={(t) => setDay(i, { open: t })} /></View>
-                  <View style={{ flex: 1 }}><TimeField compact label="Closes" value={d.close} onChange={(t) => setDay(i, { close: t })} /></View>
-                  <View style={{ flex: 0.8 }}><Field label="Grace (min)" value={d.grace} onChangeText={(t) => setDay(i, { grace: t.replace(/\D/g, "").slice(0, 3) })} keyboardType="number-pad" /></View>
-                </View>
-                {!d.any ? <Muted>{`Half day if in after or out before ${shiftMiddle(d.open, d.close)}`}{Number(d.grace) ? ` · Late after ${addMins(d.open, Number(d.grace))}` : ""}</Muted> : null}
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ color: C.text }}>Any scan = full day</Text>
-                  <Toggle value={d.any} onValueChange={(b) => setDay(i, { any: b })} label={`${DAYS[i]} any scan counts as full day`} />
-                </View>
-              </>
-            ) : null}
-          </View>
+            <ChevronRight size={18} color={C.muted} />
+          </Pressable>
         ))}
+        <Button title="New shift" variant="secondary" icon={<Plus size={18} color={C.ink.green} />} onPress={() => router.push({ pathname: "/shift/[id]", params: { id: "new" } })} />
       </Section>
 
       <Section id="holidays" open={open} setOpen={setOpen} icon={Beach} ink="pink" title="Holidays" summary={data.holidays.length ? `${data.holidays.length} added · paid for monthly staff` : "None added"}>

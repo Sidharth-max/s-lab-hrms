@@ -45,10 +45,14 @@ function RootStack() {
         headerTitleStyle: { fontFamily: FONT.bold, fontSize: 20, color: C.text },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: C.bg },
-        // Platform default transition: on Android 14+ with predictive back enabled (app.config.ts)
-        // the native stack shows the system's predictive back animation while the user swipes.
-        animation: "default",
+        // Smooth slide in from the right, the page behind sliding a little (native, on the UI thread).
+        // The Android system default (fade + zoom over a dark scrim) flashed black between pages.
+        animation: "ios_from_right",
+        animationDuration: 300,
         gestureEnabled: true,
+        // Pages underneath stop re-rendering while hidden (live updates no longer cause jank in the
+        // page you are looking at); they catch up the moment they are shown again.
+        freezeOnBlur: true,
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -56,11 +60,11 @@ function RootStack() {
           back to "/" (index), whose own Redirect ran while the change was still in progress, so Log out
           looped ("Maximum update depth exceeded") and the scanner only appeared after restarting the app. */}
       <Stack.Protected guard={!signedIn} redirectTo="/(tabs)">
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="scanner" options={{ headerShown: false, orientation: "default" }} />
+        <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
+        <Stack.Screen name="scanner" options={{ headerShown: false, orientation: "default", animation: "fade" }} />
       </Stack.Protected>
       <Stack.Protected guard={signedIn} redirectTo={scannerMode ? "/scanner" : "/login"}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="employee/[id]" options={({ route }) => ({ title: personTitle(route.params, "id", "Employee") })} />
         <Stack.Screen name="employee/edit/[id]" options={{ title: "Edit employee" }} />
         <Stack.Screen name="employee/new" options={{ title: "Add employee" }} />
@@ -75,6 +79,7 @@ function RootStack() {
         <Stack.Screen name="register" options={{ title: "Monthly register" }} />
         <Stack.Screen name="scanner-setup" options={{ title: "Face scanner" }} />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="shift/[id]" options={{ title: "Shift" }} />
         <Stack.Screen name="team" options={{ title: "Managers" }} />
       </Stack.Protected>
     </Stack>

@@ -2,14 +2,13 @@ import { BackLink } from "@/components/BackLink";
 import { PageHero, SectionTitle } from "@/components/PageHero";
 import { CalendarCheck, Clock, History, Pencil } from "@/components/icons";
 import { notFound } from "next/navigation";
-import { clearDayStatus, markAttendance, setDayStatus, voidPunch } from "@/app/actions/attendance";
+import { clearDayStatusAndReturn, markAttendanceAndReturn, setDayStatusAndReturn, voidPunch } from "@/app/actions/attendance";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
-import { lateLabel, STATUS_LABEL } from "@/lib/attendance";
+import { earlyLabel, lateLabel, STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { can, canSeeSite } from "@/lib/permissions";
-import { monthAttendance } from "@/lib/services";
-import { parseDayRules } from "@/lib/day-rules";
+import { monthAttendance, rulesForEmployee } from "@/lib/services";
 import { dateKeyToDb, formatDateKey, formatIstTime, istDateKey, weekday } from "@/lib/time";
 import { Select, TimeInput } from "@/components/controls";
 
@@ -30,7 +29,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
   const day = days.get(emp.id)!.find((d) => d.date === date)!;
   // Any past date can be corrected; the salary balance follows by itself.
   const editable = can(actor, "attendance.edit") && date <= istDateKey(new Date());
-  const hours = parseDayRules(business.dayRules)[weekday(date)]; // default "full day" for marking by hand
+  const hours = (await rulesForEmployee(business, emp.id))[weekday(date)]; // default "full day" for marking by hand
   const statuses = [
     ["PRESENT", "Present"],
     ["HALF_DAY", "Half day"],
@@ -51,6 +50,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
         pills={[
           { label: STATUS_LABEL[day.status] ?? "—", tone: day.status === "PRESENT" ? "ok" : day.status === "ABSENT" || day.status === "HALF_DAY" || day.status === "UNPAID_LEAVE" ? "alert" : undefined },
           ...(day.late ? [{ label: lateLabel(day.lateMins).replace(/^late/, "Late"), tone: "alert" as const }] : []),
+          ...(day.early ? [{ label: earlyLabel(day.earlyMins).replace(/^left/, "Left"), tone: "alert" as const }] : []),
           ...(day.overridden ? [{ label: "Edited by hand" }] : []),
         ]}
         stats={[
@@ -97,7 +97,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
           <section className="card">
             <SectionTitle icon={<Pencil size={18} />} ink="violet">Mark attendance</SectionTitle>
             <p className="muted mb-3">Full day is filled in ({hours.open} to {hours.close}). Change a time, or tick “no in / out time” for a missed punch.</p>
-            <ActionForm action={markAttendance} className="flex flex-col gap-3" submitLabel="Save attendance">
+            <ActionForm action={markAttendanceAndReturn} className="flex flex-col gap-3" submitLabel="Save attendance">
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
               <div className="grid grid-cols-2 gap-3">
@@ -119,7 +119,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
           <section className="card">
             <SectionTitle icon={<CalendarCheck size={18} />} ink="blue">Set day status</SectionTitle>
             <p className="muted mb-3">For leave, absent or half day. This overrides scans and scheduled leave for this day. To record working times, use Mark attendance.</p>
-            <ActionForm action={setDayStatus} className="flex flex-col gap-3" submitLabel={"Set status"} resetOnSuccess>
+            <ActionForm action={setDayStatusAndReturn} className="flex flex-col gap-3" submitLabel={"Set status"} resetOnSuccess>
               <input type="hidden" name="employeeId" value={emp.id} />
               <input type="hidden" name="date" value={date} />
               <Select name="status" defaultValue="PRESENT" options={statuses.map(([v, l]) => ({ value: v, label: l }))} ariaLabel="Day status" />
@@ -127,7 +127,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
             </ActionForm>
             {day.overridden && (
               <div className="mt-3">
-                <ActionForm action={clearDayStatus} submitLabel={"Back to automatic (from scans)"} submitClass="btn-secondary">
+                <ActionForm action={clearDayStatusAndReturn} submitLabel={"Back to automatic (from scans)"} submitClass="btn-secondary">
                   <input type="hidden" name="employeeId" value={emp.id} />
                   <input type="hidden" name="date" value={date} />
                 </ActionForm>

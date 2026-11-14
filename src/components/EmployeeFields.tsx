@@ -27,6 +27,7 @@ interface Values {
   customWeeklyOff?: boolean;
   inHouse?: boolean;
   weeklyOffDays?: number[];
+  shiftId?: string | null;
 }
 
 export function EmployeeFields({
@@ -35,8 +36,11 @@ export function EmployeeFields({
   isNew,
   canSalary,
   businessWeeklyOff,
+  shifts = [],
 }: {
   businessWeeklyOff: number[];
+  /** Shifts to choose from; staff without one follow the business hours. */
+  shifts?: { id: string; name: string; summary: string; weeklyOffDays: number[] }[];
   sites: { id: string; name: string }[];
   values?: Values;
   isNew: boolean;
@@ -55,7 +59,10 @@ export function EmployeeFields({
   // Editing the salary: ask from which day the new salary applies (earlier days keep the old one).
   const wageChanged = !isNew && (num(bankWage) !== num(values.bankWage ?? values.wage ?? "") || num(cashWage) !== num(values.cashWage ?? "") || wageType !== values.wageType);
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const businessOffText = businessWeeklyOff.length ? businessWeeklyOff.map((d) => DAYS[d]).join(", ") : "none";
+  const [shiftId, setShiftId] = useState(values.shiftId ?? "");
+  const shift = shifts.find((x) => x.id === shiftId);
+  const defaultOff = shift ? shift.weeklyOffDays : businessWeeklyOff;
+  const businessOffText = defaultOff.length ? defaultOff.map((d) => DAYS[d]).join(", ") : "none";
   return (
     <div className="grid gap-3 @lg:grid-cols-2">
       <div>
@@ -72,11 +79,23 @@ export function EmployeeFields({
       </div>
       <div>
         <label className="label">Site</label>
-        <Select name="siteId" defaultValue={values.siteId} options={sites.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="Site" />
+        {/* A new employee starts with no site: the person adding them picks it. */}
+        <Select name="siteId" defaultValue={values.siteId ?? ""} options={[...(values.siteId ? [] : [{ value: "", label: "Choose a site" }]), ...sites.map((s) => ({ value: s.id, label: s.name }))]} ariaLabel="Site" />
       </div>
       <div>
         <label className="label">Joining date</label>
         <DateInput name="joinedOn" defaultValue={values.joinedOn} />
+      </div>
+      <div className="@lg:col-span-2">
+        <label className="label">Shift</label>
+        <Select
+          name="shiftId"
+          defaultValue={shiftId}
+          onChange={setShiftId}
+          options={[{ value: "", label: "Business hours (from Settings)" }, ...shifts.map((x) => ({ value: x.id, label: x.name }))]}
+          ariaLabel="Shift"
+        />
+        <p className="muted mt-1 text-sm">{shift ? shift.summary : shifts.length ? "Follows the business hours set in Settings." : "Create shifts in Settings to give people different times."}</p>
       </div>
       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] p-3 @lg:col-span-2">
         <input type="checkbox" name="inHouse" defaultChecked={values.inHouse ?? false} className="mt-0.5 h-5 w-5" />
@@ -91,7 +110,7 @@ export function EmployeeFields({
           {[false, true].map((c) => (
             <label key={String(c)} className={`btn-secondary cursor-pointer ${customOff === c ? "!border-[var(--brand)] !text-[var(--brand)]" : ""}`}>
               <input type="radio" name="weeklyOffMode" value={c ? "custom" : "business"} checked={customOff === c} onChange={() => setCustomOff(c)} className="sr-only" />
-              {c ? "Own days" : `${"Same as business"} (${businessOffText})`}
+              {c ? "Own days" : `${shift ? "Same as shift" : "Same as business"} (${businessOffText})`}
             </label>
           ))}
         </div>

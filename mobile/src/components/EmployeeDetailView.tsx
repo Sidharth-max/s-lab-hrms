@@ -7,6 +7,7 @@ import { Badge, Button, Card, ErrorView, Hero, Loading, Muted, Notice, refreshPr
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateField, MonthField } from "@/components/pickers";
 import { MonthGrid } from "@/components/MonthGrid";
+import { SalaryExport } from "./SalaryExport";
 import { HisaabSection, LedgerActions, LedgerSheets, type Hisaab, type HisaabCan, type LedgerForm } from "@/components/HisaabSection";
 import { LeaveSection } from "@/components/LeaveSection";
 import { api } from "@/lib/api";
@@ -19,7 +20,7 @@ import { useDialog } from "@/components/dialog";
 interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
-    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
+    wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[]; shift?: string | null;
     face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean;
     cashWage?: number; bankAccountName?: string | null; bankAccountNumber?: string | null; bankIfsc?: string | null; bankName?: string | null; bankBranch?: string | null; upiId?: string | null;
   };
@@ -32,7 +33,7 @@ interface Detail {
 interface Register {
   month: string;
   current: string;
-  rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number; late?: number }[];
+  rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number; late?: number; early?: number }[];
 }
 
 type Tab = "overview" | "attendance" | "ledger" | "account";
@@ -63,7 +64,7 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
             <Badge label={`Present ${row.present}`} tone="green" />
             <Badge label={`Absent ${row.absent}`} tone="red" />
             <Badge label={`Leave ${row.leave}`} />
-            {row.late ? <Badge label={`Late ${row.late}`} tone="red" /> : null}
+            {row.late ? <Badge label={`Late ${row.late}`} tone="red" /> : null}{row.early ? <Badge label={`Left early ${row.early}`} tone="red" /> : null}
           </View>
           <MonthGrid employeeId={employeeId} month={data.month} days={row.days} />
           <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch · red dot late</Muted>
@@ -78,7 +79,7 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
  * One employee. Used as its own screen, and (embedded) as the right-hand panel next to the
  * employee list on wide screens such as an open foldable.
  */
-export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }: { id: string; created?: string; embedded?: boolean; initialTab?: "ledger"; /** Panel version: edit inside the panel instead of opening the edit screen. */ onEdit?: () => void }) {
+export function EmployeeDetailView({ id, created, saved, embedded, initialTab, onEdit }: { id: string; created?: string; /** Came back after saving a day by hand. */ saved?: string; embedded?: boolean; initialTab?: "ledger" | "attendance"; /** Panel version: edit inside the panel instead of opening the edit screen. */ onEdit?: () => void }) {
   const dialog = useDialog();
   const { can } = useAuth();
   const { data, error, refreshing, reload } = useLoad(() => api.get<Detail>(`/api/m/employees/${id}`), [id], ["employee", "advance", "approval", "salary", "attendance"]);
@@ -107,9 +108,10 @@ export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }
   if (!data) return <Loading />;
   const e = data.employee;
   const manage = can("employees.manage");
-  const weeklyOff = e.customWeeklyOff ? (e.weeklyOffDays.length ? e.weeklyOffDays.map((d) => DAYS[d]).join(", ") : "None") : "Same as business";
+  const weeklyOff = e.customWeeklyOff ? (e.weeklyOffDays.length ? e.weeklyOffDays.map((d) => DAYS[d]).join(", ") : "None") : e.shift ? "Same as shift" : "Same as business";
 
-  const showActions = tab === "ledger" && (data.can.pay && data.hisaab.balance > 0 || data.can.advance && e.active || data.can.extras);
+  // Pay / Advance stay pinned at the bottom on every tab (not only the ledger).
+  const showActions = (data.can.pay && data.hisaab.balance > 0 || data.can.advance && e.active || data.can.extras);
   return (
     <View style={{ flex: 1 }}>
     <Screen refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />} bottomSpace={showActions ? 90 : 0}>
@@ -167,6 +169,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }
       ) : null}
 
       {created ? <Notice tone="green" text="Employee added. Now take the face photos." /> : null}
+      {saved && !msg ? <Notice tone="green" text={saved === "day" ? "Attendance saved." : "Saved."} /> : null}
       {msg ? <Notice tone={msg.ok ? "green" : "red"} text={msg.text} /> : null}
 
       <Tabs
@@ -213,6 +216,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }
             <Row label="PF" value={e.pfEnabled ? (e.uanNumber ? `UAN ${e.uanNumber}` : "On · UAN not added") : "Off"} />
             <Row label="ESIC" value={e.esiEnabled ? (e.esicNumber ? `IP ${e.esicNumber}` : "On · IP number not added") : "Off"} />
             <Row label="Attendance" value={e.inHouse ? "In-house (automatic)" : "Face scan"} />
+            <Row label="Shift" value={e.shift ?? "Business hours"} />
             <Row label="Weekly off" value={weeklyOff} />
             {e.bankAccountNumber || e.upiId ? <Row label="Bank account" value={[e.bankAccountName, e.bankAccountNumber ? `A/c ${e.bankAccountNumber}` : null].filter(Boolean).join(" · ") || "—"} /> : null}
             {e.bankIfsc ? <Row label="IFSC" value={`${e.bankIfsc}${e.bankName ? ` · ${e.bankName}` : ""}`} /> : null}
@@ -239,6 +243,7 @@ export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }
           onDone={async (m) => { setMsg(m); await reload(); }}
         />
       ) : null}
+      {tab === "ledger" && data.can.extras ? <SalaryExport employeeId={e.id} joinedOn={e.joinedOn} /> : null}
 
       {tab === "account" && manage ? (
         <>

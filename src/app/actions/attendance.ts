@@ -1,5 +1,7 @@
 "use server";
 
+import { redirect } from "next/navigation";
+
 import { revalidatePath } from "next/cache";
 import { assertStaff } from "@/lib/auth";
 import { audit } from "@/lib/audit";
@@ -121,3 +123,18 @@ export const markAttendance = safe(async (_p: ActionResult, form: FormData): Pro
   revalidatePath("/attendance", "layout");
   return { ok: true, message: inAt && outAt ? `Marked present ${inTime} to ${outTime}` : inAt ? `In time ${inTime} added` : `Out time ${outTime} added` };
 });
+
+// Website day page: after saving the day by hand, go back to the employee's page.
+function backToEmployee(r: ActionResult, form: FormData) {
+  if (r?.ok) redirect(`/employees/${str(form, "employeeId")}?saved=day`);
+  return r;
+}
+export async function markAttendanceAndReturn(prev: ActionResult, form: FormData): Promise<ActionResult> {
+  return backToEmployee(await markAttendance(prev, form), form);
+}
+export async function setDayStatusAndReturn(prev: ActionResult, form: FormData): Promise<ActionResult> {
+  return backToEmployee(await setDayStatus(prev, form), form);
+}
+export async function clearDayStatusAndReturn(prev: ActionResult, form: FormData): Promise<ActionResult> {
+  return backToEmployee(await clearDayStatus(prev, form), form);
+}

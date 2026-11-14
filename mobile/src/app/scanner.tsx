@@ -4,7 +4,7 @@ import { router, useIsFocused } from "expo-router";
 import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "@/components/icons";
@@ -22,7 +22,8 @@ type Result = { ok: boolean; title: string; detail?: string };
 function useClock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
+    // Only the minutes are shown: re-render once a minute, not every second (keeps the camera smooth).
+    const t = setInterval(() => setNow((p) => { const d = new Date(); return d.getMinutes() === p.getMinutes() && d.getHours() === p.getHours() ? p : d; }), 1000);
     return () => clearInterval(t);
   }, []);
   return now;
@@ -46,6 +47,8 @@ export default function Scanner() {
   const [picking, setPicking] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = useClock();
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
 
   const loadConfig = useCallback(async () => {
     try {
@@ -150,6 +153,56 @@ export default function Scanner() {
         <CameraView key={`${camera.key}-${lens.facing}`} ref={cam} style={StyleSheet.absoluteFill} facing={lens.facing} mirror={lens.mirror} onCameraReady={camera.onReady} />
       ) : null}
       <Pressable style={StyleSheet.absoluteFill} onPress={scan} accessibilityLabel="Scan face">
+        {landscape ? (
+          // Landscape (tablet / phone on a stand): camera oval on the left, details and buttons on the right.
+          <SafeAreaView style={{ flex: 1, flexDirection: "row" }} edges={["top", "bottom", "left", "right"]}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }} pointerEvents="none">
+              <View style={[styles.oval, { width: Math.round(height * 0.72 * 0.75), height: Math.round(height * 0.72)}]} />
+            </View>
+            <View style={styles.side}>
+              <View style={[styles.header, { backgroundColor: "transparent", padding: 0 }]}>
+            <View style={{ flexShrink: 1 }}>
+              <Text style={styles.headerTitle}>{config?.device.business ?? " "}</Text>
+              <Text style={styles.headerSub}>{config ? `${config.device.site} · ${config.device.name}` : configError ?? "Connecting…"}</Text>
+            </View>
+            <View style={{ alignItems: "flex-end", gap: 8 }}>
+              <Text style={styles.headerSub}>
+                {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+              </Text>
+              {/* Switch lens (front / back); remembered on this device. Does not start a scan. */}
+              <CameraSwitch facing={lens.facing} onPress={lens.toggle} label={false} />
+            </View>
+          </View>
+              <View style={[styles.footer, { backgroundColor: "transparent", padding: 0 }]}>
+            {busy ? <ActivityIndicator color={"#fff"} size="large" /> : <ScanFace color={"#fff"} size={40} />}
+            <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
+            {!ready && camera.show ? (
+              <Pressable onPress={camera.restart} style={{ padding: 8 }}>
+                <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Camera black? Tap to restart it</Text>
+              </Pressable>
+            ) : null}
+            {config?.mode === "mock" ? <Text style={styles.pill}>TEST MODE</Text> : null}
+            {configError ? (
+              <Pressable onPress={loadConfig} style={{ padding: 8 }}>
+                <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Retry connection</Text>
+              </Pressable>
+            ) : null}
+            <View style={styles.actions}>
+              <Pressable onPress={() => router.replace("/login")} hitSlop={8} style={styles.action} accessibilityRole="button">
+                <LogIn color={"#fff"} size={18} />
+                <Text style={styles.actionText}>Manager / owner login</Text>
+              </Pressable>
+              {update ? (
+                <Pressable onPress={() => startUpdate(update)} hitSlop={8} style={[styles.action, { backgroundColor: "#16a34a", borderColor: "#16a34a" }]} accessibilityRole="button">
+                  <Download color={"#fff"} size={18} />
+                  <Text style={styles.actionText}>Update app ({update.name})</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+            </View>
+          </SafeAreaView>
+        ) : (
         <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
           <View style={styles.header}>
             <View style={{ flexShrink: 1 }}>
@@ -164,7 +217,7 @@ export default function Scanner() {
               <CameraSwitch facing={lens.facing} onPress={lens.toggle} label={false} />
             </View>
           </View>
-          <View style={styles.oval} pointerEvents="none" />
+          <View style={[styles.oval, { width: Math.round(Math.min(width * 0.6, height * 0.45 * 0.75)), height: Math.round(Math.min(width * 0.6, height * 0.45 * 0.75) * 4 / 3)}]} pointerEvents="none" />
           <View style={styles.footer}>
             {busy ? <ActivityIndicator color={"#fff"} size="large" /> : <ScanFace color={"#fff"} size={40} />}
             <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
@@ -193,13 +246,14 @@ export default function Scanner() {
             </View>
           </View>
         </SafeAreaView>
+        )}
       </Pressable>
 
       {picking && config ? (
         <SafeAreaView style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.9)", padding: 16 }]}>
           <Text style={[styles.big, { textAlign: "left" }]}>TEST MODE: who is in front of the camera?</Text>
           <Text style={[styles.headerSub, { marginBottom: 12 }]}>With AWS face recognition on, this step is automatic.</Text>
-          <ScrollView contentContainerStyle={{ gap: 8 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {config.testEmployees.length === 0 ? <Text style={styles.headerSub}>No employee has a face enrolled yet.</Text> : null}
             {config.testEmployees.map((e) => (
               <Pressable
@@ -236,7 +290,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", padding: 16, backgroundColor: "rgba(0,0,0,0.55)", gap: 12 },
   headerTitle: { color: "#fff", fontWeight: "600", fontSize: 15 },
   headerSub: { color: "rgba(255,255,255,0.75)", fontSize: 13 },
-  oval: { alignSelf: "center", width: "60%", aspectRatio: 3 / 4, borderRadius: 1000, borderWidth: 3, borderColor: "rgba(255,255,255,0.7)" },
+  oval: { alignSelf: "center", borderRadius: 1000, borderWidth: 3, borderColor: "rgba(255,255,255,0.7)" },
   footer: { alignItems: "center", gap: 8, padding: 20, backgroundColor: "rgba(0,0,0,0.6)" },
   big: { color: "#fff", fontSize: 22, fontWeight: "600", textAlign: "center" },
   pill: { color: "#fff", borderColor: "rgba(255,255,255,0.4)", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2, fontSize: 12, overflow: "hidden" },
@@ -244,4 +298,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 10, marginTop: 6 },
   action: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
   actionText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  side: { width: "40%", maxWidth: 420, justifyContent: "space-between", padding: 20, gap: 16, backgroundColor: "rgba(0,0,0,0.6)" },
 });

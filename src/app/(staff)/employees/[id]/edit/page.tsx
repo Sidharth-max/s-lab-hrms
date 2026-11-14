@@ -6,6 +6,8 @@ import { BackLink } from "@/components/BackLink";
 import { EmployeeFields } from "@/components/EmployeeFields";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseDayRules } from "@/lib/day-rules";
+import { scheduleSummary } from "@/components/WeekSchedule";
 import { rsInput } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { siteWhere } from "@/lib/scope";
@@ -16,9 +18,10 @@ export default async function EditEmployeePage({ params }: PageProps<"/employees
   const { id } = await params;
   const emp = await db.employee.findFirst({ where: { id, businessId: actor.businessId } });
   if (!emp || !canSeeSite(actor, emp.siteId)) notFound();
-  const [business, sites] = await Promise.all([
+  const [business, sites, shifts] = await Promise.all([
     db.business.findUniqueOrThrow({ where: { id: actor.businessId } }),
     db.site.findMany({ where: siteWhere(actor), orderBy: { name: "asc" } }),
+    db.shift.findMany({ where: { businessId: actor.businessId, active: true }, orderBy: { name: "asc" } }),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -32,13 +35,14 @@ export default async function EditEmployeePage({ params }: PageProps<"/employees
           </div>
         </div>
       </div>
-      <ActionForm action={updateEmployeeAndReturn} className="card flex flex-col gap-5" submitLabel="Save changes">
+      <ActionForm action={updateEmployeeAndReturn} className="card flex flex-col gap-5" submitLabel="Save changes" sticky>
         <input type="hidden" name="id" value={emp.id} />
         <EmployeeFields
           sites={sites}
           isNew={false}
           canSalary={can(actor, "salary.edit")}
           businessWeeklyOff={business.weeklyOffDays}
+          shifts={shifts.map((x) => ({ id: x.id, name: x.name, weeklyOffDays: x.weeklyOffDays, summary: scheduleSummary(parseDayRules(x.dayRules), x.weeklyOffDays) }))}
           values={{
             name: emp.name,
             code: emp.code,
@@ -63,6 +67,7 @@ export default async function EditEmployeePage({ params }: PageProps<"/employees
             customWeeklyOff: emp.customWeeklyOff,
             inHouse: emp.inHouse,
             weeklyOffDays: emp.weeklyOffDays,
+            shiftId: emp.shiftId,
           }}
         />
       </ActionForm>

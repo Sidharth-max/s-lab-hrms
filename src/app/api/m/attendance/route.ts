@@ -38,6 +38,8 @@ export async function GET(req: Request) {
         manual: d.overridden,
         late: d.late,
         lateMins: d.lateMins,
+        early: d.early,
+        earlyMins: d.earlyMins,
       }));
     return json({ date, today, show, rows });
   });

@@ -22,14 +22,18 @@ export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: bo
   const path = usePathname();
   const [q, setQ] = useState("");
   const [showLeft, setShowLeft] = useState(false); // true = archived
+  const [site, setSite] = useState(""); // "" = all sites
+  const sites = useMemo(() => [...new Set(rows.map((r) => r.site))].sort(), [rows]);
+  const inSite = (r: EmployeeRow) => !site || r.site === site;
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     return rows.filter(
       (r) =>
         r.active !== showLeft &&
+        (!site || r.site === site) &&
         (!s || r.name.toLowerCase().includes(s) || r.code.toLowerCase().includes(s) || (r.phone ?? "").includes(s)),
     );
-  }, [rows, q, showLeft]);
+  }, [rows, q, showLeft, site]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -41,11 +45,27 @@ export function EmployeeList({ rows, canAdd }: { rows: EmployeeRow[]; canAdd: bo
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" aria-hidden />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={"Search name, code or mobile…"} className="input !pl-9" />
       </div>
+      {/* Site filter: All, or one site. */}
+      <div className="segmented -mx-1 !flex-nowrap overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]" role="group" aria-label="Filter by site">
+        {["", ...sites].map((x) => (
+          <button
+            key={x || "all"}
+            type="button"
+            onClick={() => setSite(x)}
+            aria-pressed={site === x}
+            data-active={site === x}
+            className="shrink-0"
+          >
+            {x || "All sites"}
+            <span className="ml-1.5 opacity-70">{rows.filter((r) => r.active !== showLeft && (!x || r.site === x)).length}</span>
+          </button>
+        ))}
+      </div>
       <div className="segmented" role="tablist">
         {[false, true].map((archived) => (
           <button key={String(archived)} type="button" role="tab" aria-selected={showLeft === archived} onClick={() => setShowLeft(archived)} data-active={showLeft === archived}>
             {archived ? "Archived" : "Active"}
-            <span className="ml-1.5 text-[var(--muted)]">{rows.filter((r) => r.active !== archived).length}</span>
+            <span className="ml-1.5 text-[var(--muted)]">{rows.filter((r) => r.active !== archived && inSite(r)).length}</span>
           </button>
         ))}
       </div>

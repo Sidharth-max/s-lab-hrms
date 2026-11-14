@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/Text";
-import { Button, ChoiceChip, Field, Muted, Notice, Segmented, Toggle } from "./ui";
+import { Button, Card, ChoiceChip, Field, Muted, Notice, Screen, Segmented, STICKY_BAR_SPACE, StickyBar, Toggle } from "./ui";
+import { api } from "@/lib/api";
+import { useLoad } from "@/lib/useLoad";
 import { C } from "@/lib/theme";
 import { DateField } from "./pickers";
 import { useUnsavedGuard } from "@/lib/unsaved";
@@ -35,6 +37,8 @@ export interface EmployeeValues {
   inHouse?: boolean;
   wageFrom?: string; // editing: day the new salary starts
   weeklyOffDays: number[];
+  /** "" = business hours from Settings. */
+  shiftId?: string;
 }
 
 export function EmployeeForm({
@@ -44,7 +48,10 @@ export function EmployeeForm({
   canSalary,
   submitTitle,
   onSubmit,
+  header,
 }: {
+  /** Shown above the form card (panel title / Stack.Screen options). */
+  header?: React.ReactNode;
   initial: EmployeeValues;
   sites: { id: string; name: string }[];
   isNew: boolean;
@@ -65,8 +72,16 @@ export function EmployeeForm({
   const wageChanged = !isNew && (Number(v.wage || 0) !== Number(initial.wage || 0) || Number(v.cashWage || 0) !== Number(initial.cashWage || 0) || v.wageType !== initial.wageType);
   const totalWage = (Number(v.wage) || 0) + (Number(v.cashWage) || 0);
   const set = <K extends keyof EmployeeValues>(k: K, val: EmployeeValues[K]) => setV((o) => ({ ...o, [k]: val }));
+  const shifts = useLoad(() => api.get<{ shifts: { id: string; name: string; weeklyOffDays: number[] }[] }>("/api/m/shifts"), [], ["settings"]);
+  const shiftList = shifts.data?.shifts ?? [];
+  const shift = shiftList.find((x) => x.id === v.shiftId);
 
   return (
+    // The Save button sits in a bar pinned to the bottom of the screen, so it is always in reach.
+    <View style={{ flex: 1 }}>
+    <Screen bottomSpace={STICKY_BAR_SPACE + (error ? 56 : 0)}>
+    {header}
+    <Card>
     <View style={{ gap: 14 }}>
       <Field label="Full name" value={v.name} onChangeText={(t) => set("name", t)} />
       {isNew ? (
@@ -82,7 +97,7 @@ export function EmployeeForm({
       ) : null}
       <Field label="Mobile (optional, needed for web login)" value={v.phone} onChangeText={(t) => set("phone", t)} keyboardType="phone-pad" />
       <View style={{ gap: 6 }}>
-        <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Site</Text>
+        <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>{v.siteId ? "Site" : "Site · choose one"}</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {sites.map((s) => (
             <ChoiceChip key={s.id} label={s.name} selected={v.siteId === s.id} onPress={() => set("siteId", s.id)} />
@@ -90,6 +105,16 @@ export function EmployeeForm({
         </View>
       </View>
       <DateField label="Joining date" value={v.joinedOn} onChange={(t) => set("joinedOn", t)} />
+      <View style={{ gap: 6 }}>
+        <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Shift</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <ChoiceChip label="Business hours" selected={!v.shiftId} onPress={() => set("shiftId", "")} />
+          {shiftList.map((x) => (
+            <ChoiceChip key={x.id} label={x.name} selected={v.shiftId === x.id} onPress={() => set("shiftId", x.id)} />
+          ))}
+        </View>
+        <Muted>{shift ? `Times, grace and weekly off come from the ${shift.name} shift.` : shiftList.length ? "Follows the business hours in Settings." : "Create shifts in More > Settings to give people different times."}</Muted>
+      </View>
 
       {isNew || canSalary ? (
         <>
@@ -159,7 +184,7 @@ export function EmployeeForm({
           <Toggle value={!!v.inHouse} onValueChange={(b) => set("inHouse", b)} label="In-house employee" />
         </View>
         <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Weekly off</Text>
-        <Segmented options={[{ value: "business", label: "Same as business" }, { value: "custom", label: "Own days" }]} value={v.customWeeklyOff ? "custom" : "business"} onChange={(m) => set("customWeeklyOff", m === "custom")} />
+        <Segmented options={[{ value: "business", label: shift ? "Same as shift" : "Same as business" }, { value: "custom", label: "Own days" }]} value={v.customWeeklyOff ? "custom" : "business"} onChange={(m) => set("customWeeklyOff", m === "custom")} />
         {v.customWeeklyOff ? (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {DAYS.map((d, i) => {
@@ -172,9 +197,14 @@ export function EmployeeForm({
         ) : null}
       </View>
 
+    </View>
+    </Card>
+    </Screen>
+    <StickyBar>
       {error ? <Notice tone="red" text={error} /> : null}
       <Button
-        title={submitTitle}
+        title={v.siteId ? submitTitle : "Choose a site first"}
+        disabled={!v.siteId}
         loading={busy}
         onPress={async () => {
           setBusy(true);
@@ -182,6 +212,7 @@ export function EmployeeForm({
           setBusy(false);
         }}
       />
+    </StickyBar>
     </View>
   );
 }
@@ -194,6 +225,7 @@ export function employeeBody(v: EmployeeValues, canSalary: boolean, isNew: boole
     phone: v.phone,
     siteId: v.siteId,
     joinedOn: v.joinedOn,
+    shiftId: v.shiftId ?? "",
     ...(isNew || canSalary
       ? { wageType: v.wageType, bankWage: v.wage || "0", cashWage: v.cashWage || "0", basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "", wageFrom: v.wageFrom ?? "" }
       : {}),

@@ -32,6 +32,7 @@ model Business {
   esiEmployerBps Int @default(325)
 
   sites       Site[]
+  shifts      Shift[]
   users       User[]
   employees   Employee[]
   devices     Device[]
@@ -51,6 +52,24 @@ model Site {
   business  Business   @relation(fields: [businessId], references: [id])
   employees Employee[]
   devices   Device[]
+
+  @@unique([businessId, name])
+}
+
+// A named working schedule (e.g. "Morning", "Night") with its own per-weekday times and grace
+// periods. Employees with a shift use it instead of the business hours from Settings.
+model Shift {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  dayRules   Json // same shape as Business.dayRules, see src/lib/day-rules.ts
+  weeklyOffDays Int[] @default([]) // weekly off for staff on this shift (an employee's own days still win)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business  Business   @relation(fields: [businessId], references: [id])
+  employees Employee[]
 
   @@unique([businessId, name])
 }
@@ -140,6 +159,8 @@ model Employee {
   bankBranch        String?
   upiId             String?
 
+  shiftId String? // null = business hours from Settings
+
   customWeeklyOff Boolean @default(false) // true = use weeklyOffDays below instead of the business default
   weeklyOffDays   Int[]   @default([])
 
@@ -152,6 +173,7 @@ model Employee {
 
   business     Business          @relation(fields: [businessId], references: [id])
   site         Site              @relation(fields: [siteId], references: [id])
+  shift        Shift?            @relation(fields: [shiftId], references: [id])
   user         User?             @relation(fields: [userId], references: [id])
   punches      AttendancePunch[]
   dayOverrides DayOverride[]

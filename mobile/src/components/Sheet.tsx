@@ -122,7 +122,7 @@ export function Sheet({
               </View>
             ) : null}
           </View>
-          <Animated.ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, gap: 12 }} style={{ flexGrow: 0, flexShrink: 1 }}>
+          <Animated.ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, gap: 12 }} style={{ flexGrow: 0, flexShrink: 1 }}>
             {children}
           </Animated.ScrollView>
           {footer ? <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>{footer}</View> : null}

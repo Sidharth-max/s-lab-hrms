@@ -2,7 +2,7 @@ import "server-only";
 import type { Business, Employee, Prisma } from "@prisma/client";
 import { deriveMonth, STATUS_LABEL, type DayResult } from "./attendance";
 import { db } from "./db";
-import { effectiveWeeklyOff, parseDayRules } from "./day-rules";
+import { effectiveWeeklyOff, parseDayRules, type DayRule } from "./day-rules";
 import { dbToDateKey, dateKeyToDb, istDateKey, monthDates } from "./time";
 
 type Tx = Prisma.TransactionClient;
@@ -33,6 +33,29 @@ export async function businessRules(businessId: string, month: string, tx: Tx = 
   };
 }
 
+export interface EmployeeShift {
+  id: string;
+  name: string;
+  dayRules: DayRule[];
+  weeklyOffDays: number[];
+}
+
+/** The shift of each employee that has one (employees without a shift use the business hours). */
+export async function shiftsOf(employeeIds: string[], tx: Tx = db): Promise<Map<string, EmployeeShift>> {
+  const map = new Map<string, EmployeeShift>();
+  if (employeeIds.length === 0) return map;
+  const rows = await tx.employee.findMany({ where: { id: { in: employeeIds }, shiftId: { not: null } }, select: { id: true, shift: true } });
+  for (const r of rows) {
+    if (r.shift) map.set(r.id, { id: r.shift.id, name: r.shift.name, dayRules: parseDayRules(r.shift.dayRules), weeklyOffDays: r.shift.weeklyOffDays });
+  }
+  return map;
+}
+
+/** Per-weekday rules for one employee: their shift's, otherwise the business hours. */
+export async function rulesForEmployee(business: { dayRules: unknown }, employeeId: string, tx: Tx = db): Promise<DayRule[]> {
+  return (await shiftsOf([employeeId], tx)).get(employeeId)?.dayRules ?? parseDayRules(business.dayRules);
+}
+
 export async function monthAttendance(
   businessId: string,
   month: string,
@@ -42,21 +65,23 @@ export async function monthAttendance(
   const { business, rules } = await businessRules(businessId, month, tx);
   const { start, end } = monthRange(month);
   const ids = employees.map((e) => e.id);
-  const [punches, overrides, plans] = await Promise.all([
+  const [punches, overrides, plans, shifts] = await Promise.all([
     tx.attendancePunch.findMany({ where: { employeeId: { in: ids }, workDate: { gte: start, lte: end }, voidedAt: null } }),
     tx.dayOverride.findMany({ where: { employeeId: { in: ids }, workDate: { gte: start, lte: end } } }),
     tx.leavePlan.findMany({ where: { employeeId: { in: ids }, status: "ACTIVE", fromDate: { lte: end }, toDate: { gte: start } } }),
+    shiftsOf(ids, tx),
   ]);
   const today = istDateKey(new Date());
   const days = new Map<string, DayResult[]>();
   for (const e of employees) {
+    const shift = shifts.get(e.id);
     days.set(
       e.id,
       deriveMonth(
         month,
         punches.filter((p) => p.employeeId === e.id).map((p) => ({ type: p.type, at: p.at, workDate: dbToDateKey(p.workDate) })),
         overrides.filter((o) => o.employeeId === e.id).map((o) => ({ workDate: dbToDateKey(o.workDate), status: o.status, createdAt: o.createdAt })),
-        { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e) },
+        { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e, shift), byWeekday: shift?.dayRules ?? rules.byWeekday },
         { today, joinedOn: dbToDateKey(e.joinedOn), leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null, inHouse: e.inHouse },
         leaveDays(plans.filter((p) => p.employeeId === e.id)),
       ),

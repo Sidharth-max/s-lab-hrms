@@ -39,7 +39,7 @@ export function EmployeePicker({ label = "Employee", employees, value, onChange 
                 <MagnifyingGlass size={18} color={C.muted} />
                 <TextInput value={q} onChangeText={setQ} placeholder="Search name or code…" placeholderTextColor={C.placeholder} style={{ flex: 1, minHeight: 44, fontSize: 16, color: C.text }} />
               </View>
-              <FlatList
+              <FlatList showsVerticalScrollIndicator={false}
                 data={list}
                 keyExtractor={(e) => e.id}
                 keyboardShouldPersistTaps="handled"

@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, View, type PressableProps, type RefreshControlProps, type TextInputProps, type ViewStyle } from "react-native";
 import { Text, TextInput } from "@/components/Text";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, isDark, R, shadow, type Ink } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 import { FLOATING_NAV_SPACE } from "@/lib/layout";
 import { PressScale, SkeletonList } from "@/lib/motion";
+import Reanimated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { GradientFill } from "./Viz";
 import { BlurFrame, useHeaderPad } from "./BlurFrame";
+
+const SCREEN_IN = FadeIn.duration(220).reduceMotion(ReduceMotion.System);
 
 export function Screen({
   children,
@@ -32,9 +35,10 @@ export function Screen({
       {/* The page starts below the transparent, blurred header and scrolls underneath it. */}
       <BlurFrame>
         {(pad) => {
-          const inner = <View style={[styles.inner, padded && styles.padded, { paddingTop: (padded ? 16 : 0) + pad, paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace }]}>{children}</View>;
+          // The page content fades in once it is ready (instead of popping in after the loading placeholder).
+          const inner = <Reanimated.View entering={SCREEN_IN} style={[styles.inner, padded && styles.padded, { paddingTop: (padded ? 16 : 0) + pad, paddingBottom: (padded ? 24 : 0) + (tabs ? FLOATING_NAV_SPACE : 0) + bottomSpace }]}>{children}</Reanimated.View>;
           return scroll ? (
-            <KeyboardAwareScrollView bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }} scrollIndicatorInsets={{ top: pad }}>
+            <KeyboardAwareScrollView showsVerticalScrollIndicator={false} bottomOffset={32} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ flexGrow: 1 }} scrollIndicatorInsets={{ top: pad }}>
               {inner}
             </KeyboardAwareScrollView>
           ) : (
@@ -232,9 +236,9 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable key={o.value} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
+          <PressScale key={o.value} scaleTo={0.96} onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }} accessibilityRole="radio" accessibilityState={{ selected: active }} style={[styles.segmentItem, active && styles.segmentActive]}>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.segmentText, active && { color: C.brandInk }]}>{o.label}</Text>
-          </Pressable>
+          </PressScale>
         );
       })}
     </View>
@@ -245,14 +249,15 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
 export function ChoiceChip({ label, selected, onPress, tone }: { label: string; selected: boolean; onPress: () => void; tone?: "red" }) {
   const red = tone === "red" && selected;
   return (
-    <Pressable
+    <PressScale
+      scaleTo={0.94}
       onPress={() => { if (!selected) haptic.select(); onPress(); }}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      style={({ pressed }) => ({ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: red ? C.ink.red : selected ? C.brand : C.hairline, backgroundColor: red ? C.tint.red : selected ? C.brandSoft : pressed ? C.trackPressed : C.card })}
+      style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: red ? C.ink.red : selected ? C.brand : C.hairline, backgroundColor: red ? C.tint.red : selected ? C.brandSoft : C.card }}
     >
       <Text style={{ fontSize: 14, fontWeight: "600", color: red ? C.ink.red : selected ? C.brandInk : C.muted }}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -263,15 +268,16 @@ export function Tabs<T extends string>({ options, value, onChange }: { options: 
       {options.map((o) => {
         const active = o.value === value;
         return (
-          <Pressable
+          <PressScale
             key={o.value}
+            scaleTo={0.94}
             onPress={() => { if (o.value !== value) haptic.select(); onChange(o.value); }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={({ pressed }) => ({ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: active ? C.brand : C.hairline, backgroundColor: active ? C.brandSoft : pressed ? C.trackPressed : C.card })}
+            style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: active ? C.brand : C.hairline, backgroundColor: active ? C.brandSoft : C.card }}
           >
             <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.brandInk : C.muted }}>{o.label}</Text>
-          </Pressable>
+          </PressScale>
         );
       })}
     </ScrollView>
@@ -435,3 +441,19 @@ export const styles = StyleSheet.create({
   rowValue: { fontSize: 15, color: C.text, textAlign: "right", flexShrink: 1, fontVariant: ["tabular-nums"] },
   notice: { borderWidth: 1, borderRadius: R.md, padding: 12 },
 });
+
+/** Height to reserve at the bottom of a Screen (bottomSpace) when a StickyBar is shown. */
+export const STICKY_BAR_SPACE = 96;
+
+/**
+ * Action bar pinned to the bottom of the screen (Save, Pay, Advance…): stays in reach while the page
+ * scrolls. Put it next to the Screen inside a flex: 1 View, and give the Screen bottomSpace={STICKY_BAR_SPACE}.
+ */
+export function StickyBar({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.hairline, gap: 8, ...shadow(3) }}>
+      {children}
+    </View>
+  );
+}

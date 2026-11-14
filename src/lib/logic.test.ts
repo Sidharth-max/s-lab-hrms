@@ -271,7 +271,7 @@ describe("half day by the middle of the shift, grace and late", () => {
   const byWeekday = Array.from({ length: 7 }, (_, i) =>
     i === 0
       ? { open: "10:00", close: "14:00", halfDayBelowMins: 0, anyScanFullDay: true, graceMins: 0 }
-      : { open: "10:00", close: "18:00", halfDayBelowMins: 240, anyScanFullDay: false, graceMins: 30 },
+      : { open: "10:00", close: "18:00", halfDayBelowMins: 240, anyScanFullDay: false, graceMins: 30, graceOutMins: 15 },
   );
   const rules = { weeklyOffDays: [], holidays: new Set<string>(), halfDayBelowMins: 240, byWeekday };
   const ctx = { today: "2026-11-30", joinedOn: "2026-01-01", leftOn: null };
@@ -302,6 +302,20 @@ describe("half day by the middle of the shift, grace and late", () => {
     expect(d.lateMins).toBe(15);
     expect(d.status).toBe("PRESENT");
   });
+  it("tags left early only before closing time - grace out, with full pay", () => {
+    expect(day("10:00", "17:45").early).toBe(false); // inside 15 min grace out
+    const d = day("10:00", "17:20");
+    expect(d.early).toBe(true);
+    expect(d.earlyMins).toBe(25);
+    expect(d.status).toBe("PRESENT");
+    expect(day("10:00").early).toBe(false); // no out punch
+    expect(day("10:00", "18:30").early).toBe(false);
+  });
+  it("tags early on a shift past midnight", async () => {
+    const { earlyMinutes } = await import("./attendance");
+    expect(earlyMinutes(istDateTime("2026-11-10", "03:30"), "20:00", "04:00", 10)).toBe(20);
+    expect(earlyMinutes(istDateTime("2026-11-10", "04:05"), "20:00", "04:00", 10)).toBe(0);
+  });
   it("never tags in-house staff or short days as late / half day", () => {
     expect(day("12:00", "18:00", "2026-11-09", { inHouse: true }).late).toBe(false);
     expect(day("13:00", "13:30", "2026-11-08").status).toBe("PRESENT"); // Sunday: any scan = full day
@@ -318,11 +332,14 @@ describe("day rules parsing", () => {
   it("falls back to defaults for bad data", async () => {
     const { parseDayRules, effectiveWeeklyOff } = await import("./day-rules");
     const r = parseDayRules([{ open: "25:00", close: "15:00", halfDayBelowMins: -5, anyScanFullDay: "yes" }]);
-    expect(r[0]).toEqual({ open: "09:00", close: "15:00", halfDayBelowMins: 0, anyScanFullDay: true, graceMins: 0 });
+    expect(r[0]).toEqual({ open: "09:00", close: "15:00", halfDayBelowMins: 0, anyScanFullDay: true, graceMins: 0, graceOutMins: 0 });
     expect(r).toHaveLength(7);
     expect(parseDayRules(null)[1].halfDayBelowMins).toBe(240);
     expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: true, weeklyOffDays: [2] })).toEqual([2]);
     expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: false, weeklyOffDays: [2] })).toEqual([0]);
+    // shift days win over the business; the employee's own days win over the shift
+    expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: false, weeklyOffDays: [] }, { weeklyOffDays: [3] })).toEqual([3]);
+    expect(effectiveWeeklyOff({ weeklyOffDays: [0] }, { customWeeklyOff: true, weeklyOffDays: [2] }, { weeklyOffDays: [3] })).toEqual([2]);
   });
 });
 

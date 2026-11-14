@@ -1,11 +1,11 @@
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
 import { Button, Card, ChoiceChip, ErrorView, Field, Hero, Loading, Muted, Notice, Screen, SectionHead, Toggle } from "@/components/ui";
 import { CalendarCheck, Clock, History, Pencil } from "@/components/icons";
 import { api } from "@/lib/api";
-import { dateLabel, lateLabel } from "@/lib/format";
+import { dateLabel, earlyLabel, lateLabel } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { TimeField } from "@/components/pickers";
@@ -20,6 +20,8 @@ interface DayDetail {
   manual: boolean;
   late?: boolean;
   lateMins?: number;
+  early?: boolean;
+  earlyMins?: number;
   locked: boolean;
   editable: boolean;
   hours?: { open: string; close: string };
@@ -31,7 +33,7 @@ interface DayDetail {
  * Mark the day by hand: separate In and Out times (each with its own picker), set to the store's
  * hours by default so one tap marks a full day. Either time can be switched off.
  */
-function MarkAttendance({ hours, busy, onSave }: { hours: { open: string; close: string }; busy: boolean; onSave: (body: Record<string, unknown>) => void }) {
+function MarkAttendance({ hours, busy, onSave }: { hours: { open: string; close: string }; busy: boolean; onSave: (body: Record<string, unknown>, allowLeave: () => void) => void }) {
   const [useIn, setUseIn] = useState(true);
   const [useOut, setUseOut] = useState(true);
   const [inTime, setInTime] = useState(hours.open);
@@ -39,7 +41,7 @@ function MarkAttendance({ hours, busy, onSave }: { hours: { open: string; close:
   const [nextDay, setNextDay] = useState(false);
   const [reason, setReason] = useState("");
   const full = useIn && useOut && inTime === hours.open && outTime === hours.close;
-  useUnsavedGuard(!busy && (!!reason || !full || nextDay));
+  const { allowLeave } = useUnsavedGuard(!busy && (!!reason || !full || nextDay));
   return (
     <Card>
       <SectionHead icon={<Pencil size={18} color={C.ink.violet} />} ink="violet" title="Mark attendance" />
@@ -71,7 +73,7 @@ function MarkAttendance({ hours, busy, onSave }: { hours: { open: string; close:
         title={full ? "Mark present (full day)" : "Save times"}
         loading={busy}
         disabled={!useIn && !useOut}
-        onPress={() => onSave({ inTime: useIn ? inTime : "", outTime: useOut ? outTime : "", nextDay: useOut && nextDay, reason })}
+        onPress={() => onSave({ inTime: useIn ? inTime : "", outTime: useOut ? outTime : "", nextDay: useOut && nextDay, reason }, allowLeave)}
       />
     </Card>
   );
@@ -93,16 +95,19 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
   const [statusReason, setStatusReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  // Bumped after a save so the "Mark attendance" form starts fresh (and no longer counts as unsaved).
-  const [markRound, setMarkRound] = useState(0);
 
-  async function run(name: string, body: Record<string, unknown>, after?: () => void) {
+  async function run(name: string, body: Record<string, unknown>, after?: () => void, leave = false) {
     setBusy(name);
     setMsg(null);
     try {
       const r = await api.action(name, body);
-      setMsg({ text: r.message ?? "Saved", ok: true });
       after?.();
+      // Saving the day by hand goes straight back to the employee's page (attendance tab).
+      if (leave) {
+        router.dismissTo({ pathname: "/employee/[id]", params: { id: employeeId, tab: "attendance", saved: "day" } });
+        return;
+      }
+      setMsg({ text: r.message ?? "Saved", ok: true });
       await reload();
     } catch (e) {
       setMsg({ text: (e as Error).message, ok: false });
@@ -121,7 +126,7 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
         avatar={data.employee.name}
         eyebrow={dateLabel(data.date)}
         title={data.employee.name}
-        pills={[{ label: data.statusLabel || "—", tone: statusTone(data.status) === "green" ? "ok" : statusTone(data.status) === "neutral" ? undefined : "alert" }, ...(data.late ? [{ label: lateLabel(data.lateMins ?? 0).replace(/^late/, "Late"), tone: "alert" as const }] : []), ...(data.manual ? [{ label: "Edited" }] : [])]}
+        pills={[{ label: data.statusLabel || "—", tone: statusTone(data.status) === "green" ? "ok" : statusTone(data.status) === "neutral" ? undefined : "alert" }, ...(data.late ? [{ label: lateLabel(data.lateMins ?? 0).replace(/^late/, "Late"), tone: "alert" as const }] : []), ...(data.early ? [{ label: earlyLabel(data.earlyMins ?? 0).replace(/^left/, "Left"), tone: "alert" as const }] : []), ...(data.manual ? [{ label: "Edited" }] : [])]}
         stats={[
           { label: "In", value: data.punches.find((p) => p.type === "IN" && !p.voided)?.time ?? "—" },
           { label: "Out", value: [...data.punches].reverse().find((p) => p.type === "OUT" && !p.voided)?.time ?? "—" },
@@ -158,7 +163,7 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
 
       {data.editable ? (
         <>
-          <MarkAttendance key={`${data.hours?.open}-${data.hours?.close}-${markRound}`} hours={data.hours ?? { open: "09:00", close: "18:00" }} busy={busy === "markAttendance"} onSave={(body) => run("markAttendance", { employeeId, date, ...body }, () => setMarkRound((n) => n + 1))} />
+          <MarkAttendance key={`${data.hours?.open}-${data.hours?.close}`} hours={data.hours ?? { open: "09:00", close: "18:00" }} busy={busy === "markAttendance"} onSave={(body, allowLeave) => run("markAttendance", { employeeId, date, ...body }, allowLeave, true)} />
           <Card>
             <SectionHead icon={<CalendarCheck size={18} color={C.ink.blue} />} ink="blue" title="Set day status" />
             <Muted>For leave, absent or half day. This overrides scans and scheduled leave for this day. To record working times, use Mark attendance above.</Muted>
@@ -168,8 +173,8 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
               ))}
             </View>
             <Field label="Reason" value={statusReason} onChangeText={setStatusReason} />
-            <Button title="Set status" loading={busy === "setDayStatus"} disabled={statusReason.trim().length < 3} onPress={() => run("setDayStatus", { employeeId, date, status, reason: statusReason }, () => setStatusReason(""))} />
-            {data.manual ? <Button title="Back to automatic (from scans)" variant="secondary" loading={busy === "clearDayStatus"} onPress={() => run("clearDayStatus", { employeeId, date })} /> : null}
+            <Button title="Set status" loading={busy === "setDayStatus"} disabled={statusReason.trim().length < 3} onPress={() => run("setDayStatus", { employeeId, date, status, reason: statusReason }, () => setStatusReason(""), true)} />
+            {data.manual ? <Button title="Back to automatic (from scans)" variant="secondary" loading={busy === "clearDayStatus"} onPress={() => run("clearDayStatus", { employeeId, date }, undefined, true)} /> : null}
           </Card>
         </>
       ) : null}

@@ -131,6 +131,29 @@ body {
 }
 
 @layer components {
+  /* Save / action buttons that stay at the bottom of the screen while a long form scrolls
+     (above the floating phone nav bar). */
+  .sticky-actions {
+    position: sticky;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom));
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 -0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--card) 82%, transparent);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  }
+  @media (min-width: 640px) {
+    .sticky-actions { bottom: 0.75rem; }
+  }
+
   .card {
     @apply rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4 shadow-[0_2px_6px_rgba(15,23,42,0.04)] sm:p-5;
   }
@@ -409,8 +432,11 @@ textarea,
   background: rgba(23, 23, 23, 0.14);
 }
 
-/* Vercel guidelines: no double-tap zoom on controls, our own tap highlight, visible keyboard focus,
-   tabular figures for amounts and counts. */
+/* No double-tap zoom on controls, no grey tap flash on phones (buttons and tabs press in instead),
+   visible keyboard focus, tabular figures for amounts and counts. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
 button,
 a,
 summary,
@@ -418,7 +444,7 @@ label,
 [role="tab"],
 [role="option"] {
   touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(23, 23, 23, 0.06);
+  -webkit-tap-highlight-color: transparent;
 }
 :focus-visible {
   outline: 2px solid var(--brand);
@@ -444,6 +470,9 @@ label,
 .rise-list > *:nth-child(n + 6) { animation-delay: 150ms; }
 .btn, .btn-primary, .btn-secondary, .btn-danger { transition-property: background-color, border-color, color, opacity, transform; }
 .btn:active, .btn-primary:active, .btn-secondary:active, .btn-danger:active { transform: scale(0.97); }
+/* Tabs and pill chips press in a little (instead of the grey tap flash). */
+.segmented > button, .segmented > a, [role="tab"] { transition-property: background-color, color, box-shadow, transform; transition-duration: 160ms; }
+.segmented > button:active, .segmented > a:active, [role="tab"]:active { transform: scale(0.96); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

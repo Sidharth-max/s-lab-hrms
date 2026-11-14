@@ -45,3 +45,10 @@ export function lateLabel(mins: number) {
   const m = mins % 60;
   return `late ${h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`}`;
 }
+
+/** "left 20m early" */
+export function earlyLabel(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `left ${h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`} early`;
+}

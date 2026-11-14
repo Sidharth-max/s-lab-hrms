@@ -8,7 +8,7 @@ import { dbToDateKey } from "@/lib/time";
 export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id]">) {
   return staff(async (actor) => {
     const { id } = await ctx.params;
-    const e = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true } });
+    const e = await db.employee.findFirst({ where: { id, businessId: actor.businessId }, include: { site: true, user: true, shift: true } });
     if (!e || !canSeeSite(actor, e.siteId)) return apiError("Employee not found", 404);
     const [hisaab, wages, today] = await Promise.all([
       hisaabOf(e),
@@ -38,6 +38,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
         ...(can(actor, "salary.edit")
           ? { bankAccountName: e.bankAccountName, bankAccountNumber: e.bankAccountNumber, bankIfsc: e.bankIfsc, bankName: e.bankName, bankBranch: e.bankBranch, upiId: e.upiId }
           : {}),
+        shiftId: e.shift?.active ? e.shift.id : null,
+        shift: e.shift?.active ? e.shift.name : null,
         customWeeklyOff: e.customWeeklyOff,
         weeklyOffDays: e.weeklyOffDays,
         face: !!e.faceId,
