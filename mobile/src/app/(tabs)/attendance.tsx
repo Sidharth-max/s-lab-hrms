@@ -13,7 +13,7 @@ import { haptic } from "@/lib/haptics";
 import { PressScale } from "@/lib/motion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/lib/api";
-import { addDays, dateLabel, hours } from "@/lib/format";
+import { addDays, dateLabel, hours, lateLabel } from "@/lib/format";
 import { C, shadow, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { useWide } from "@/lib/layout";
@@ -23,7 +23,7 @@ import { DayView } from "@/components/DayView";
 interface Day {
   date: string;
   today: string;
-  rows: { archived?: boolean; employeeId: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; workedMins: number; missingOut: boolean; manual: boolean }[];
+  rows: { archived?: boolean; employeeId: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; workedMins: number; missingOut: boolean; manual: boolean; late?: boolean; lateMins?: number }[];
 }
 
 export default function Attendance() {
@@ -119,7 +119,8 @@ export default function Attendance() {
               </View>
             </View>
             <Muted>
-              In <Text style={{ color: r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text> · Out <Text style={{ color: r.outAt ? C.ink.blue : C.muted, fontWeight: r.outAt ? "600" : "400" }}>{r.outAt ?? "—"}</Text> · {hours(r.workedMins)}
+              In <Text style={{ color: r.late ? C.ink.red : r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text>
+              {r.late ? <Text style={{ color: C.ink.red, fontWeight: "600" }}>{` (${lateLabel(r.lateMins ?? 0)})`}</Text> : null} · Out <Text style={{ color: r.outAt ? C.ink.blue : C.muted, fontWeight: r.outAt ? "600" : "400" }}>{r.outAt ?? "—"}</Text> · {hours(r.workedMins)}
               {r.manual ? " · manual" : ""}
               {r.missingOut ? <Text style={{ color: C.ink.red }}> · no out punch</Text> : null}
             </Muted>

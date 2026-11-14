@@ -9,7 +9,7 @@ import { ArrowUpRight, BadgeCheck, Building, Camera, ChevronRight, Clock, UserPl
 import { Avatar, Badge, Button, Card, ErrorView, InkText, Loading, Muted, refreshProps, SectionLabel } from "@/components/ui";
 import { ArrivalsChart, DotGauge, GradientFill, SegmentBar, siteInk } from "@/components/Viz";
 import { api } from "@/lib/api";
-import { dateLabel, rs } from "@/lib/format";
+import { dateLabel, lateLabel, rs } from "@/lib/format";
 import { C, shadow, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { FLOATING_NAV_SPACE, RAIL_WIDTH, useWindowLayout } from "@/lib/layout";
@@ -28,7 +28,7 @@ interface Dashboard {
   sites: { id: string; name: string; total: number; present: number; inside: number; notIn: number }[];
   arrivals: { hour: number; count: number }[];
   payroll: { toPay: number; owed: number; people: number } | null;
-  rows: { id: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; inside: boolean; manual: boolean; needsFace: boolean }[];
+  rows: { id: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; inside: boolean; manual: boolean; needsFace: boolean; late?: boolean; lateMins?: number }[];
   noFace: { id: string; name: string }[];
 }
 
@@ -64,7 +64,8 @@ function PersonRow({ r, date, i }: { r: Dashboard["rows"][number]; date: string;
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }} numberOfLines={1}>{r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}</Text></Text>
           <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={2}>
-            {r.site} · In <Text style={{ color: r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text> · Out{" "}
+            {r.site} · In <Text style={{ color: r.late ? C.ink.red : r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text>
+            {r.late ? <Text style={{ color: C.ink.red, fontWeight: "600" }}>{` (${lateLabel(r.lateMins ?? 0)})`}</Text> : null} · Out{" "}
             <Text style={{ color: r.outAt ? C.ink.blue : r.inside ? C.ink.teal : C.muted, fontWeight: r.outAt || r.inside ? "600" : "400" }}>{r.outAt ?? (r.inside ? "inside" : "—")}</Text>
             {r.manual ? " · manual" : ""}
           </Text>

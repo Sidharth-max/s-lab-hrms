@@ -5,7 +5,7 @@ import { Text } from "@/components/Text";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 
-export interface GridDay { date: string; status: string; short: string; manual: boolean; missingOut: boolean }
+export interface GridDay { date: string; status: string; short: string; manual: boolean; missingOut: boolean; late?: boolean }
 
 const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
 
@@ -52,12 +52,14 @@ export function MonthGrid({ employeeId, month, days, compact }: { employeeId: st
                 key={j}
                 disabled={!tappable}
                 onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId, date: d.date } })}
-                accessibilityLabel={`${dateLabel(d.date)}: ${d.short || d.status}`}
+                accessibilityLabel={`${dateLabel(d.date)}: ${d.short || d.status}${d.late ? ", late" : ""}`}
                 style={({ pressed }) => [
                   { width: cell, height: cellH, borderRadius: Math.min(12, Math.round(cell * 0.28)), borderWidth: isToday ? 2 : 1, borderColor: isToday ? C.brand : col.border, backgroundColor: col.bg, alignItems: "center", justifyContent: "center", gap: 1 },
                   pressed && { opacity: 0.7 },
                 ]}
               >
+                {/* Late arrival: small red dot in the corner (still a full day). */}
+                {d.late ? <View style={{ position: "absolute", top: 3, right: 3, width: 6, height: 6, borderRadius: 3, backgroundColor: C.red }} /> : null}
                 <Text style={{ ...tight, fontSize: numSize, lineHeight: numSize + 2, color: isToday ? C.brandInk : C.muted, fontWeight: isToday ? "700" : "400" }}>{Number(d.date.slice(8))}</Text>
                 {d.short ? <Text numberOfLines={1} style={{ ...tight, fontSize: letterSize, lineHeight: letterSize + 2, fontWeight: "700", color: col.fg }}>{d.short}{d.manual ? "*" : ""}{d.missingOut ? "!" : ""}</Text> : null}
               </Pressable>

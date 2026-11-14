@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { ArrowUpRight, BadgeCheck, Camera } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
-import { statusBadgeClass } from "@/lib/attendance";
+import { lateLabel, statusBadgeClass } from "@/lib/attendance";
 import { buildDashboard } from "@/lib/dashboard";
 import { formatRs } from "@/lib/money";
 import { formatDateKey } from "@/lib/time";
@@ -120,7 +120,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/dashboard"
                 <td className="card-title"><Link className="font-medium text-[var(--text)] hover:underline" href={`/attendance/${r.id}/${d.date}`}>{r.name}</Link> <span className="muted">{r.code}</span></td>
                 <td data-label="Site">{r.site}</td>
                 <td data-label="Status">{r.status === "ABSENT" ? <span className="badge badge-neutral">Not in yet</span> : <span className={statusBadgeClass(r.status)}>{r.statusLabel}</span>}{r.manual && <span className="muted"> (manual)</span>}</td>
-                <td data-label="In" className={r.inAt ? "ink-teal font-semibold" : ""}>{r.inAt ?? "—"}</td>
+                <td data-label="In" className={r.late ? "ink-red font-semibold" : r.inAt ? "ink-teal font-semibold" : ""}>{r.inAt ?? "—"}{r.late ? <span className="badge badge-red ml-1.5">{lateLabel(r.lateMins)}</span> : null}</td>
                 <td data-label="Out" className={r.outAt ? "ink-blue font-semibold" : r.inside ? "ink-teal font-semibold" : ""}>{r.outAt ?? (r.inside ? "inside" : "—")}</td>
               </tr>
             ))}

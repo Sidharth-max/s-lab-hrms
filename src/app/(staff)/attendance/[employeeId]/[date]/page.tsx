@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { clearDayStatus, markAttendance, setDayStatus, voidPunch } from "@/app/actions/attendance";
 import { ActionForm } from "@/components/ActionForm";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL } from "@/lib/attendance";
+import { lateLabel, STATUS_LABEL } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { can, canSeeSite } from "@/lib/permissions";
 import { monthAttendance } from "@/lib/services";
@@ -50,6 +50,7 @@ export default async function DayDetail({ params }: PageProps<"/attendance/[empl
         title={emp.name}
         pills={[
           { label: STATUS_LABEL[day.status] ?? "—", tone: day.status === "PRESENT" ? "ok" : day.status === "ABSENT" || day.status === "HALF_DAY" || day.status === "UNPAID_LEAVE" ? "alert" : undefined },
+          ...(day.late ? [{ label: lateLabel(day.lateMins).replace(/^late/, "Late"), tone: "alert" as const }] : []),
           ...(day.overridden ? [{ label: "Edited by hand" }] : []),
         ]}
         stats={[

@@ -31,7 +31,7 @@ interface Detail {
 interface Register {
   month: string;
   current: string;
-  rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number }[];
+  rows: { days: { date: string; status: string; short: string; manual: boolean; missingOut: boolean }[]; present: number; absent: number; leave: number; late?: number }[];
 }
 
 type Tab = "overview" | "attendance" | "ledger" | "account";
@@ -62,9 +62,10 @@ function MonthCalendar({ employeeId }: { employeeId: string }) {
             <Badge label={`Present ${row.present}`} tone="green" />
             <Badge label={`Absent ${row.absent}`} tone="red" />
             <Badge label={`Leave ${row.leave}`} />
+            {row.late ? <Badge label={`Late ${row.late}`} tone="red" /> : null}
           </View>
           <MonthGrid employeeId={employeeId} month={data.month} days={row.days} />
-          <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch</Muted>
+          <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch · red dot late</Muted>
         </>
       )}
       {error ? <Button title="Retry" variant="secondary" onPress={reload} /> : null}

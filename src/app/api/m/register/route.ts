@@ -27,10 +27,11 @@ export async function GET(req: Request) {
         return {
           employeeId: e.id,
           name: e.name,
-          days: list.map((d) => ({ date: d.date, status: d.status, short: STATUS_SHORT[d.status], manual: d.overridden, missingOut: d.missingOut && !d.overridden })),
+          days: list.map((d) => ({ date: d.date, status: d.status, short: STATUS_SHORT[d.status], manual: d.overridden, missingOut: d.missingOut && !d.overridden, late: d.late })),
           present: c.present,
           absent: c.absent,
           leave: c.paidLeave + c.unpaidLeave,
+          late: list.filter((d) => d.late).length,
         };
       }),
     });

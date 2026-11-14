@@ -5,7 +5,7 @@ import { Text } from "@/components/Text";
 import { Button, Card, ChoiceChip, ErrorView, Field, Hero, Loading, Muted, Notice, Screen, SectionHead, Toggle } from "@/components/ui";
 import { CalendarCheck, Clock, History, Pencil } from "@/components/icons";
 import { api } from "@/lib/api";
-import { dateLabel } from "@/lib/format";
+import { dateLabel, lateLabel } from "@/lib/format";
 import { C, statusTone } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 import { TimeField } from "@/components/pickers";
@@ -18,6 +18,8 @@ interface DayDetail {
   status: string;
   statusLabel: string;
   manual: boolean;
+  late?: boolean;
+  lateMins?: number;
   locked: boolean;
   editable: boolean;
   hours?: { open: string; close: string };
@@ -119,7 +121,7 @@ export function DayView({ employeeId, date, embedded }: { employeeId: string; da
         avatar={data.employee.name}
         eyebrow={dateLabel(data.date)}
         title={data.employee.name}
-        pills={[{ label: data.statusLabel || "—", tone: statusTone(data.status) === "green" ? "ok" : statusTone(data.status) === "neutral" ? undefined : "alert" }, ...(data.manual ? [{ label: "Edited" }] : [])]}
+        pills={[{ label: data.statusLabel || "—", tone: statusTone(data.status) === "green" ? "ok" : statusTone(data.status) === "neutral" ? undefined : "alert" }, ...(data.late ? [{ label: lateLabel(data.lateMins ?? 0).replace(/^late/, "Late"), tone: "alert" as const }] : []), ...(data.manual ? [{ label: "Edited" }] : [])]}
         stats={[
           { label: "In", value: data.punches.find((p) => p.type === "IN" && !p.voided)?.time ?? "—" },
           { label: "Out", value: [...data.punches].reverse().find((p) => p.type === "OUT" && !p.voided)?.time ?? "—" },

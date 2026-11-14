@@ -10,7 +10,7 @@ import { env } from "@/lib/env";
 import { isPermission } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
 import { dateKeyToDb } from "@/lib/time";
-import { isTime, type DayRule } from "@/lib/day-rules";
+import { halfDayLimit, isTime, type DayRule } from "@/lib/day-rules";
 import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 
@@ -35,10 +35,12 @@ export const updateSettings = safe(async (_p: ActionResult, form: FormData): Pro
     const open = str(form, `open_${i}`);
     const close = str(form, `close_${i}`);
     if (!isTime(open) || !isTime(close)) return { error: "Enter open and close times as HH:MM" };
-    const halfHours = Number(str(form, `half_${i}`) || "0");
-    if (!Number.isFinite(halfHours) || halfHours < 0 || halfHours > 12) return { error: "Half day hours must be between 0 and 12" };
+    // Grace period in minutes: a first scan-in after open + grace is tagged "Late" (full pay).
+    const grace = Number(str(form, `grace_${i}`) || "0");
+    if (!Number.isInteger(grace) || grace < 0 || grace > 240) return { error: "Grace period must be 0 to 240 minutes" };
     if (form.get(`off_${i}`) === "on") weeklyOffDays.push(i);
-    dayRules.push({ open, close, halfDayBelowMins: Math.round(halfHours * 60), anyScanFullDay: form.get(`any_${i}`) === "on" });
+    // Half day is always under 50% of the day's hours; the minutes are stored for older readers.
+    dayRules.push({ open, close, halfDayBelowMins: halfDayLimit({ open, close }), anyScanFullDay: form.get(`any_${i}`) === "on", graceMins: grace });
   }
 
   const data = {

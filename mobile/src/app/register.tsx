@@ -15,7 +15,7 @@ interface Reg {
   month: string;
   current: string;
   dates: string[];
-  rows: { employeeId: string; name: string; days: GridDay[]; present: number; absent: number; leave: number }[];
+  rows: { employeeId: string; name: string; days: GridDay[]; present: number; absent: number; leave: number; late?: number }[];
 }
 
 /** Monthly register on a phone: one card per employee with their month calendar (no wide table). */
@@ -59,7 +59,7 @@ export default function Register() {
                 <TextInput value={q} onChangeText={setQ} placeholder="Search employee…" placeholderTextColor={C.placeholder} style={{ flex: 1, minHeight: 44, fontSize: 15, color: C.text }} />
               </View>
             ) : null}
-            <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch. Tap a day to open it.</Muted>
+            <Muted>P present · H half · A absent · PL/UL leave · WO off · HO holiday · * edited · ! no out punch · red dot late. Tap a day to open it.</Muted>
           </View>
         }
         ListEmptyComponent={<Muted>No employees in this month.</Muted>}
@@ -74,6 +74,7 @@ export default function Register() {
               <Badge label={`Present ${r.present}`} tone="green" dot />
               <Badge label={`Absent ${r.absent}`} tone="red" dot />
               <Badge label={`Leave ${r.leave}`} />
+            {r.late ? <Badge label={`Late ${r.late}`} tone="red" /> : null}
             </View>
             <MonthGrid employeeId={r.employeeId} month={data.month} days={r.days} compact />
           </View>

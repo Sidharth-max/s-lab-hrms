@@ -27,6 +27,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/attendance/[e
       status: day.status,
       statusLabel: STATUS_LABEL[day.status],
       manual: day.overridden,
+      late: day.late,
+      lateMins: day.lateMins,
       locked: false, // salary months are no longer locked; kept for older app versions
       // Store hours for that weekday: the default "full day" for marking attendance by hand.
       hours: (() => { const r = parseDayRules(business.dayRules)[weekday(date)]; return { open: r.open, close: r.close }; })(),

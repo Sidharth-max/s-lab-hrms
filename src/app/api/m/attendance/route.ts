@@ -36,6 +36,8 @@ export async function GET(req: Request) {
         workedMins: d.workedMins,
         missingOut: d.missingOut && !d.overridden,
         manual: d.overridden,
+        late: d.late,
+        lateMins: d.lateMins,
       }));
     return json({ date, today, show, rows });
   });

@@ -3,7 +3,7 @@ import { Pencil } from "@/components/icons";
 import { can } from "@/lib/permissions";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { requireStaff } from "@/lib/auth";
-import { STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
+import { lateLabel, STATUS_LABEL, statusBadgeClass } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
@@ -67,9 +67,10 @@ export default async function AttendanceDay({ searchParams }: PageProps<"/attend
                     <span className={statusBadgeClass(d.status)}>{d.auto ? "Present (auto)" : STATUS_LABEL[d.status]}</span>
                     {d.overridden && <span className="badge badge-neutral ml-1">manual</span>}
                     {d.missingOut && !d.overridden && <span className="badge badge-red ml-1">no out punch</span>}
+                    {d.late && <span className="badge badge-red ml-1">{lateLabel(d.lateMins)}</span>}
                   </span>
                 </td>
-                <td data-label={"In"} className={d.inAt ? "ink-teal font-semibold" : ""}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
+                <td data-label={"In"} className={d.late ? "ink-red font-semibold" : d.inAt ? "ink-teal font-semibold" : ""}>{d.inAt ? formatIstTime(d.inAt) : "—"}</td>
                 <td data-label={"Out"} className={d.outAt ? "ink-blue font-semibold" : ""}>{d.outAt ? formatIstTime(d.outAt) : "—"}</td>
                 <td data-label={"Worked"}>{minsToText(d.workedMins)}</td>
                 <td><Link className="btn-secondary !h-9" href={`/attendance/${e.id}/${date}`}><Pencil size={14} aria-hidden />Edit</Link></td>

@@ -5,7 +5,10 @@ import { Building, CalendarDays, Settings } from "@/components/icons";
 import { requireStaff } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dbToDateKey, formatDateKey } from "@/lib/time";
-import { parseDayRules } from "@/lib/day-rules";
+import { parseDayRules, shiftMiddle, shiftMinutes } from "@/lib/day-rules";
+
+const hm = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}`;
+const time12 = (t: string) => { const h = Number(t.slice(0, 2)); return `${((h + 11) % 12) + 1}:${t.slice(3)} ${h >= 12 ? "pm" : "am"}`; };
 import { DateInput, TimeInput } from "@/components/controls";
 
 export default async function SettingsPage() {
@@ -40,7 +43,7 @@ export default async function SettingsPage() {
           </div>
           <h3 className="font-semibold">Weekly schedule</h3>
           <p className="muted -mt-3">
-            {"Weekly off: paid day off for monthly staff (an employee can have their own days, set on the employee). Half day: worked less than these hours. Any scan = full day: for short days like Sunday."}
+            {"Weekly off: paid day off for monthly staff (an employee can have their own days, set on the employee). Grace: minutes after opening time that still count as on time; a later first scan is tagged Late (full pay, no cut). Half day: punched in after the middle of that day's shift, or punched out before it (shown per day). Any scan = full day: for short days like Sunday."}
           </p>
           <div className="overflow-x-auto">
             <table className="table table-cards">
@@ -50,7 +53,8 @@ export default async function SettingsPage() {
                   <th>Weekly off</th>
                   <th>Opens</th>
                   <th>Closes</th>
-                  <th>Half day below (hours, 0 = never)</th>
+                  <th>Grace (minutes)</th>
+                  <th>Half day if in after / out before</th>
                   <th>Any scan = full day</th>
                 </tr>
               </thead>
@@ -63,8 +67,11 @@ export default async function SettingsPage() {
                     </td>
                     <td data-label={"Opens"}><TimeInput name={`open_${i}`} defaultValue={r.open} className="w-36" /></td>
                     <td data-label={"Closes"}><TimeInput name={`close_${i}`} defaultValue={r.close} className="w-36" /></td>
-                    <td data-label={"Half day below (hours)"}>
-                      <input type="number" name={`half_${i}`} step="0.5" min={0} max={12} defaultValue={r.halfDayBelowMins / 60} className="input !w-24" />
+                    <td data-label={"Grace (minutes)"}>
+                      <input type="number" name={`grace_${i}`} step="5" min={0} max={240} defaultValue={r.graceMins} className="input !w-24" aria-label={`Grace minutes on ${DAYS[i]}`} />
+                    </td>
+                    <td data-label={"Half day if in after / out before"} className="muted tabular-nums">
+                      {r.anyScanFullDay ? "Never (any scan = full day)" : `${time12(shiftMiddle(r))} (middle of ${hm(shiftMinutes(r))})`}
                     </td>
                     <td data-label={"Any scan = full day"}>
                       <input type="checkbox" name={`any_${i}`} defaultChecked={r.anyScanFullDay} className="h-5 w-5" />

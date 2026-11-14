@@ -38,3 +38,10 @@ export function addDays(key: string, n: number): string {
 export function hours(mins: number): string {
   return mins ? `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m` : "—";
 }
+
+/** "late 25m" / "late 1h 5m" for an arrival after opening time + grace. */
+export function lateLabel(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `late ${h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`}`;
+}

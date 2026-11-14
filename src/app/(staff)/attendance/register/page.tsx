@@ -4,7 +4,7 @@ import { CalendarRange } from "@/components/icons";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { requireStaff } from "@/lib/auth";
-import { countDays, STATUS_SHORT, type DerivedStatus } from "@/lib/attendance";
+import { countDays, lateLabel, STATUS_SHORT, type DerivedStatus } from "@/lib/attendance";
 import { db } from "@/lib/db";
 import { employeeScope } from "@/lib/scope";
 import { employedInMonthWhere, monthAttendance } from "@/lib/services";
@@ -55,7 +55,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
           {only && <Link className="btn-secondary" href={`?month=${month}`}>All employees</Link>}
         </div>
       </div>
-      <p className="muted">P present · H half day · A absent · PL paid leave · UL unpaid leave · WO weekly off · HO holiday · * edited · ! no out punch. Tap a day to edit.</p>
+      <p className="muted">P present · H half day · A absent · PL paid leave · UL unpaid leave · WO weekly off · HO holiday · * edited · ! no out punch · red mark = late. Tap a day to edit.</p>
       {!only && <ShowTabs show={show} params={{ month: month === current ? undefined : month }} />}
       {/* Phones: one card per employee with a month calendar. Wider screens: the full table. */}
       <div className="flex flex-col gap-3 md:hidden">
@@ -87,7 +87,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
                     </>
                   );
                   return short ? (
-                    <Link key={d.date} href={`/attendance/${e.id}/${d.date}`} className={`rounded-md border border-[var(--line)] py-1 ${COLOR[d.status] ?? ""}`}>{body}</Link>
+                    <Link key={d.date} href={`/attendance/${e.id}/${d.date}`} title={d.late ? lateLabel(d.lateMins) : undefined} className={`relative rounded-md border border-[var(--line)] py-1 ${COLOR[d.status] ?? ""}`}>{body}{d.late && <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-[var(--red)]" aria-label="late" />}</Link>
                   ) : (
                     <span key={d.date} className="rounded-md border border-[var(--line)] py-1 text-[var(--faint)]">{body}</span>
                   );
@@ -117,7 +117,7 @@ export default async function Register({ searchParams }: PageProps<"/attendance/
                   {list.map((d) => (
                     <td key={d.date} className="!px-0.5 text-center">
                       {STATUS_SHORT[d.status] ? (
-                        <Link href={`/attendance/${e.id}/${d.date}`} className={`block rounded px-1 py-0.5 font-semibold ${COLOR[d.status] ?? ""}`}>
+                        <Link href={`/attendance/${e.id}/${d.date}`} title={d.late ? lateLabel(d.lateMins) : undefined} className={`relative block rounded px-1 py-0.5 font-semibold ${COLOR[d.status] ?? ""} ${d.late ? "underline decoration-[var(--red)] decoration-2 underline-offset-2" : ""}`}>
                           {STATUS_SHORT[d.status]}{d.overridden ? "*" : ""}{d.missingOut && !d.overridden ? "!" : ""}
                         </Link>
                       ) : null}
