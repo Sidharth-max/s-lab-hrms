@@ -1,7 +1,5 @@
 package expo.modules.backtohome
 
-import androidx.activity.OnBackPressedCallback
-import com.facebook.react.ReactActivity
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -13,6 +11,9 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * the swipe. On the app's start screen (Today, nothing open on top) the app turns that callback off,
  * so Android handles Back itself: the swipe shows the real back-to-home preview and the app closes.
  * Everywhere else it is on again and Back works inside the app as before.
+ *
+ * The classes are looked up at run time (this small module does not link React Native or AndroidX);
+ * if anything is missing, nothing changes and Back keeps working through JavaScript.
  */
 class BackToHomeModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -20,14 +21,19 @@ class BackToHomeModule : Module() {
 
     /** atRoot = true: let Android handle Back (preview + close). false: React Native handles Back. */
     Function("setAtRoot") { atRoot: Boolean ->
-      val activity = appContext.currentActivity as? ReactActivity ?: return@Function false
+      val activity = appContext.currentActivity ?: return@Function false
       activity.runOnUiThread {
         try {
-          val field = ReactActivity::class.java.getDeclaredField("mBackPressedCallback")
-          field.isAccessible = true
-          (field.get(activity) as? OnBackPressedCallback)?.isEnabled = !atRoot
+          var cls: Class<*>? = activity.javaClass
+          var field: java.lang.reflect.Field? = null
+          while (cls != null && field == null) {
+            field = try { cls.getDeclaredField("mBackPressedCallback") } catch (_: NoSuchFieldException) { null }
+            cls = cls.superclass
+          }
+          val callback = field?.let { it.isAccessible = true; it.get(activity) } ?: return@runOnUiThread
+          callback.javaClass.getMethod("setEnabled", Boolean::class.javaPrimitiveType).invoke(callback, !atRoot)
         } catch (_: Throwable) {
-          // Field missing in another React Native version: Back keeps working through JavaScript.
+          // Not available in this React Native version: Back keeps working through JavaScript.
         }
       }
       true
