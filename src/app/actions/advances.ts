@@ -8,6 +8,7 @@ import { formatRs, parseRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { hisaabOf } from "@/lib/ledger";
 import { safe, str, type ActionResult } from "@/lib/action";
+import { noteOrNull } from "@/lib/text";
 import { dateKeyToDb, dbToDateKey, istDateKey } from "@/lib/time";
 
 export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
@@ -25,7 +26,7 @@ export const giveAdvance = safe(async (_p: ActionResult, form: FormData): Promis
   const goesNegative = amount > balance;
   const selfApprove = can(actor, "approvals.decide");
   const needsApproval = goesNegative && !selfApprove;
-  const note = str(form, "note") || null;
+  const note = noteOrNull(str(form, "note"));
 
   const advance = await db.$transaction(async (tx) => {
     const a = await tx.advance.create({
@@ -144,7 +145,7 @@ export const editAdvance = safe(async (_p: ActionResult, form: FormData): Promis
   if (amount == null || amount <= 0) return { error: "Enter the amount" };
   const givenOn = str(form, "givenOn") || dbToDateKey(adv.givenOn);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(givenOn) || givenOn > istDateKey(new Date())) return { error: "Enter a valid date (not in the future)" };
-  const note = form.has("note") ? str(form, "note") || null : adv.note;
+  const note = form.has("note") ? noteOrNull(str(form, "note")) : adv.note;
 
   await db.advance.update({ where: { id: adv.id }, data: { amount, givenOn: dateKeyToDb(givenOn), startMonth: givenOn.slice(0, 7), note, status: "ACTIVE" } });
   await audit(actor.businessId, actor.id, "advance.edit", "Advance", adv.id, {

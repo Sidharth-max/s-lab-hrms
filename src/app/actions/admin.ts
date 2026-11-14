@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { isPermission } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
+import { titleCase } from "@/lib/text";
 import { dateKeyToDb } from "@/lib/time";
 import { readDayRulesForm } from "@/lib/day-rules";
 import type { Prisma } from "@prisma/client";
@@ -24,7 +25,7 @@ function intIn(form: FormData, key: string, min: number, max: number, label: str
 
 export const updateSettings = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("settings.manage");
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   if (!name) return { error: "Enter the business name" };
   const pct = (k: string, label: string) => Math.round(intIn(form, k, 0, 100, label) * 100);
 
@@ -56,7 +57,7 @@ export const updateSettings = safe(async (_p: ActionResult, form: FormData): Pro
 /** Creates a shift, or updates one when shiftId is sent. Same per-day fields as the business hours. */
 export const saveShift = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("settings.manage");
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   if (!name) return { error: "Enter the shift name" };
   if (name.length > 40) return { error: "Shift name: up to 40 letters" };
   const week = readDayRulesForm((k) => str(form, k), (k) => form.get(k) === "on");
@@ -103,7 +104,7 @@ export const removeShift = safe(async (_p: ActionResult, form: FormData): Promis
 
 export const addSite = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("settings.manage");
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   if (!name) return { error: "Enter the site name" };
   if (await db.site.findFirst({ where: { businessId: actor.businessId, name } })) return { error: "A site with this name exists" };
   const site = await db.site.create({ data: { businessId: actor.businessId, name } });
@@ -125,7 +126,7 @@ export const toggleSite = safe(async (_p: ActionResult, form: FormData): Promise
 export const addHoliday = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("settings.manage");
   const date = str(form, "date");
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !name) return { error: "Enter date and name" };
   await db.holiday.upsert({
     where: { businessId_date: { businessId: actor.businessId, date: dateKeyToDb(date) } },
@@ -162,7 +163,7 @@ function readPermissions(form: FormData) {
 export const saveManager = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertOwner();
   const id = str(form, "id");
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   const phone = normalizePhone(str(form, "phone"));
   if (!name) return { error: "Enter the name" };
   if (!phone) return { error: "Enter a valid 10 digit mobile number" };
@@ -203,7 +204,7 @@ export const registerDevice = safe(async (_p: ActionResult, form: FormData): Pro
   const actor = await assertStaff("devices.register");
   const site = await db.site.findFirst({ where: { id: str(form, "siteId"), businessId: actor.businessId, active: true } });
   if (!site) return { error: "Choose a site" };
-  const name = str(form, "name") || `${site.name} scanner`;
+  const name = titleCase(str(form, "name")) || `${site.name} scanner`;
   const token = randomBytes(32).toString("base64url");
   const device = await db.device.create({
     data: { businessId: actor.businessId, siteId: site.id, name, language: "en", tokenHash: hashToken(token), registeredBy: actor.id },
@@ -229,7 +230,7 @@ export const renameDevice = safe(async (_p: ActionResult, form: FormData): Promi
   const actor = await assertStaff("devices.register");
   const d = await db.device.findFirst({ where: { id: str(form, "deviceId"), businessId: actor.businessId } });
   if (!d) return { error: "Device not found" };
-  const name = str(form, "name").slice(0, 60);
+  const name = titleCase(str(form, "name")).slice(0, 60);
   if (!name) return { error: "Enter a name" };
   const siteId = str(form, "siteId") || d.siteId;
   const site = await db.site.findFirst({ where: { id: siteId, businessId: actor.businessId, active: true } });

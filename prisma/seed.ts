@@ -2,6 +2,7 @@
 // Safe to run again: does nothing if the owner's mobile already exists.
 //   OWNER_PHONE=9876543210 OWNER_NAME="Sid" BUSINESS_NAME="GGU" SITE_NAME="Main" npx tsx prisma/seed.ts
 import { PrismaClient } from "@prisma/client";
+import { titleCase } from "../src/lib/text";
 
 const db = new PrismaClient();
 
@@ -13,9 +14,9 @@ async function main() {
     console.log(`Owner ${phone} already exists, nothing to do.`);
     return;
   }
-  const business = await db.business.create({ data: { name: process.env.BUSINESS_NAME || "My Business" } });
-  await db.site.create({ data: { businessId: business.id, name: process.env.SITE_NAME || "Main site" } });
-  await db.user.create({ data: { businessId: business.id, phone, name: process.env.OWNER_NAME || "Owner", role: "OWNER" } });
+  const business = await db.business.create({ data: { name: titleCase(process.env.BUSINESS_NAME || "My Business") } });
+  await db.site.create({ data: { businessId: business.id, name: titleCase(process.env.SITE_NAME || "Main site") } });
+  await db.user.create({ data: { businessId: business.id, phone, name: titleCase(process.env.OWNER_NAME || "Owner"), role: "OWNER" } });
   console.log(`Created business "${business.name}" with owner ${phone}. Log in with this mobile number.`);
 }
 

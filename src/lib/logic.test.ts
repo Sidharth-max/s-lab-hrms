@@ -355,3 +355,26 @@ describe("month length", () => {
     expect(grossPay(emp, 30, 31)).toBe(Math.round((3000000 * 30) / 31));
   });
 });
+
+describe("tidy capitals", () => {
+  it("title-cases names and places", async () => {
+    const { titleCase } = await import("./text");
+    expect(titleCase("KULDEEP YOGENDRA SINGH")).toBe("Kuldeep Yogendra Singh");
+    expect(titleCase("  damini   ben ")).toBe("Damini Ben");
+    expect(titleCase("RATAN KUMARI RAJA RAM")).toBe("Ratan Kumari Raja Ram");
+    expect(titleCase("STATE BANK OF INDIA")).toBe("State Bank of India");
+    expect(titleCase("GGU Main gate")).toBe("GGU Main Gate");
+    expect(titleCase("shop 2B")).toBe("Shop 2B");
+    expect(titleCase("McDonald")).toBe("McDonald");
+    expect(titleCase("ram singh-rathore")).toBe("Ram Singh-Rathore");
+    expect(titleCase("out side employee")).toBe("Out Side Employee");
+    expect(titleCase("")).toBe("");
+  });
+  it("sentence-cases notes", async () => {
+    const { sentenceCase, noteOrNull } = await import("./text");
+    expect(sentenceCase("SALARY TILL DIWALI")).toBe("Salary till diwali");
+    expect(sentenceCase("forgot to scan")).toBe("Forgot to scan");
+    expect(sentenceCase("paid via UPI")).toBe("Paid via UPI");
+    expect(noteOrNull("  ")).toBe(null);
+  });
+});

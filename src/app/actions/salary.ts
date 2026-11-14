@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { formatRs, parseRs } from "@/lib/money";
 import { canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
+import { noteOrNull, sentenceCase } from "@/lib/text";
 import { dateKeyToDb, dbToDateKey, istDateKey } from "@/lib/time";
 
 // Salary is one running balance per employee (see lib/ledger.ts). These actions add money
@@ -42,7 +43,7 @@ export const paySalary = safe(async (_p: ActionResult, form: FormData): Promise<
       paidOn: dateKeyToDb(paidOn),
       mode,
       ref: str(form, "ref") || null,
-      note: str(form, "note") || null,
+      note: noteOrNull(str(form, "note")),
       createdBy: actor.id,
     },
   });
@@ -69,7 +70,7 @@ export const addAdjustment = safe(async (_p: ActionResult, form: FormData): Prom
   const emp = await employeeFor(actor, str(form, "employeeId"));
   const amount = parseRs(str(form, "amount"));
   if (amount == null || amount <= 0) return { error: "Enter the amount" };
-  const reason = str(form, "reason");
+  const reason = sentenceCase(str(form, "reason"));
   if (reason.length < 3) return { error: "Write a reason" };
   const onDate = str(form, "date") || istDateKey(new Date());
   if (!isDate(onDate) || onDate > istDateKey(new Date())) return { error: "Enter a valid date (not in the future)" };

@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
+import { noteOrNull } from "@/lib/text";
 import { dateKeyToDb, dbToDateKey, istDateKey } from "@/lib/time";
 
 // Leave scheduled ahead. Days in the plan count as leave unless the person comes back (scan or
@@ -35,7 +36,7 @@ export const scheduleLeave = safe(async (_p: ActionResult, form: FormData): Prom
   const overlap = await db.leavePlan.findFirst({ where: { employeeId: emp.id, status: "ACTIVE", fromDate: { lte: dateKeyToDb(to) }, toDate: { gte: dateKeyToDb(from) } } });
   if (overlap) return { error: `Overlaps a leave from ${dbToDateKey(overlap.fromDate)} to ${dbToDateKey(overlap.toDate)}` };
   const paid = str(form, "paid") !== "0";
-  const reason = str(form, "reason") || null;
+  const reason = noteOrNull(str(form, "reason"));
   const plan = await db.leavePlan.create({
     data: { businessId: actor.businessId, employeeId: emp.id, fromDate: dateKeyToDb(from), toDate: dateKeyToDb(to), paid, reason, createdBy: actor.id },
   });

@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { endLeaveOnReturn } from "@/lib/leave-return";
 import { canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
+import { sentenceCase } from "@/lib/text";
 import { dateKeyToDb, istDateKey, istDateTime } from "@/lib/time";
 
 const STATUSES = ["PRESENT", "HALF_DAY", "ABSENT", "PAID_LEAVE", "UNPAID_LEAVE"] as const;
@@ -25,7 +26,7 @@ export const setDayStatus = safe(async (_p: ActionResult, form: FormData): Promi
   const actor = await assertStaff("attendance.edit");
   const date = str(form, "date");
   const status = str(form, "status") as (typeof STATUSES)[number];
-  const reason = str(form, "reason");
+  const reason = sentenceCase(str(form, "reason"));
   if (!STATUSES.includes(status)) return { error: "Choose a status" };
   if (reason.length < 3) return { error: "Write a reason" };
   const emp = await checkEditable(actor.businessId, str(form, "employeeId"), date, actor);
@@ -43,7 +44,7 @@ export const clearDayStatus = safe(async (_p: ActionResult, form: FormData): Pro
   const emp = await checkEditable(actor.businessId, str(form, "employeeId"), date, actor);
   // Nothing is deleted: an AUTO row on top means "use the scans again"; older rows stay as history.
   const o = await db.dayOverride.create({
-    data: { employeeId: emp.id, workDate: dateKeyToDb(date), status: "AUTO", reason: str(form, "reason") || "Back to automatic", createdBy: actor.id },
+    data: { employeeId: emp.id, workDate: dateKeyToDb(date), status: "AUTO", reason: sentenceCase(str(form, "reason")) || "Back to automatic", createdBy: actor.id },
   });
   await audit(actor.businessId, actor.id, "attendance.override.clear", "DayOverride", o.id, { employeeId: emp.id, date });
   revalidatePath("/attendance", "layout");
@@ -55,7 +56,7 @@ export const addManualPunch = safe(async (_p: ActionResult, form: FormData): Pro
   const date = str(form, "date");
   const type = str(form, "type") === "OUT" ? "OUT" : "IN";
   const time = str(form, "time");
-  const reason = str(form, "reason");
+  const reason = sentenceCase(str(form, "reason"));
   if (!/^\d{2}:\d{2}$/.test(time)) return { error: "Enter the time" };
   if (reason.length < 3) return { error: "Write a reason" };
   const emp = await checkEditable(actor.businessId, str(form, "employeeId"), date, actor);
@@ -75,7 +76,7 @@ export const voidPunch = safe(async (_p: ActionResult, form: FormData): Promise<
   const actor = await assertStaff("attendance.edit");
   const punch = await db.attendancePunch.findFirst({ where: { id: str(form, "punchId"), businessId: actor.businessId, voidedAt: null } });
   if (!punch) return { error: "Punch not found" };
-  const reason = str(form, "reason") || "Removed by manager";
+  const reason = sentenceCase(str(form, "reason")) || "Removed by manager";
   await checkEditable(actor.businessId, punch.employeeId, punch.workDate.toISOString().slice(0, 10), actor);
   await db.attendancePunch.update({ where: { id: punch.id }, data: { voidedAt: new Date(), voidedBy: actor.id, voidReason: reason } });
   await audit(actor.businessId, actor.id, "attendance.punch.void", "AttendancePunch", punch.id, { reason });
@@ -93,7 +94,7 @@ export const markAttendance = safe(async (_p: ActionResult, form: FormData): Pro
   // The website form has "no in / out time" boxes; the app simply sends an empty time.
   const inTime = form.get("skipIn") === "on" ? "" : str(form, "inTime");
   const outTime = form.get("skipOut") === "on" ? "" : str(form, "outTime");
-  const reason = str(form, "reason") || "Marked by hand";
+  const reason = sentenceCase(str(form, "reason")) || "Marked by hand";
   if (!inTime && !outTime) return { error: "Choose an in time or an out time" };
   for (const t of [inTime, outTime]) if (t && !/^\d{2}:\d{2}$/.test(t)) return { error: "Choose a valid time" };
   const emp = await checkEditable(actor.businessId, str(form, "employeeId"), date, actor);

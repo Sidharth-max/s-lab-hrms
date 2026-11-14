@@ -1,3 +1,4 @@
+import { titleCase } from "@/lib/text";
 import { randomBytes } from "node:crypto";
 import { hashToken } from "@/lib/auth";
 import { audit } from "@/lib/audit";
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
     const body = await readJson(req);
     const site = await db.site.findFirst({ where: { id: String(body.siteId ?? ""), businessId: actor.businessId, active: true } });
     if (!site || !canSeeSite(actor, site.id)) return apiError("Choose a site");
-    const name = String(body.name ?? "").trim().slice(0, 60) || `${site.name} scanner`;
+    const name = titleCase(String(body.name ?? "")).slice(0, 60) || `${site.name} scanner`;
     const hardwareId = String(body.hardwareId ?? "").trim().slice(0, 100) || null;
     const model = String(body.model ?? "").trim().slice(0, 100) || null;
     const token = randomBytes(32).toString("base64url");

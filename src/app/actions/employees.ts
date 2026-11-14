@@ -10,6 +10,7 @@ import { decodeImage, faceProvider, storedFaceIds } from "@/lib/face";
 import { parseRs } from "@/lib/money";
 import { can, canSeeSite } from "@/lib/permissions";
 import { safe, str, type ActionResult } from "@/lib/action";
+import { titleCase } from "@/lib/text";
 import { dateKeyToDb, dbToDateKey, istDateKey } from "@/lib/time";
 import { setWageFrom } from "@/lib/ledger";
 import { nextEmployeeCode } from "@/lib/services";
@@ -84,7 +85,7 @@ function parsePay(form: FormData) {
  */
 async function parseBank(form: FormData, before?: { bankIfsc: string | null; bankName: string | null; bankBranch: string | null }) {
   if (!form.has("bankAccountNumber") && !form.has("bankIfsc") && !form.has("upiId") && !form.has("bankAccountName")) return { data: null } as const;
-  const bankAccountName = str(form, "bankAccountName") || null;
+  const bankAccountName = titleCase(str(form, "bankAccountName")) || null;
   const bankAccountNumber = str(form, "bankAccountNumber").replace(/[\s-]/g, "") || null;
   const confirm = str(form, "bankAccountNumber2").replace(/[\s-]/g, "");
   const bankIfsc = str(form, "bankIfsc").replace(/\s/g, "").toUpperCase() || null;
@@ -101,8 +102,8 @@ async function parseBank(form: FormData, before?: { bankIfsc: string | null; ban
       if (res.status === 404) return { error: "This IFSC was not found. Check it on the cheque book or passbook." } as const;
       if (res.ok) {
         const j = (await res.json()) as { BANK?: string; BRANCH?: string };
-        bankName = j.BANK ?? null;
-        bankBranch = j.BRANCH ?? null;
+        bankName = j.BANK ? titleCase(j.BANK) : null;
+        bankBranch = j.BRANCH ? titleCase(j.BRANCH) : null;
       }
     } catch {
       // Lookup not reachable: save without the bank / branch name.
@@ -114,7 +115,7 @@ async function parseBank(form: FormData, before?: { bankIfsc: string | null; ban
 /** Creates the employee; returns its id (used by the website action below and the Android app API). */
 export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData): Promise<ActionResult> => {
   const actor = await assertStaff("employees.manage");
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   // Left empty: the next free code (E001, E002, …) is used.
   const code = str(form, "code").toUpperCase() || (await nextEmployeeCode(actor.businessId));
   const siteId = str(form, "siteId");
@@ -159,7 +160,7 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
   const actor = await assertStaff("employees.manage");
   const emp = await loadEmployee(str(form, "id"), actor.businessId);
   if (!canSeeSite(actor, emp.siteId)) return { error: "Not allowed for this site" };
-  const name = str(form, "name");
+  const name = titleCase(str(form, "name"));
   const siteId = str(form, "siteId");
   const phoneRaw = str(form, "phone");
   const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
