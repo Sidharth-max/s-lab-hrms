@@ -56,6 +56,19 @@ export interface WageRate {
   wageType: "MONTHLY" | "DAILY";
   monthlyWage: number;
   dailyWage: number;
+  /** Cash part, same unit as the wage (per month or per day). Bank part = wage - cash. Missing = 0. */
+  cashWage?: number;
+}
+
+/**
+ * Share of the wage paid through the bank (0 to 1). PF and ESIC are worked out on this part only;
+ * the cash part has none. No cash part = 1 (everything through the bank, as before).
+ */
+export function bankShare(rate: WageRate): number {
+  const total = rate.wageType === "MONTHLY" ? rate.monthlyWage : rate.dailyWage;
+  if (total <= 0) return 1;
+  const cash = Math.min(Math.max(rate.cashWage ?? 0, 0), total);
+  return (total - cash) / total;
 }
 
 /** Share of a day's pay earned for a day status. Weekly offs and holidays are paid to monthly staff only. */

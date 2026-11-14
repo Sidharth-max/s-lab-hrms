@@ -21,6 +21,7 @@ interface Detail {
     id: string; name: string; code: string; phone: string | null; siteId: string; site: string; joinedOn: string; leftOn: string | null; active: boolean;
     wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[];
     face: boolean; faceEnrolledAt: string | null; webLogin: boolean; inHouse: boolean;
+    cashWage?: number; bankAccountName?: string | null; bankAccountNumber?: string | null; bankIfsc?: string | null; bankName?: string | null; bankBranch?: string | null; upiId?: string | null;
   };
   today: { status: string; label: string } | null;
   hisaab: Hisaab;
@@ -206,11 +207,16 @@ export function EmployeeDetailView({ id, created, embedded, initialTab, onEdit }
             <Row label="Mobile" value={e.phone ?? "—"} />
             <Row label="Joined" value={dateLabel(e.joinedOn)} />
             <Row label="Pay" value={`${rs(e.wage)} ${e.wageType === "MONTHLY" ? "per month" : "per day"}`} />
+            {e.cashWage ? <Row label="Bank part" value={`${rs(e.wage - e.cashWage)} · PF / ESIC on this`} ink="blue" /> : null}
+            {e.cashWage ? <Row label="Cash part" value={rs(e.cashWage)} ink="orange" /> : null}
             <Row label="Basic for PF" value={`${e.basicPercent}%`} />
             <Row label="PF" value={e.pfEnabled ? (e.uanNumber ? `UAN ${e.uanNumber}` : "On · UAN not added") : "Off"} />
             <Row label="ESIC" value={e.esiEnabled ? (e.esicNumber ? `IP ${e.esicNumber}` : "On · IP number not added") : "Off"} />
             <Row label="Attendance" value={e.inHouse ? "In-house (automatic)" : "Face scan"} />
             <Row label="Weekly off" value={weeklyOff} />
+            {e.bankAccountNumber || e.upiId ? <Row label="Bank account" value={[e.bankAccountName, e.bankAccountNumber ? `A/c ${e.bankAccountNumber}` : null].filter(Boolean).join(" · ") || "—"} /> : null}
+            {e.bankIfsc ? <Row label="IFSC" value={`${e.bankIfsc}${e.bankName ? ` · ${e.bankName}` : ""}`} /> : null}
+            {e.upiId ? <Row label="UPI" value={e.upiId} /> : null}
             {manage ? <Button title="Edit details" variant="secondary" icon={<Pencil size={16} color={C.text} />} onPress={() => (onEdit ? onEdit() : router.push({ pathname: "/employee/edit/[id]", params: { id: e.id } }))} /> : null}
           </Card>
         </>

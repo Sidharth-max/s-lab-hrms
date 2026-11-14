@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countDays, deriveMonth, nextPunch, type PunchInput } from "./attendance";
 import { parseRs, formatRs } from "./money";
-import { dayFactor, dayRate, grossPay, payableDays, statutory, wageOn, type StatutoryRates } from "./payroll";
+import { bankShare, dayFactor, dayRate, grossPay, payableDays, statutory, wageOn, type StatutoryRates } from "./payroll";
 import { istDateKey, istDateTime, monthDiff, addMonths, daysInMonth } from "./time";
 
 const rates: StatutoryRates = {
@@ -168,6 +168,29 @@ describe("payroll", () => {
 
   it("does nothing for PF/ESIC when switched off", () => {
     expect(statutory(monthly, 2000000, rates)).toEqual({ pfEmployee: 0, pfEmployer: 0, esiEmployee: 0, esiEmployer: 0 });
+  });
+});
+
+describe("bank and cash parts", () => {
+  const monthly = { wageType: "MONTHLY" as const, monthlyWage: 1500000, dailyWage: 0, basicPercent: 100, pfEnabled: true, esiEnabled: true };
+  it("splits the wage into bank and cash shares", () => {
+    expect(bankShare({ effectiveFrom: "2026-01-01", wageType: "MONTHLY", monthlyWage: 1500000, dailyWage: 0, cashWage: 500000 })).toBeCloseTo(2 / 3);
+    expect(bankShare({ effectiveFrom: "2026-01-01", wageType: "DAILY", monthlyWage: 0, dailyWage: 60000, cashWage: 20000 })).toBeCloseTo(2 / 3);
+  });
+  it("treats no cash part as all bank (unchanged for existing staff)", () => {
+    expect(bankShare({ effectiveFrom: "2026-01-01", wageType: "MONTHLY", monthlyWage: 1500000, dailyWage: 0 })).toBe(1);
+    expect(bankShare({ effectiveFrom: "2026-01-01", wageType: "MONTHLY", monthlyWage: 1500000, dailyWage: 0, cashWage: 0 })).toBe(1);
+  });
+  it("never goes below zero bank when cash is more than the wage", () => {
+    expect(bankShare({ effectiveFrom: "2026-01-01", wageType: "MONTHLY", monthlyWage: 1000000, dailyWage: 0, cashWage: 2000000 })).toBe(0);
+  });
+  it("works out PF and ESIC on the bank part only", () => {
+    // Rs 15,000 total = Rs 10,000 bank + Rs 5,000 cash: PF 12% and ESIC 0.75% of Rs 10,000.
+    const onBank = statutory(monthly, 1000000, rates);
+    expect(onBank.pfEmployee).toBe(120000); // Rs 1,200
+    expect(onBank.esiEmployee).toBe(7500); // Rs 75
+    const onTotal = statutory(monthly, 1500000, rates);
+    expect(onTotal.esiEmployee).toBeGreaterThan(onBank.esiEmployee);
   });
 });
 

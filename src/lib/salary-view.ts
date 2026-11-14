@@ -24,6 +24,10 @@ export interface SalaryRow {
   advances: number;
   payments: number;
   balance: number;
+  /** Bank / cash split of the balance (cashGross 0 = no cash part). */
+  cashGross: number;
+  bankBalance: number;
+  cashBalance: number;
   lastPaidOn: string | null;
   pendingAdvances: number;
 }
@@ -67,6 +71,9 @@ export async function buildSalaryView(actor: Actor, show: ShowFilter, q = ""): P
       advances: h.advances,
       payments: h.payments,
       balance: h.balance,
+      cashGross: h.cashGross,
+      bankBalance: h.bankBalance,
+      cashBalance: h.cashBalance,
       lastPaidOn: h.lastPaidOn,
       pendingAdvances: h.pendingAdvances,
     };

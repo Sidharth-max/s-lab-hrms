@@ -11,6 +11,14 @@ interface Values {
   joinedOn?: string;
   wageType?: "MONTHLY" | "DAILY";
   wage?: string;
+  bankWage?: string;
+  cashWage?: string;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  bankIfsc?: string | null;
+  bankName?: string | null;
+  bankBranch?: string | null;
+  upiId?: string | null;
   basicPercent?: number;
   pfEnabled?: boolean;
   esiEnabled?: boolean;
@@ -38,10 +46,14 @@ export function EmployeeFields({
   const [customOff, setCustomOff] = useState(values.customWeeklyOff ?? false);
   const [pf, setPf] = useState(values.pfEnabled ?? false);
   const [esi, setEsi] = useState(values.esiEnabled ?? false);
-  const [wage, setWage] = useState(values.wage ?? "");
+  // Salary in two parts: bank (PF / ESIC worked out on this) and cash. Total = bank + cash.
+  const [bankWage, setBankWage] = useState(values.bankWage ?? values.wage ?? "");
+  const [cashWage, setCashWage] = useState(values.cashWage ?? "");
+  const num = (v: string) => Number(v.replace(/,/g, "")) || 0;
+  const total = num(bankWage) + num(cashWage);
   const [today] = useState(() => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10)); // India date
   // Editing the salary: ask from which day the new salary applies (earlier days keep the old one).
-  const wageChanged = !isNew && (wage.trim() !== (values.wage ?? "") || wageType !== values.wageType);
+  const wageChanged = !isNew && (num(bankWage) !== num(values.bankWage ?? values.wage ?? "") || num(cashWage) !== num(values.cashWage ?? "") || wageType !== values.wageType);
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const businessOffText = businessWeeklyOff.length ? businessWeeklyOff.map((d) => DAYS[d]).join(", ") : "none";
   return (
@@ -106,9 +118,20 @@ export function EmployeeFields({
               ))}
             </div>
           </div>
-          <div>
-            <label className="label">{wageType === "MONTHLY" ? "Salary per month (₹)" : "Wage per day (₹)"}</label>
-            <input name="wage" className="input" inputMode="decimal" value={wage} onChange={(e) => setWage(e.target.value)} required />
+          <div className="@lg:col-span-2 grid gap-3 rounded-lg border border-[var(--line)] p-3 @lg:grid-cols-3">
+            <div>
+              <label className="label">{wageType === "MONTHLY" ? "Bank part per month (₹)" : "Bank part per day (₹)"}</label>
+              <input name="bankWage" className="input" inputMode="decimal" value={bankWage} onChange={(e) => setBankWage(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <label className="label">{wageType === "MONTHLY" ? "Cash part per month (₹)" : "Cash part per day (₹)"}</label>
+              <input name="cashWage" className="input" inputMode="decimal" value={cashWage} onChange={(e) => setCashWage(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <span className="label">{wageType === "MONTHLY" ? "Total salary per month" : "Total wage per day"}</span>
+              <p className="flex h-11 items-center text-lg font-bold tabular-nums ink-violet sm:h-10">₹{total.toLocaleString("en-IN")}</p>
+            </div>
+            <p className="muted text-xs @lg:col-span-3">PF and ESIC are worked out on the bank part only. The cash part has no PF or ESIC.</p>
           </div>
           {wageChanged && (
             <div className="@lg:col-span-2 rounded-lg border border-[var(--line)] bg-[var(--amber-soft)] p-3">
@@ -147,6 +170,32 @@ export function EmployeeFields({
               <p className="muted">PF / ESIC stay off. A user with salary permission can turn them on.</p>
             )}
           </div>
+          {canSalary && (
+            <div className="@lg:col-span-2 grid gap-3 rounded-lg border border-[var(--line)] p-3 @lg:grid-cols-2">
+              <p className="font-semibold @lg:col-span-2">Bank details (optional)</p>
+              <div className="@lg:col-span-2">
+                <label className="label">Account holder name</label>
+                <input name="bankAccountName" className="input" defaultValue={values.bankAccountName ?? ""} placeholder="As on the bank account" />
+              </div>
+              <div>
+                <label className="label">Account number</label>
+                <input name="bankAccountNumber" className="input" inputMode="numeric" autoComplete="off" defaultValue={values.bankAccountNumber ?? ""} />
+              </div>
+              <div>
+                <label className="label">Account number again</label>
+                <input name="bankAccountNumber2" className="input" inputMode="numeric" autoComplete="off" defaultValue={values.bankAccountNumber ?? ""} onPaste={(e) => e.preventDefault()} />
+              </div>
+              <div>
+                <label className="label">IFSC</label>
+                <input name="bankIfsc" className="input uppercase" maxLength={11} defaultValue={values.bankIfsc ?? ""} placeholder="e.g. SBIN0001234" />
+                {values.bankName ? <p className="muted mt-1 text-xs">{values.bankName}{values.bankBranch ? ` · ${values.bankBranch}` : ""}</p> : <p className="muted mt-1 text-xs">Bank and branch are filled in from the IFSC.</p>}
+              </div>
+              <div>
+                <label className="label">UPI ID</label>
+                <input name="upiId" className="input" autoComplete="off" defaultValue={values.upiId ?? ""} placeholder="e.g. name@okaxis" />
+              </div>
+            </div>
+          )}
         </fieldset>
       )}
     </div>

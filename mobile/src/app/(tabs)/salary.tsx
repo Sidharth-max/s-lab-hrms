@@ -16,7 +16,7 @@ import { rememberNames } from "@/lib/names";
 import { Animated, CountUp, enterAt, PressScale } from "@/lib/motion";
 
 // Same data model as the website's Salary page (server: src/lib/salary-view.ts).
-interface Row { employeeId: string; name: string; code: string; active: boolean; wageType: "MONTHLY" | "DAILY"; wage: number; earned: number; advances: number; payments: number; balance: number; lastPaidOn: string | null; pendingAdvances: number }
+interface Row { employeeId: string; name: string; code: string; active: boolean; wageType: "MONTHLY" | "DAILY"; wage: number; earned: number; advances: number; payments: number; balance: number; lastPaidOn: string | null; pendingAdvances: number; cashGross?: number; bankBalance?: number; cashBalance?: number }
 interface View_ { rows: Row[]; toPay: number; owed: number; due: number; paidThisMonth: number; advancesThisMonth: number }
 
 /**
@@ -123,6 +123,7 @@ export default function SalaryScreen() {
           employeeId={paying.employeeId}
           name={paying.name}
           balance={paying.balance}
+          split={paying.cashGross ? { bank: paying.bankBalance ?? 0, cash: paying.cashBalance ?? 0 } : undefined}
           onClose={() => setPaying(null)}
           onDone={async () => { setPaying(null); await reload(); }}
         />

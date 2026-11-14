@@ -49,7 +49,7 @@ export function NewEmployeeView({ embedded, onCreated, onClose }: { embedded?: b
           sites={sites}
           submitTitle="Add employee"
           initial={{
-            name: "", code: data?.nextCode ?? "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", basicPercent: "100",
+            name: "", code: data?.nextCode ?? "", phone: "", siteId: sites[0]?.id ?? "", joinedOn: today(), wageType: "MONTHLY", wage: "", cashWage: "", basicPercent: "100",
             pfEnabled: false, esiEnabled: false, customWeeklyOff: false, weeklyOffDays: [], inHouse: false,
           }}
           onSubmit={async (v, allowLeave) => {
@@ -74,6 +74,7 @@ interface Detail {
   employee: {
     id: string; name: string; code: string; phone: string | null; siteId: string; joinedOn: string;
     wageType: "MONTHLY" | "DAILY"; wage: number; basicPercent: number; pfEnabled: boolean; esiEnabled: boolean; uanNumber: string | null; esicNumber: string | null; customWeeklyOff: boolean; weeklyOffDays: number[]; inHouse: boolean;
+    cashWage?: number; bankAccountName?: string | null; bankAccountNumber?: string | null; bankIfsc?: string | null; bankName?: string | null; bankBranch?: string | null; upiId?: string | null;
   };
 }
 
@@ -85,7 +86,9 @@ export function EditEmployeeView({ id, embedded, onSaved, onClose }: { id: strin
   const e = data.employee;
   const initial: EmployeeValues = {
     name: e.name, code: e.code, phone: e.phone ?? "", siteId: e.siteId, joinedOn: e.joinedOn, wageType: e.wageType,
-    wage: String(e.wage / 100), basicPercent: String(e.basicPercent), pfEnabled: e.pfEnabled, esiEnabled: e.esiEnabled, uanNumber: e.uanNumber ?? "", esicNumber: e.esicNumber ?? "",
+    wage: String((e.wage - (e.cashWage ?? 0)) / 100), cashWage: e.cashWage ? String(e.cashWage / 100) : "", basicPercent: String(e.basicPercent),
+    bankAccountName: e.bankAccountName ?? "", bankAccountNumber: e.bankAccountNumber ?? "", bankAccountNumber2: e.bankAccountNumber ?? "", bankIfsc: e.bankIfsc ?? "", upiId: e.upiId ?? "",
+    bankName: e.bankName ? `${e.bankName}${e.bankBranch ? ` · ${e.bankBranch}` : ""}` : "", pfEnabled: e.pfEnabled, esiEnabled: e.esiEnabled, uanNumber: e.uanNumber ?? "", esicNumber: e.esicNumber ?? "",
     customWeeklyOff: e.customWeeklyOff, weeklyOffDays: e.weeklyOffDays, inHouse: e.inHouse,
   };
   return (

@@ -123,12 +123,22 @@ model Employee {
   wageType     WageType
   monthlyWage  Int      @default(0) // paise, used when MONTHLY
   dailyWage    Int      @default(0) // paise, used when DAILY
+  // Cash part of the wage (paise, same unit as the wage: per month or per day). Bank part = wage - cash.
+  // PF and ESIC are worked out on the bank part only. 0 = all bank.
+  cashWage     Int      @default(0)
   basicPercent Int      @default(100) // share of earned wage treated as basic for PF
   pfEnabled    Boolean  @default(false)
   esiEnabled   Boolean  @default(false)
   inHouse      Boolean  @default(false) // marked present automatically on working days; scanning is optional
   uanNumber    String? // PF UAN, 12 digits
   esicNumber   String? // ESIC IP number, 10 digits
+  // Bank details for salary transfer
+  bankAccountName   String?
+  bankAccountNumber String?
+  bankIfsc          String?
+  bankName          String? // filled in from the IFSC when it can be looked up
+  bankBranch        String?
+  upiId             String?
 
   customWeeklyOff Boolean @default(false) // true = use weeklyOffDays below instead of the business default
   weeklyOffDays   Int[]   @default([])
@@ -354,6 +364,7 @@ model WageChange {
   wageType      WageType
   monthlyWage   Int      @default(0) // paise
   dailyWage     Int      @default(0) // paise
+  cashWage      Int      @default(0) // paise, cash part of the wage (bank = wage - cash)
   createdBy     String?
   createdAt     DateTime @default(now())
 

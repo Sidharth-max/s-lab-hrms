@@ -33,6 +33,11 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
         esiEnabled: e.esiEnabled,
         uanNumber: e.uanNumber,
         esicNumber: e.esicNumber,
+        cashWage: e.cashWage,
+        // Bank details only for people allowed to handle salary.
+        ...(can(actor, "salary.edit")
+          ? { bankAccountName: e.bankAccountName, bankAccountNumber: e.bankAccountNumber, bankIfsc: e.bankIfsc, bankName: e.bankName, bankBranch: e.bankBranch, upiId: e.upiId }
+          : {}),
         customWeeklyOff: e.customWeeklyOff,
         weeklyOffDays: e.weeklyOffDays,
         face: !!e.faceId,
@@ -43,7 +48,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/m/employees/[id
       today,
       // One running salary balance (no salary months). See lib/ledger.ts.
       hisaab,
-      wages: wages.map((w) => ({ from: dbToDateKey(w.effectiveFrom), wageType: w.wageType, wage: w.wageType === "MONTHLY" ? w.monthlyWage : w.dailyWage })),
+      wages: wages.map((w) => ({ from: dbToDateKey(w.effectiveFrom), wageType: w.wageType, wage: w.wageType === "MONTHLY" ? w.monthlyWage : w.dailyWage, cashWage: w.cashWage })),
       can: {
         pay: can(actor, "payroll.lock"),
         extras: can(actor, "payroll.run"),

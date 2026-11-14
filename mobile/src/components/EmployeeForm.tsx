@@ -15,7 +15,17 @@ export interface EmployeeValues {
   siteId: string;
   joinedOn: string;
   wageType: "MONTHLY" | "DAILY";
+  /** Bank part of the wage (PF / ESIC are worked out on this). Total = wage + cashWage. */
   wage: string;
+  /** Cash part of the wage (no PF / ESIC). */
+  cashWage?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  bankAccountNumber2?: string;
+  bankIfsc?: string;
+  upiId?: string;
+  /** Shown only: filled in by the server from the IFSC. */
+  bankName?: string;
   basicPercent: string;
   pfEnabled: boolean;
   esiEnabled: boolean;
@@ -52,7 +62,8 @@ export function EmployeeForm({
   // the same person twice).
   const { allowLeave } = useUnsavedGuard(!busy && JSON.stringify(v) !== JSON.stringify(initial));
   const [wageFrom, setWageFrom] = useState(() => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10));
-  const wageChanged = !isNew && (Number(v.wage) !== Number(initial.wage) || v.wageType !== initial.wageType);
+  const wageChanged = !isNew && (Number(v.wage || 0) !== Number(initial.wage || 0) || Number(v.cashWage || 0) !== Number(initial.cashWage || 0) || v.wageType !== initial.wageType);
+  const totalWage = (Number(v.wage) || 0) + (Number(v.cashWage) || 0);
   const set = <K extends keyof EmployeeValues>(k: K, val: EmployeeValues[K]) => setV((o) => ({ ...o, [k]: val }));
 
   return (
@@ -86,7 +97,18 @@ export function EmployeeForm({
             <Text style={{ fontSize: 13, fontWeight: "500", color: C.muted }}>Paid</Text>
             <Segmented options={[{ value: "MONTHLY", label: "Monthly salary" }, { value: "DAILY", label: "Daily wage" }]} value={v.wageType} onChange={(t) => set("wageType", t)} />
           </View>
-          <Field label={v.wageType === "MONTHLY" ? "Salary per month (₹)" : "Wage per day (₹)"} value={v.wage} onChangeText={(t) => set("wage", t)} keyboardType="decimal-pad" />
+          {/* Two parts: bank (PF / ESIC on this) and cash. Total = bank + cash. */}
+          <View style={{ gap: 8, borderWidth: 1, borderColor: C.hairline, borderRadius: 14, padding: 12 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={{ flex: 1 }}><Field label={v.wageType === "MONTHLY" ? "Bank / month (₹)" : "Bank / day (₹)"} value={v.wage} onChangeText={(t) => set("wage", t)} keyboardType="decimal-pad" placeholder="0" /></View>
+              <View style={{ flex: 1 }}><Field label={v.wageType === "MONTHLY" ? "Cash / month (₹)" : "Cash / day (₹)"} value={v.cashWage ?? ""} onChangeText={(t) => set("cashWage", t)} keyboardType="decimal-pad" placeholder="0" /></View>
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: C.muted, fontSize: 13 }}>{v.wageType === "MONTHLY" ? "Total salary per month" : "Total wage per day"}</Text>
+              <Text style={{ color: C.ink.violet, fontSize: 18, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{`₹${totalWage.toLocaleString("en-IN")}`}</Text>
+            </View>
+            <Muted>PF and ESIC are worked out on the bank part only.</Muted>
+          </View>
           {wageChanged ? (
             <View style={{ gap: 6, borderWidth: 1, borderColor: C.amberLine, backgroundColor: C.amberSoft, borderRadius: 12, padding: 12 }}>
               <DateField label="New salary applies from" value={wageFrom} onChange={setWageFrom} min={v.joinedOn} />
@@ -114,6 +136,17 @@ export function EmployeeForm({
           ) : (
             <Muted>PF / ESIC stay off. A user with salary permission can turn them on.</Muted>
           )}
+          {canSalary ? (
+            <View style={{ gap: 10, borderWidth: 1, borderColor: C.line, borderRadius: 12, padding: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>Bank details (optional)</Text>
+              <Field label="Account holder name" value={v.bankAccountName ?? ""} onChangeText={(t) => set("bankAccountName", t)} placeholder="As on the bank account" />
+              <Field label="Account number" value={v.bankAccountNumber ?? ""} onChangeText={(t) => set("bankAccountNumber", t.replace(/\D/g, ""))} keyboardType="number-pad" maxLength={18} autoComplete="off" />
+              <Field label="Account number again" value={v.bankAccountNumber2 ?? ""} onChangeText={(t) => set("bankAccountNumber2", t.replace(/\D/g, ""))} keyboardType="number-pad" maxLength={18} autoComplete="off" contextMenuHidden />
+              {v.bankAccountNumber && v.bankAccountNumber2 && v.bankAccountNumber !== v.bankAccountNumber2 ? <Text style={{ color: C.ink.red, fontSize: 13 }}>The two account numbers do not match</Text> : null}
+              <Field label="IFSC" value={v.bankIfsc ?? ""} onChangeText={(t) => set("bankIfsc", t.toUpperCase().replace(/[^A-Z0-9]/g, ""))} autoCapitalize="characters" maxLength={11} placeholder="e.g. SBIN0001234" hint={v.bankName ? v.bankName : "Bank and branch are filled in from the IFSC."} />
+              <Field label="UPI ID" value={v.upiId ?? ""} onChangeText={(t) => set("upiId", t.trim())} autoCapitalize="none" autoComplete="off" placeholder="e.g. name@okaxis" />
+            </View>
+          ) : null}
         </>
       ) : null}
 
@@ -162,7 +195,10 @@ export function employeeBody(v: EmployeeValues, canSalary: boolean, isNew: boole
     siteId: v.siteId,
     joinedOn: v.joinedOn,
     ...(isNew || canSalary
-      ? { wageType: v.wageType, wage: v.wage, basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "", wageFrom: v.wageFrom ?? "" }
+      ? { wageType: v.wageType, bankWage: v.wage || "0", cashWage: v.cashWage || "0", basicPercent: v.basicPercent || "100", pfEnabled: canSalary && v.pfEnabled, esiEnabled: canSalary && v.esiEnabled, uanNumber: v.uanNumber ?? "", esicNumber: v.esicNumber ?? "", wageFrom: v.wageFrom ?? "" }
+      : {}),
+    ...(canSalary
+      ? { bankAccountName: v.bankAccountName ?? "", bankAccountNumber: v.bankAccountNumber ?? "", bankAccountNumber2: v.bankAccountNumber2 ?? "", bankIfsc: v.bankIfsc ?? "", upiId: v.upiId ?? "" }
       : {}),
     weeklyOffMode: v.customWeeklyOff ? "custom" : "business",
     inHouse: !!v.inHouse,

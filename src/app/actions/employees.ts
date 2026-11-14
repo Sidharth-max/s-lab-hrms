@@ -30,7 +30,19 @@ async function loadEmployee(id: string, businessId: string) {
 
 function parsePay(form: FormData) {
   const wageType = str(form, "wageType") === "DAILY" ? "DAILY" : "MONTHLY";
-  const amount = parseRs(str(form, "wage"));
+  // New forms send the bank and cash parts (total = bank + cash; PF / ESIC on the bank part only).
+  // Older app versions send one "wage" amount: treated as all bank, as before.
+  let amount: number | null;
+  let cashWage = 0;
+  if (form.has("bankWage") || form.has("cashWage")) {
+    const bank = str(form, "bankWage") ? parseRs(str(form, "bankWage")) : 0;
+    const cash = str(form, "cashWage") ? parseRs(str(form, "cashWage")) : 0;
+    if (bank == null || bank < 0 || cash == null || cash < 0) return { error: "Enter the bank and cash amounts" } as const;
+    amount = bank + cash;
+    cashWage = cash;
+  } else {
+    amount = parseRs(str(form, "wage"));
+  }
   if (amount == null || amount <= 0) return { error: "Enter the wage amount" } as const;
   const basicPercent = Number(str(form, "basicPercent") || "100");
   const pfEnabled = form.get("pfEnabled") === "on";
@@ -46,6 +58,7 @@ function parsePay(form: FormData) {
       wageType,
       monthlyWage: wageType === "MONTHLY" ? amount : 0,
       dailyWage: wageType === "DAILY" ? amount : 0,
+      cashWage,
       basicPercent,
       pfEnabled,
       esiEnabled,
@@ -53,6 +66,39 @@ function parsePay(form: FormData) {
       esicNumber: esiEnabled ? esicNumber : null,
     } as const,
   };
+}
+
+/**
+ * Bank details (all optional). The bank and branch names are looked up from the IFSC (Razorpay's
+ * public IFSC directory, only the IFSC code is sent); if that fails the details still save.
+ */
+async function parseBank(form: FormData, before?: { bankIfsc: string | null; bankName: string | null; bankBranch: string | null }) {
+  if (!form.has("bankAccountNumber") && !form.has("bankIfsc") && !form.has("upiId") && !form.has("bankAccountName")) return { data: null } as const;
+  const bankAccountName = str(form, "bankAccountName") || null;
+  const bankAccountNumber = str(form, "bankAccountNumber").replace(/[\s-]/g, "") || null;
+  const confirm = str(form, "bankAccountNumber2").replace(/[\s-]/g, "");
+  const bankIfsc = str(form, "bankIfsc").replace(/\s/g, "").toUpperCase() || null;
+  const upiId = str(form, "upiId").replace(/\s/g, "") || null;
+  if (bankAccountNumber && !/^\d{9,18}$/.test(bankAccountNumber)) return { error: "Bank account number must be 9 to 18 digits" } as const;
+  if (form.has("bankAccountNumber2") && bankAccountNumber && confirm !== bankAccountNumber) return { error: "The two account numbers do not match" } as const;
+  if (bankIfsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankIfsc)) return { error: "IFSC must look like SBIN0001234 (11 characters)" } as const;
+  if (upiId && !/^[\w.-]{2,}@[a-zA-Z][\w.-]{1,}$/.test(upiId)) return { error: "UPI ID must look like name@bank" } as const;
+  let bankName = before?.bankIfsc === bankIfsc ? before?.bankName ?? null : null;
+  let bankBranch = before?.bankIfsc === bankIfsc ? before?.bankBranch ?? null : null;
+  if (bankIfsc && bankIfsc !== before?.bankIfsc) {
+    try {
+      const res = await fetch(`https://ifsc.razorpay.com/${bankIfsc}`, { signal: AbortSignal.timeout(4000) });
+      if (res.status === 404) return { error: "This IFSC was not found. Check it on the cheque book or passbook." } as const;
+      if (res.ok) {
+        const j = (await res.json()) as { BANK?: string; BRANCH?: string };
+        bankName = j.BANK ?? null;
+        bankBranch = j.BRANCH ?? null;
+      }
+    } catch {
+      // Lookup not reachable: save without the bank / branch name.
+    }
+  }
+  return { data: { bankAccountName, bankAccountNumber, bankIfsc, bankName, bankBranch, upiId } } as const;
 }
 
 /** Creates the employee; returns its id (used by the website action below and the Android app API). */
@@ -76,12 +122,14 @@ export const createEmployeeCore = safe(async (_p: ActionResult, form: FormData):
   // Without salary permission a manager can add the person but PF/ESIC stay off.
   const payData = can(actor, "salary.edit") ? pay.data : { ...pay.data, pfEnabled: false, esiEnabled: false, uanNumber: null, esicNumber: null };
   if (await db.employee.findFirst({ where: { businessId: actor.businessId, code } })) return { error: "This employee code is already used" };
+  const bank = can(actor, "salary.edit") ? await parseBank(form) : { data: null };
+  if ("error" in bank) return { error: bank.error };
 
   const emp = await db.$transaction(async (tx) => {
     const e = await tx.employee.create({
-      data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...payData, ...parseWeeklyOff(form) },
+      data: { businessId: actor.businessId, siteId, name, code, phone, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...payData, ...(bank.data ?? {}), ...parseWeeklyOff(form) },
     });
-    await setWageFrom(e.id, joinedOn, { wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage }, actor.id, tx);
+    await setWageFrom(e.id, joinedOn, { wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage, cashWage: e.cashWage }, actor.id, tx);
     return e;
   });
   await audit(actor.businessId, actor.id, "employee.create", "Employee", emp.id, { name, code });
@@ -112,19 +160,26 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
 
   const data: Prisma.EmployeeUpdateInput = { name, phone, site: { connect: { id: siteId } }, joinedOn: dateKeyToDb(joinedOn), inHouse: form.get("inHouse") === "on", ...parseWeeklyOff(form) };
   // A new salary applies from a chosen day; days before it keep the old salary.
-  let wageChange: { from: string; rate: { wageType: "MONTHLY" | "DAILY"; monthlyWage: number; dailyWage: number } } | null = null;
-  if (form.has("wage")) {
+  let wageChange: { from: string; rate: { wageType: "MONTHLY" | "DAILY"; monthlyWage: number; dailyWage: number; cashWage: number } } | null = null;
+  if (form.has("wage") || form.has("bankWage") || form.has("cashWage")) {
     if (!can(actor, "salary.edit")) return { error: "You cannot change salary" };
     const pay = parsePay(form);
     if ("error" in pay) return { error: pay.error };
     Object.assign(data, pay.data);
-    const rate = { wageType: pay.data.wageType, monthlyWage: pay.data.monthlyWage, dailyWage: pay.data.dailyWage };
-    if (rate.wageType !== emp.wageType || rate.monthlyWage !== emp.monthlyWage || rate.dailyWage !== emp.dailyWage) {
+    const rate = { wageType: pay.data.wageType, monthlyWage: pay.data.monthlyWage, dailyWage: pay.data.dailyWage, cashWage: pay.data.cashWage };
+    if (rate.wageType !== emp.wageType || rate.monthlyWage !== emp.monthlyWage || rate.dailyWage !== emp.dailyWage || rate.cashWage !== emp.cashWage) {
       let from = str(form, "wageFrom") || istDateKey(new Date());
       if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return { error: "Choose the day the new salary starts" };
       if (from < joinedOn) from = joinedOn;
       wageChange = { from, rate };
     }
+  }
+  // Bank details: same permission as salary.
+  if (form.has("bankAccountNumber") || form.has("bankIfsc") || form.has("upiId") || form.has("bankAccountName")) {
+    if (!can(actor, "salary.edit")) return { error: "You cannot change bank details" };
+    const bank = await parseBank(form, emp);
+    if ("error" in bank) return { error: bank.error };
+    if (bank.data) Object.assign(data, bank.data);
   }
   if (emp.userId && phone !== emp.phone) {
     if (!phone) return { error: "Turn off web login before removing the mobile number" };
@@ -137,7 +192,7 @@ export const updateEmployee = safe(async (_p: ActionResult, form: FormData): Pro
     if (wageChange) {
       // Keep the old salary for the days before the change (older records may have no history yet).
       if ((await tx.wageChange.count({ where: { employeeId: emp.id } })) === 0) {
-        await setWageFrom(emp.id, dbToDateKey(emp.joinedOn), { wageType: emp.wageType, monthlyWage: emp.monthlyWage, dailyWage: emp.dailyWage }, null, tx);
+        await setWageFrom(emp.id, dbToDateKey(emp.joinedOn), { wageType: emp.wageType, monthlyWage: emp.monthlyWage, dailyWage: emp.dailyWage, cashWage: emp.cashWage }, null, tx);
       }
       // The new salary is the current one, so any change planned after its start is replaced.
       await tx.wageChange.deleteMany({ where: { employeeId: emp.id, effectiveFrom: { gt: dateKeyToDb(wageChange.from) } } });

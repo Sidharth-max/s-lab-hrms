@@ -3,7 +3,7 @@ import type { Employee, Prisma } from "@prisma/client";
 import { deriveMonth, type PunchInput, type OverrideInput } from "./attendance";
 import { db } from "./db";
 import { effectiveWeeklyOff, parseDayRules } from "./day-rules";
-import { dayFactor, dayRate, statutory, wageOn, type WageRate } from "./payroll";
+import { bankShare, dayFactor, dayRate, statutory, wageOn, type WageRate } from "./payroll";
 import { leaveDays } from "./services";
 import { addMonths, dateKeyToDb, daysInMonth, dbToDateKey, istDateKey } from "./time";
 
@@ -11,6 +11,11 @@ import { addMonths, dateKeyToDb, daysInMonth, dbToDateKey, istDateKey } from "./
 //   balance = salary earned since joining (each day at that day's rate, PF/ESIC taken off)
 //           + extra pay - deductions - advances given - salary paid
 // Positive = the business owes the employee. Negative = the employee owes (advance more than earned).
+//
+// Bank and cash: each day's pay is split by the employee's bank / cash share on that date. PF and
+// ESIC come only from the bank part. "Bank to pay" = bank part - PF - ESIC - payments made by bank /
+// UPI / cheque. "Cash to pay" = cash part + extra pay - deductions - advances - cash payments.
+// Bank to pay + cash to pay = balance.
 
 type Tx = Prisma.TransactionClient;
 
@@ -21,6 +26,8 @@ export interface HisaabMonth {
   pf: number;
   esi: number;
   net: number;
+  bankGross: number; // part of gross paid through the bank (PF / ESIC worked out on this)
+  cashGross: number;
 }
 
 export interface HisaabEntry {
@@ -47,6 +54,12 @@ export interface Hisaab {
   advances: number;
   payments: number;
   balance: number;
+  /** Earned through the bank (bank gross - PF - ESIC) and in cash. */
+  bankGross: number;
+  cashGross: number;
+  /** balance split: still to pay by bank, and in cash (can be negative). bankBalance + cashBalance = balance. */
+  bankBalance: number;
+  cashBalance: number;
   pendingAdvances: number;
   lastPaidOn: string | null;
   months: HisaabMonth[];
@@ -55,7 +68,7 @@ export interface Hisaab {
 
 type Emp = Pick<
   Employee,
-  "id" | "businessId" | "joinedOn" | "leftOn" | "customWeeklyOff" | "weeklyOffDays" | "inHouse" | "wageType" | "monthlyWage" | "dailyWage" | "basicPercent" | "pfEnabled" | "esiEnabled"
+  "id" | "businessId" | "joinedOn" | "leftOn" | "customWeeklyOff" | "weeklyOffDays" | "inHouse" | "wageType" | "monthlyWage" | "dailyWage" | "cashWage" | "basicPercent" | "pfEnabled" | "esiEnabled"
 >;
 
 function monthsBetween(from: string, to: string) {
@@ -121,8 +134,8 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
 
   for (const e of employees) {
     const { since, upTo } = span.get(e.id)!;
-    const wage: WageRate[] = (rateBy.get(e.id) ?? []).map((r) => ({ effectiveFrom: dbToDateKey(r.effectiveFrom), wageType: r.wageType, monthlyWage: r.monthlyWage, dailyWage: r.dailyWage }));
-    if (wage.length === 0) wage.push({ effectiveFrom: since, wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage });
+    const wage: WageRate[] = (rateBy.get(e.id) ?? []).map((r) => ({ effectiveFrom: dbToDateKey(r.effectiveFrom), wageType: r.wageType, monthlyWage: r.monthlyWage, dailyWage: r.dailyWage, cashWage: r.cashWage }));
+    if (wage.length === 0) wage.push({ effectiveFrom: since, wageType: e.wageType, monthlyWage: e.monthlyWage, dailyWage: e.dailyWage, cashWage: e.cashWage });
     const leaves = leaveDays(planBy.get(e.id) ?? []);
     const ctx = { today, joinedOn: since, leftOn: e.leftOn ? dbToDateKey(e.leftOn) : null, inHouse: e.inHouse };
     const dayRules = { ...rules, weeklyOffDays: effectiveWeeklyOff(business, e) };
@@ -134,18 +147,23 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
         const o: OverrideInput[] = (overrideBy.get(`${e.id}|${m}`) ?? []).map((x) => ({ workDate: dbToDateKey(x.workDate), status: x.status, createdAt: x.createdAt }));
         const dim = daysInMonth(m);
         let gross = 0;
+        let bankGross = 0;
         let payableDays = 0;
         for (const d of deriveMonth(m, p, o, dayRules, ctx, leaves)) {
           const r = wageOn(wage, d.date)!;
           const f = dayFactor(d.status, r.wageType);
           if (f === 0) continue;
           payableDays += f;
-          gross += f * dayRate(r, dim);
+          const pay = f * dayRate(r, dim);
+          gross += pay;
+          bankGross += pay * bankShare(r);
         }
         gross = Math.round(gross);
+        bankGross = Math.min(gross, Math.round(bankGross));
         if (gross === 0 && payableDays === 0) continue;
-        const st = statutory(e, gross, business);
-        months.push({ month: m, payableDays, gross, pf: st.pfEmployee, esi: st.esiEmployee, net: gross - st.pfEmployee - st.esiEmployee });
+        // PF and ESIC on the bank part only (the cash part has none).
+        const st = statutory(e, bankGross, business);
+        months.push({ month: m, payableDays, gross, pf: st.pfEmployee, esi: st.esiEmployee, net: gross - st.pfEmployee - st.esiEmployee, bankGross, cashGross: gross - bankGross });
       }
     }
 
@@ -164,6 +182,9 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
     const adv = sum(entries.filter((x) => x.kind === "advance" && !x.pending));
     const pendingAdvances = sum(entries.filter((x) => x.kind === "advance" && x.pending));
     const paid = sum(entries.filter((x) => x.kind === "payment"));
+    const paidCash = sum(entries.filter((x) => x.kind === "payment" && (x.mode ?? "CASH") === "CASH"));
+    const bankGross = months.reduce((s, m) => s + m.bankGross, 0);
+    const cashGross = gross - bankGross;
     const lastPaid = entries.find((x) => x.kind === "payment");
     result.set(e.id, {
       employeeId: e.id,
@@ -177,6 +198,10 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
       advances: adv,
       payments: paid,
       balance: earned + extras - adv - paid,
+      bankGross,
+      cashGross,
+      bankBalance: bankGross - pf - esi - (paid - paidCash),
+      cashBalance: cashGross + extras - adv - paidCash,
       pendingAdvances,
       lastPaidOn: lastPaid?.date ?? null,
       months: months.reverse(),
@@ -194,7 +219,7 @@ export async function hisaabOf(employee: Emp, tx: Tx = db): Promise<Hisaab> {
 export async function setWageFrom(
   employeeId: string,
   effectiveFrom: string,
-  rate: { wageType: "MONTHLY" | "DAILY"; monthlyWage: number; dailyWage: number },
+  rate: { wageType: "MONTHLY" | "DAILY"; monthlyWage: number; dailyWage: number; cashWage?: number },
   actorId: string | null,
   tx: Tx = db,
 ) {

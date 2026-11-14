@@ -28,6 +28,11 @@ export interface Hisaab {
   advances: number;
   payments: number;
   balance: number;
+  /** Bank / cash split (older servers do not send these). bankBalance + cashBalance = balance. */
+  bankGross?: number;
+  cashGross?: number;
+  bankBalance?: number;
+  cashBalance?: number;
   pendingAdvances: number;
   lastPaidOn: string | null;
   months: { month: string; payableDays: number; gross: number; pf: number; esi: number; net: number }[];
@@ -62,11 +67,13 @@ const firstName = (n: string) => n.trim().split(/\s+/)[0] ?? n;
  * Pay salary, as a bottom sheet. The amount starts at the full balance, which clears the ledger.
  * The button says exactly what happens ("Pay ₹12,400 to Ramesh") instead of a generic "Pay salary".
  */
-export function PaySheet({ visible, employeeId, name, balance, onClose, onDone }: { visible: boolean; employeeId: string; name: string; balance: number; onClose: () => void; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
+export function PaySheet({ visible, employeeId, name, balance, split, onClose, onDone }: { visible: boolean; employeeId: string; name: string; balance: number; /** Bank and cash still to pay: choosing Cash fills the cash amount, Bank / UPI / Cheque the bank amount. */ split?: { bank: number; cash: number }; onClose: () => void; onDone: (m: { text: string; ok: boolean }) => Promise<void> }) {
   const dialog = useDialog();
-  const [amount, setAmount] = useState(rupees(balance));
+  const startBank = !!split && split.bank > 0;
+  const forMode = (m: string) => (split ? Math.max(0, Math.min(m === "CASH" ? split.cash : split.bank, balance)) : balance);
+  const [amount, setAmount] = useState(rupees(split ? forMode(startBank ? "BANK" : "CASH") : balance));
   const [paidOn, setPaidOn] = useState(istToday());
-  const [mode, setMode] = useState<Mode>("CASH");
+  const [mode, setMode] = useState<Mode>(startBank ? "BANK" : "CASH");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const paise = Math.round(Number(amount) * 100);
@@ -105,7 +112,8 @@ export function PaySheet({ visible, employeeId, name, balance, onClose, onDone }
         <Text style={{ fontSize: 26, fontWeight: "700", color: C.ink.green, fontVariant: ["tabular-nums"] }}>{rs(balance)}</Text>
       </View>
       <Field label="Amount to pay now (₹)" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" hint={full ? "Full amount: clears the ledger." : paise > 0 && left > 0 ? `${rs(left)} will stay due.` : undefined} />
-      <Segmented options={MODES.map((m) => ({ value: m.value, label: m.label }))} value={mode} onChange={setMode} />
+      <Segmented options={MODES.map((m) => ({ value: m.value, label: m.label }))} value={mode} onChange={(m) => { setMode(m); if (split) setAmount(rupees(forMode(m))); }} />
+      {split ? <Muted>{`Bank to pay ${rs(Math.max(0, split.bank))} · Cash to pay ${rs(Math.max(0, split.cash))}`}</Muted> : null}
       <DateField label="Paid on" value={paidOn} onChange={setPaidOn} max={istToday()} />
       <Field label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. Salary till Diwali" />
     </Sheet>
@@ -189,7 +197,7 @@ export function LedgerSheets({ employee, h, form, setForm, onDone }: { employee:
   };
   return (
     <>
-      {form === "pay" ? <PaySheet visible employeeId={employee.id} name={employee.name} balance={h.balance} onClose={() => setForm(null)} onDone={done} /> : null}
+      {form === "pay" ? <PaySheet visible employeeId={employee.id} name={employee.name} balance={h.balance} split={h.cashGross ? { bank: h.bankBalance ?? 0, cash: h.cashBalance ?? 0 } : undefined} onClose={() => setForm(null)} onDone={done} /> : null}
       {form === "advance" ? (
         <Sheet visible onClose={() => setForm(null)} title={`Give advance to ${firstName(employee.name)}`}>
           <GiveAdvanceForm bare employeeId={employee.id} onDone={done} />
@@ -211,6 +219,21 @@ export function HisaabSection({ h, wages, can, onDone }: { employee: { id: strin
         <CountUp value={Math.abs(h.balance)} format={(n) => rs(Math.round(n))} style={{ fontSize: 34, fontWeight: "700", color: owes ? C.ink.red : h.balance === 0 ? C.text : C.ink.green, letterSpacing: -1 }} />
         {h.balance === 0 ? <Badge label="All settled" tone="green" dot /> : null}
         {owes ? <Muted>Advance is more than the salary earned. It comes off future salary by itself.</Muted> : null}
+        {h.cashGross ? (
+          // Two parts: PF / ESIC come off the bank part; advances and extras sit on the cash part.
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+            <View style={{ flex: 1, backgroundColor: C.tint.blue, borderRadius: 14, padding: 10, gap: 2 }}>
+              <Text style={{ color: C.ink.blue, fontSize: 12, fontWeight: "600" }}>Bank to pay</Text>
+              <Text style={{ color: (h.bankBalance ?? 0) < 0 ? C.ink.red : C.ink.blue, fontSize: 18, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{(h.bankBalance ?? 0) < 0 ? "− " : ""}{rs(Math.abs(h.bankBalance ?? 0))}</Text>
+              <Text style={{ color: C.muted, fontSize: 11 }}>after PF / ESIC</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: C.tint.orange, borderRadius: 14, padding: 10, gap: 2 }}>
+              <Text style={{ color: C.ink.orange, fontSize: 12, fontWeight: "600" }}>Cash to pay</Text>
+              <Text style={{ color: (h.cashBalance ?? 0) < 0 ? C.ink.red : C.ink.orange, fontSize: 18, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{(h.cashBalance ?? 0) < 0 ? "− " : ""}{rs(Math.abs(h.cashBalance ?? 0))}</Text>
+              <Text style={{ color: C.muted, fontSize: 11 }}>after advances</Text>
+            </View>
+          </View>
+        ) : null}
         <View style={{ height: 1, backgroundColor: C.hairline, marginVertical: 6 }} />
         <Row label={`Earned since ${dateLabel(h.since)}`} value={`+ ${rs(h.gross)}`} ink="violet" />
         {h.pf + h.esi > 0 ? <Row label="PF and ESIC" value={`− ${rs(h.pf + h.esi)}`} ink="red" /> : null}

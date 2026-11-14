@@ -75,11 +75,22 @@ export default async function EmployeePage({ params, searchParams }: PageProps<"
     ["Mobile", emp.phone ?? "—"],
     ["Joined", formatDateKey(dbToDateKey(emp.joinedOn))],
     ["Pay", pay],
+    ...(emp.cashWage > 0
+      ? ([["Bank part", `${formatRs((emp.wageType === "MONTHLY" ? emp.monthlyWage : emp.dailyWage) - emp.cashWage)} (PF / ESIC on this)`], ["Cash part", formatRs(emp.cashWage)]] as [string, string][])
+      : []),
     ["Basic for PF", `${emp.basicPercent}%`],
     ["PF", emp.pfEnabled ? `On${emp.uanNumber ? ` · UAN ${emp.uanNumber}` : " · UAN not added"}` : "Off"],
     ["ESIC", emp.esiEnabled ? `On${emp.esicNumber ? ` · IP ${emp.esicNumber}` : " · IP number not added"}` : "Off"],
     ["Attendance", emp.inHouse ? "In-house: present automatically on working days" : "Face scan"],
     ["Weekly off", emp.customWeeklyOff ? (emp.weeklyOffDays.map((d) => DAYS[d]).join(", ") || "None") : "Same as business"],
+    // Bank details only for people allowed to see salary.
+    ...(can(actor, "salary.edit") && (emp.bankAccountNumber || emp.upiId)
+      ? ([
+          ["Bank account", [emp.bankAccountName, emp.bankAccountNumber ? `A/c ${emp.bankAccountNumber}` : null].filter(Boolean).join(" · ") || "—"],
+          ["IFSC", emp.bankIfsc ? `${emp.bankIfsc}${emp.bankName ? ` · ${emp.bankName}` : ""}${emp.bankBranch ? `, ${emp.bankBranch}` : ""}` : "—"],
+          ["UPI", emp.upiId ?? "—"],
+        ] as [string, string][])
+      : []),
   ];
   const details = (
     <section className="card flex flex-col gap-3">

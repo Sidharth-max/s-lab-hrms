@@ -76,13 +76,48 @@ export function HisaabPanel({
             <dd className={`text-base font-bold tabular-nums ${h.balance < 0 ? "ink-red" : "ink-green"}`}>{h.balance < 0 ? "− " : ""}{formatRs(Math.abs(h.balance))}</dd>
           </div>
         </dl>
+        {h.cashGross > 0 && (
+          // Salary paid in two parts: PF / ESIC come off the bank part; advances and extras sit on the cash part.
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-[var(--tint-blue)] p-3">
+              <div className="text-xs font-semibold ink-blue">Bank to pay</div>
+              <div className={`text-lg font-bold tabular-nums ${h.bankBalance < 0 ? "ink-red" : "ink-blue"}`}>{h.bankBalance < 0 ? "− " : ""}{formatRs(Math.abs(h.bankBalance))}</div>
+              <div className="muted text-xs">after PF / ESIC</div>
+            </div>
+            <div className="rounded-xl bg-[var(--tint-orange)] p-3">
+              <div className="text-xs font-semibold ink-orange">Cash to pay</div>
+              <div className={`text-lg font-bold tabular-nums ${h.cashBalance < 0 ? "ink-red" : "ink-orange"}`}>{h.cashBalance < 0 ? "− " : ""}{formatRs(Math.abs(h.cashBalance))}</div>
+              <div className="muted text-xs">after advances</div>
+            </div>
+          </div>
+        )}
         {h.pendingAdvances > 0 && (
           <p className="text-sm text-[var(--red)]">
             {formatRs(h.pendingAdvances)} advance is waiting for approval and is not counted yet. <Link className="underline" href="/approvals">Open approvals</Link>
           </p>
         )}
 
-        {can.pay && h.balance > 0 && (
+        {can.pay && h.cashGross > 0 && h.balance > 0 && (
+          <div className="grid gap-3 @md:grid-cols-2">
+            {([
+              ["bank", "Pay bank part", Math.max(0, Math.min(h.bankBalance, h.balance)), MODES.filter((m) => m.value !== "CASH"), "BANK"],
+              ["cash", "Pay cash part", Math.max(0, Math.min(h.cashBalance, h.balance)), MODES.filter((m) => m.value === "CASH"), "CASH"],
+            ] as const).map(([key, title, amount, modes, mode]) => (
+              <details key={key} className="rounded-lg border border-[var(--line)] p-3" open={amount > 0}>
+                <summary className="cursor-pointer font-semibold">{title} {formatRs(amount)}</summary>
+                <ActionForm action={paySalary} className="mt-3 grid gap-3" submitLabel={`${title}`} confirm={`${title} to ${employee.name} now? It is recorded as salary paid.`} resetOnSuccess>
+                  <input type="hidden" name="employeeId" value={employee.id} />
+                  <div><label className="label">Amount (₹)</label><input name="amount" className="input" inputMode="decimal" defaultValue={rsInput(amount)} required /></div>
+                  <div><label className="label">Paid on</label><DateInput name="paidOn" defaultValue={today} max={today} /></div>
+                  {modes.length > 1 ? <div><label className="label">Paid by</label><Select name="mode" defaultValue={mode} ariaLabel="Payment mode" options={[...modes]} /></div> : <input type="hidden" name="mode" value={mode} />}
+                  {key === "bank" ? <div><label className="label">Reference (optional)</label><input name="ref" className="input" placeholder="UTR, UPI or cheque number" /></div> : null}
+                  <div><label className="label">Note (optional)</label><input name="note" className="input" /></div>
+                </ActionForm>
+              </details>
+            ))}
+          </div>
+        )}
+        {can.pay && h.cashGross === 0 && h.balance > 0 && (
           <details className="rounded-lg border border-[var(--line)] p-3" open>
             <summary className="cursor-pointer font-semibold">Pay {formatRs(h.balance)} to {employee.name}</summary>
             <p className="muted mt-2 text-sm">The full amount settles the ledger. You can also pay part of it; the rest stays due.</p>
