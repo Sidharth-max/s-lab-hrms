@@ -10,7 +10,8 @@ import * as SecureStore from "expo-secure-store";
  * screen is hidden, opened fresh when it comes back, and restarted if it does not start in time.
  * Render <CameraView key={key} onCameraReady={onReady} /> only while `show` is true.
  */
-export function useCameraSession() {
+/** `enabled` = false keeps the camera off (e.g. the scanner waiting for a tap). */
+export function useCameraSession(enabled = true) {
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const [focused, setFocused] = useState(false);
   const [key, setKey] = useState(0);
@@ -40,7 +41,16 @@ export function useCameraSession() {
     }, []),
   );
 
-  const show = appActive && focused;
+  const show = appActive && focused && enabled;
+  // Turning the camera on again starts a fresh session (adjusted while rendering, not in an effect).
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
+    if (enabled) {
+      setReady(false);
+      setKey((k) => k + 1);
+    }
+  }
 
   // Watchdog: if the preview has not started after 4 s, open the camera again (up to 3 times).
   useEffect(() => {

@@ -48,6 +48,10 @@ export function Scanner() {
   const [picking, setPicking] = useState<string | null>(null); // captured image while choosing in test mode
   const [livenessSession, setLivenessSession] = useState<string | null>(null);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Waiting screen: a big Scan button with the camera off. Tapping it opens the camera and the face is
+  // scanned by itself once the picture is showing; after the result it goes back to the button.
+  const [armed, setArmed] = useState(false);
+  const [camReady, setCamReady] = useState(false);
 
   useEffect(() => {
     fetch("/api/scan", { cache: "no-store" })
@@ -61,7 +65,11 @@ export function Scanner() {
     beep(r.ok);
     void speak(speech ?? r.title);
     if (resetTimer.current) clearTimeout(resetTimer.current);
-    resetTimer.current = setTimeout(() => setResult(null), 4500);
+    resetTimer.current = setTimeout(() => {
+      setResult(null);
+      setArmed(false); // back to the Scan button, camera off
+      setCamReady(false);
+    }, 3500);
   }, []);
 
   const send = useCallback(
@@ -104,6 +112,30 @@ export function Scanner() {
     await send({ image });
   }, [busy, config, result, picking, livenessSession, send, show]);
 
+  const arm = useCallback(() => {
+    if (!config || result || busy || picking || livenessSession) return;
+    // With the liveness check the check itself opens the camera.
+    if (config.liveness) return void start();
+    setCamReady(false);
+    setArmed(true);
+  }, [config, result, busy, picking, livenessSession, start]);
+
+  // Auto-scan shortly after the camera picture appears (time for focus / exposure).
+  useEffect(() => {
+    if (!armed || !camReady || busy || result || picking) return;
+    const t = setTimeout(() => void start(), 800);
+    return () => clearTimeout(t);
+  }, [armed, camReady, busy, result, picking, start]);
+
+  // Safety: camera never started -> back to the button.
+  useEffect(() => {
+    if (!armed || result || picking || busy) return;
+    const t = setTimeout(() => { setArmed(false); setCamReady(false); }, 20000);
+    return () => clearTimeout(t);
+  }, [armed, result, picking, busy]);
+
+  const status = !config ? "Connecting…" : !armed ? "Tap Scan to mark your attendance" : busy ? "Checking…" : camReady ? "Look at the camera…" : "Starting camera…";
+
   return (
     <main className="fixed inset-0 flex flex-col bg-black text-white select-none">
       <header className="flex items-center justify-between gap-2 bg-black/80 px-4 py-3 text-sm">
@@ -135,18 +167,32 @@ export function Scanner() {
         <div
           role="button"
           tabIndex={0}
-          onClick={start}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); start(); } }}
-          className="relative flex-1 cursor-pointer overflow-hidden"
+          onClick={armed ? undefined : arm}
+          onKeyDown={(e) => { if (!armed && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); arm(); } }}
+          className={`relative flex-1 overflow-hidden ${armed ? "" : "cursor-pointer"}`}
           aria-label="Scan face"
         >
-          <Camera ref={cam} className="absolute inset-0 h-full w-full" />
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="h-[55%] aspect-[3/4] rounded-[50%] border-4 border-white/70" />
-          </div>
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-6 text-center">
-            <ScanFace size={40} className="mx-auto mb-3" aria-hidden />
-            <div className="text-2xl font-semibold tracking-tight">{busy ? "Checking…" : "Tap the screen and look at the camera"}</div>
+          {armed ? (
+            <>
+              <Camera ref={cam} className="absolute inset-0 h-full w-full" onReady={() => setCamReady(true)} />
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="h-[55%] aspect-[3/4] rounded-[50%] border-4 border-white/70" />
+              </div>
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="relative flex items-center justify-center">
+                <span aria-hidden className="absolute h-[min(62vw,52vh,22rem)] w-[min(62vw,52vh,22rem)] animate-ping rounded-full bg-white/15 [animation-duration:2s]" />
+                <span className="relative flex h-[min(55vw,46vh,20rem)] w-[min(55vw,46vh,20rem)] flex-col items-center justify-center gap-2 rounded-full border-4 border-white/85 bg-[#4a3cff] shadow-[0_20px_60px_rgba(74,60,255,0.45)] transition active:scale-95">
+                  <ScanFace size={72} aria-hidden />
+                  <span className="text-3xl font-bold tracking-tight">Scan</span>
+                </span>
+              </span>
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-6 text-center">
+            {armed && <ScanFace size={40} className="mx-auto mb-3" aria-hidden />}
+            <div className="text-2xl font-semibold tracking-tight">{status}</div>
             {config?.mode === "mock" && <div className="mt-2 inline-block rounded-md border border-white/30 px-2.5 py-0.5 text-xs font-medium text-white">TEST MODE</div>}
           </div>
         </div>
@@ -173,7 +219,7 @@ export function Scanner() {
               </button>
             ))}
           </div>
-          <button className="btn-secondary mt-3 text-black" onClick={() => setPicking(null)}>Cancel</button>
+          <button className="btn-secondary mt-3 text-black" onClick={() => { setPicking(null); setArmed(false); setCamReady(false); }}>Cancel</button>
         </div>
       )}
 

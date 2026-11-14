@@ -5,6 +5,7 @@ import * as Speech from "expo-speech";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { Text } from "@/components/Text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "@/components/icons";
@@ -35,7 +36,10 @@ export default function Scanner() {
   const [permission, requestPermission] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
   const lens = useCameraFacing();
-  const camera = useCameraSession();
+  // Waiting screen: a big Scan button with the camera off. Tapping it turns the camera on and the
+  // face is scanned by itself once the camera is ready; after the result it goes back to the button.
+  const [armed, setArmed] = useState(false);
+  const camera = useCameraSession(armed);
   // Light status bar icons on the black screen; the login page on top gets the normal dark icons back.
   const focused = useIsFocused();
   const ready = camera.ready;
@@ -97,7 +101,10 @@ export default function Scanner() {
     Speech.stop().catch(() => {});
     Speech.speak(speech ?? r.title, { language: "en-IN", rate: 0.95 });
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setResult(null), 4500);
+    timer.current = setTimeout(() => {
+      setResult(null);
+      setArmed(false); // back to the Scan button, camera off
+    }, 3500);
   }, []);
 
   const send = useCallback(
@@ -124,9 +131,14 @@ export default function Scanner() {
     }
     try {
       setBusy(true);
-      const image = await capture(cam.current);
+      // The first frame can arrive a moment after "camera ready": try once more before giving up.
+      let image: string | null = null;
+      for (let attempt = 0; attempt < 2 && !image; attempt++) {
+        if (attempt) await new Promise((r) => setTimeout(r, 800));
+        image = await capture(cam.current).catch(() => null);
+      }
       setBusy(false);
-      if (!image) return show({ ok: false, title: "Camera not ready" });
+      if (!image) return show({ ok: false, title: "Camera not ready", detail: "Tap Scan to try again" });
       if (config.mode === "mock") return setPicking(image);
       await send({ image });
     } catch (e) {
@@ -134,6 +146,30 @@ export default function Scanner() {
       show({ ok: false, title: (e as Error).message });
     }
   }, [busy, result, picking, config, ready, send, show]);
+
+  // Auto-scan: shortly after the camera is ready (time for focus / exposure), take the photo.
+  useEffect(() => {
+    if (!armed || !ready || busy || result || picking || !config) return;
+    const t = setTimeout(() => void scan(), 1000);
+    return () => clearTimeout(t);
+  }, [armed, ready, busy, result, picking, config, scan]);
+
+  // Safety: if nothing happened (camera never started), go back to the button.
+  useEffect(() => {
+    if (!armed || result || picking || busy) return;
+    const t = setTimeout(() => setArmed(false), 20000);
+    return () => clearTimeout(t);
+  }, [armed, result, picking, busy]);
+
+  const arm = useCallback(() => {
+    if (!config || result || busy) return;
+    haptic.select();
+    setArmed(true);
+  }, [config, result, busy]);
+
+  const status = !armed
+    ? config ? "Tap Scan to mark your attendance" : "Connecting…"
+    : busy ? "Checking…" : ready ? "Look at the camera…" : "Starting camera…";
 
   if (!permission) return <View style={styles.black}>{focused ? <StatusBar style="light" /> : null}</View>;
   if (!permission.granted) {
@@ -149,15 +185,15 @@ export default function Scanner() {
   return (
     <View style={styles.black}>
       {focused ? <StatusBar style="light" /> : null}
-      {camera.show ? (
+      {armed && camera.show ? (
         <CameraView key={`${camera.key}-${lens.facing}`} ref={cam} style={StyleSheet.absoluteFill} facing={lens.facing} mirror={lens.mirror} onCameraReady={camera.onReady} />
       ) : null}
-      <Pressable style={StyleSheet.absoluteFill} onPress={scan} accessibilityLabel="Scan face">
+      <Pressable style={StyleSheet.absoluteFill} onPress={armed ? undefined : arm} accessibilityLabel="Scan face" disabled={armed}>
         {landscape ? (
           // Landscape (tablet / phone on a stand): camera oval on the left, details and buttons on the right.
           <SafeAreaView style={{ flex: 1, flexDirection: "row" }} edges={["top", "bottom", "left", "right"]}>
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }} pointerEvents="none">
-              <View style={[styles.oval, { width: Math.round(height * 0.72 * 0.75), height: Math.round(height * 0.72)}]} />
+              {armed ? <View style={[styles.oval, { width: Math.round(height * 0.72 * 0.75), height: Math.round(height * 0.72)}]} /> : <ScanButton size={Math.round(height * 0.5)} />}
             </View>
             <View style={styles.side}>
               <View style={[styles.header, { backgroundColor: "transparent", padding: 0 }]}>
@@ -174,9 +210,9 @@ export default function Scanner() {
             </View>
           </View>
               <View style={[styles.footer, { backgroundColor: "transparent", padding: 0 }]}>
-            {busy ? <ActivityIndicator color={"#fff"} size="large" /> : <ScanFace color={"#fff"} size={40} />}
-            <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
-            {!ready && camera.show ? (
+            {busy ? <ActivityIndicator color={"#fff"} size="large" /> : armed ? <ScanFace color={"#fff"} size={40} /> : null}
+            <Text style={styles.big}>{status}</Text>
+            {armed && !ready && camera.show ? (
               <Pressable onPress={camera.restart} style={{ padding: 8 }}>
                 <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Camera black? Tap to restart it</Text>
               </Pressable>
@@ -217,11 +253,15 @@ export default function Scanner() {
               <CameraSwitch facing={lens.facing} onPress={lens.toggle} label={false} />
             </View>
           </View>
-          <View style={[styles.oval, { width: Math.round(Math.min(width * 0.6, height * 0.45 * 0.75)), height: Math.round(Math.min(width * 0.6, height * 0.45 * 0.75) * 4 / 3)}]} pointerEvents="none" />
+          {armed ? (
+            <View style={[styles.oval, { width: Math.round(Math.min(width * 0.6, height * 0.45 * 0.75)), height: Math.round(Math.min(width * 0.6, height * 0.45 * 0.75) * 4 / 3)}]} pointerEvents="none" />
+          ) : (
+            <View style={{ alignItems: "center" }} pointerEvents="none"><ScanButton size={Math.round(Math.min(width * 0.62, height * 0.34))} /></View>
+          )}
           <View style={styles.footer}>
-            {busy ? <ActivityIndicator color={"#fff"} size="large" /> : <ScanFace color={"#fff"} size={40} />}
-            <Text style={styles.big}>{busy ? "Checking…" : ready ? "Tap the screen and look at the camera" : "Starting camera…"}</Text>
-            {!ready && camera.show ? (
+            {busy ? <ActivityIndicator color={"#fff"} size="large" /> : armed ? <ScanFace color={"#fff"} size={40} /> : null}
+            <Text style={styles.big}>{status}</Text>
+            {armed && !ready && camera.show ? (
               <Pressable onPress={camera.restart} style={{ padding: 8 }}>
                 <Text style={[styles.headerSub, { textDecorationLine: "underline" }]}>Camera black? Tap to restart it</Text>
               </Pressable>
@@ -270,7 +310,7 @@ export default function Scanner() {
               </Pressable>
             ))}
           </ScrollView>
-          <Button title="Cancel" variant="secondary" onPress={() => setPicking(null)} style={{ marginTop: 12 }} />
+          <Button title="Cancel" variant="secondary" onPress={() => { setPicking(null); setArmed(false); }} style={{ marginTop: 12 }} />
         </SafeAreaView>
       ) : null}
 
@@ -281,6 +321,24 @@ export default function Scanner() {
           {result.detail ? <Text style={[styles.big, { fontSize: 20, fontWeight: "400", marginTop: 8 }]}>{result.detail}</Text> : null}
         </Pressable>
       ) : null}
+    </View>
+  );
+}
+
+/** The big round Scan button on the waiting screen, gently pulsing. */
+function ScanButton({ size }: { size: number }) {
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    pulse.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, true));
+  }, [pulse]);
+  const ring = useAnimatedStyle(() => ({ transform: [{ scale: 1 + pulse.value * 0.1 }], opacity: 0.22 - pulse.value * 0.18 }));
+  return (
+    <View style={{ width: size * 1.2, height: size * 1.2, alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={[{ position: "absolute", width: size * 1.16, height: size * 1.16, borderRadius: size, backgroundColor: "#ffffff" }, ring]} />
+      <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: "#4a3cff", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 4, borderColor: "rgba(255,255,255,0.85)" }}>
+        <ScanFace color={"#fff"} size={Math.round(size * 0.34)} />
+        <Text style={{ color: "#fff", fontSize: Math.max(18, Math.round(size * 0.11)), fontWeight: "700" }}>Scan</Text>
+      </View>
     </View>
   );
 }

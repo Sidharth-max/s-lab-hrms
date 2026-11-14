@@ -15,11 +15,15 @@ const FACING_KEY = "hrms.cameraFacing";
  * mounted the other way keeps the back camera). The front camera preview is mirrored like a
  * selfie; captured photos are never mirrored.
  */
-export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: boolean; switchPosition?: "top-right" | "bottom-right" }>(function Camera(
-  { className = "", mirrored = true, switchPosition = "top-right" },
+export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: boolean; switchPosition?: "top-right" | "bottom-right"; /** Called once the picture is showing (ready to capture). */ onReady?: () => void }>(function Camera(
+  { className = "", mirrored = true, switchPosition = "top-right", onReady },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  });
   const [error, setError] = useState<string | null>(null);
   const [facing, setFacing] = useState<"user" | "environment">("user");
   // Read the saved choice after mount (localStorage is not available while rendering on the server).
@@ -55,6 +59,11 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
+          // Ready once frames arrive (videoWidth is known).
+          const v = videoRef.current;
+          const fire = () => { if (!cancelled && v.videoWidth) onReadyRef.current?.(); };
+          if (v.videoWidth) fire();
+          else v.addEventListener("loadeddata", fire, { once: true });
         }
       } catch (e) {
         setError(
