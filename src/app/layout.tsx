@@ -4,10 +4,15 @@ import "./globals.css";
 import { Toaster } from "@/components/Toaster";
 import { ConfirmHost } from "@/components/controls";
 import { LeaveGuard } from "@/components/LeaveGuard";
+import { ServiceWorker } from "@/components/ServiceWorker";
 
 export const metadata: Metadata = {
   title: "S-Lab HRMS",
   description: "Attendance and salary for your staff",
+  applicationName: "S-Lab HRMS",
+  // iPhone / iPad "Add to Home Screen": own window and name (the manifest covers other browsers).
+  appleWebApp: { capable: true, title: "S-Lab HRMS", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -31,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Toaster />
         <ConfirmHost />
         <LeaveGuard />
+        <ServiceWorker />
       </body>
     </html>
   );
