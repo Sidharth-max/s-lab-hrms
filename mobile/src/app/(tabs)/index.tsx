@@ -27,6 +27,7 @@ interface Dashboard {
   counts: { total: number; present: number; inside: number; notIn: number; pendingApprovals: number };
   sites: { id: string; name: string; total: number; present: number; inside: number; notIn: number }[];
   arrivals: { hour: number; count: number }[];
+  arrivalMins?: number[];
   payroll: { toPay: number; owed: number; people: number } | null;
   rows: { id: string; name: string; code: string; site: string; status: string; statusLabel: string; inAt: string | null; outAt: string | null; inside: boolean; manual: boolean; needsFace: boolean; late?: boolean; lateMins?: number; early?: boolean; earlyMins?: number }[];
   noFace: { id: string; name: string }[];
@@ -218,7 +219,7 @@ export default function Today() {
                   <Badge label={`${data.counts.notIn} not in yet`} tone={data.counts.notIn ? "amber" : "neutral"} />
                 </View>
                 <Text style={{ fontSize: 13, color: C.muted, marginTop: 10 }}>Arrivals through the day</Text>
-                <ArrivalsChart arrivals={data.arrivals} height={130} />
+                <ArrivalsChart arrivals={data.arrivals} arrivalMins={data.arrivalMins} staff={data.counts.total} open={data.storeHours?.open} close={data.storeHours?.close} height={130} />
               </Card>
               <PeopleCard data={data} narrow={layout.width - RAIL_WIDTH < 760} />
             </View>
@@ -285,7 +286,7 @@ export default function Today() {
               <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>Arrivals</Text>
               <InkText ink="blue" style={{ fontSize: 13 }}>{data.rows.filter((r) => r.inAt).length} checked in</InkText>
             </View>
-            <ArrivalsChart arrivals={data.arrivals} height={90} />
+            <ArrivalsChart arrivals={data.arrivals} arrivalMins={data.arrivalMins} staff={data.counts.total} open={data.storeHours?.open} close={data.storeHours?.close} height={90} />
           </Card>
         ) : null}
         <SitesCard data={data} />

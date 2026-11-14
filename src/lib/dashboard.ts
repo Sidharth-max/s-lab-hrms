@@ -51,6 +51,8 @@ export interface Dashboard {
   sites: DashboardSite[];
   /** Check-ins per hour today (for the arrivals chart), hours 6..22. */
   arrivals: { hour: number; count: number }[];
+  /** Each first scan-in today, as IST minutes after midnight (sorted): the arrivals chart plots these. */
+  arrivalMins: number[];
   /** Salary money, only for people allowed to see balances. */
   payroll: { toPay: number; owed: number; people: number } | null;
   rows: DashboardRow[];
@@ -77,11 +79,14 @@ export async function buildDashboard(actor: Actor): Promise<Dashboard> {
   ]);
   const { days } = await monthAttendance(actor.businessId, today.slice(0, 7), employees);
   const arrivals = Array.from({ length: 17 }, (_, i) => ({ hour: i + 6, count: 0 }));
+  const arrivalMins: number[] = [];
   const rows: DashboardRow[] = employees.map((e) => {
     const d = days.get(e.id)!.find((x) => x.date === today)!;
     if (d.inAt) {
       const slot = arrivals.find((a) => a.hour === istHour(d.inAt!));
       if (slot) slot.count++;
+      const ist = new Date(d.inAt.getTime() + 5.5 * 3600000);
+      arrivalMins.push(ist.getUTCHours() * 60 + ist.getUTCMinutes());
     }
     return {
       id: e.id,
@@ -145,6 +150,7 @@ export async function buildDashboard(actor: Actor): Promise<Dashboard> {
     },
     sites: [...siteMap.values()].sort((a, b) => b.total - a.total),
     arrivals,
+    arrivalMins: arrivalMins.sort((a, b) => a - b),
     payroll,
     rows,
     noFace: rows.filter((r) => r.needsFace).map((r) => ({ id: r.id, name: r.name })),
