@@ -23,7 +23,7 @@ export default async function DevicesPage() {
         icon={<Smartphone size={24} />}
         eyebrow="Scanner devices"
         title={`${devices.filter((d) => !d.revokedAt).length} active scanner${devices.filter((d) => !d.revokedAt).length === 1 ? "" : "s"}`}
-        subtitle="Phones and tablets that take face attendance."
+        subtitle="Phones, tablets and computers (in the browser) that take face attendance."
       />
       <section className="card flex flex-col gap-3">
         <SectionTitle icon={<ScanFace size={18} />} ink="blue">This device</SectionTitle>
@@ -36,7 +36,7 @@ export default async function DevicesPage() {
         ) : (
           <>
             <p className="muted">
-              {"Make this phone / tablet the attendance scanner for a site. Workers will then only see the face scan screen."}
+              {"Make this phone, tablet or computer the attendance scanner for a site. It opens the face scan in this browser (allow the camera when asked); workers then only see the face scan screen."}
             </p>
             <ActionForm action={registerDevice} className="grid gap-3 @2xl:grid-cols-2" submitLabel={"Make this device a scanner"}>
               <div>
