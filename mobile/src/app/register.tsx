@@ -34,7 +34,7 @@ export default function Register() {
     <>
       <Stack.Screen options={{ title: "Attendance register" }} />
       <BlurFrame>{(pad) => (
-      <FlatList showsVerticalScrollIndicator={false}
+      <FlatList showsVerticalScrollIndicator={false} initialNumToRender={12} maxToRenderPerBatch={10} windowSize={9}
         data={rows}
         keyExtractor={(r) => r.employeeId}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}

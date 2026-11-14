@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'dev.slab.hrms'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.backtohome"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+    // Keeps the React Native field this module switches (release builds shrink names).
+    consumerProguardFiles 'proguard-rules.pro'
+  }
+}

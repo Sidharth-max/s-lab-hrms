@@ -50,7 +50,7 @@ export default function HistoryScreen() {
     <>
       <Stack.Screen options={{ title: "History" }} />
       <BlurFrame>{(pad) => (
-      <SectionList showsVerticalScrollIndicator={false}
+      <SectionList showsVerticalScrollIndicator={false} initialNumToRender={12} maxToRenderPerBatch={10} windowSize={9}
         sections={sections}
         keyExtractor={(i) => i.id}
         stickySectionHeadersEnabled={false}

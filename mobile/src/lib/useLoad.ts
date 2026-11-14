@@ -19,9 +19,20 @@ export function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = [], live?
     loaderRef.current = loader;
   });
 
+  // Last data as JSON: a reload that returns the same data does not redraw the screen (no jank).
+  const lastJson = useRef<string | null>(null);
   const fetchNow = useCallback(() => {
     return loaderRef.current().then(
       (d) => {
+        let json: string | null = null;
+        try {
+          json = JSON.stringify(d);
+        } catch {}
+        if (json !== null && json === lastJson.current) {
+          setError(null);
+          return;
+        }
+        lastJson.current = json;
         setData(d);
         setError(null);
       },
@@ -35,6 +46,9 @@ export function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = [], live?
     loaderRef.current().then(
       (d) => {
         if (!alive) return;
+        try {
+          lastJson.current = JSON.stringify(d);
+        } catch {}
         setData(d);
         setError(null);
       },
@@ -52,7 +66,9 @@ export function useLoad<T>(loader: () => Promise<T>, deps: unknown[] = [], live?
         seenFocus.current = true;
         return;
       }
-      void fetchNow();
+      // Wait for the back / tab animation to finish before reloading, so it stays smooth.
+      const t = setTimeout(() => void fetchNow(), 350);
+      return () => clearTimeout(t);
     }, [fetchNow]),
   );
 

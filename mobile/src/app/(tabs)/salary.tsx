@@ -42,7 +42,7 @@ export default function SalaryScreen() {
   return (
     <>
       <BlurFrame>{(pad) => (
-      <FlatList showsVerticalScrollIndicator={false}
+      <FlatList showsVerticalScrollIndicator={false} initialNumToRender={12} maxToRenderPerBatch={10} windowSize={9}
         data={rows}
         keyExtractor={(r) => r.employeeId}
         refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}

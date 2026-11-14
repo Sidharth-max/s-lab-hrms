@@ -45,7 +45,7 @@ export default function Employees() {
   const list_ = (
     <View style={{ flex: 1 }}>
     <BlurFrame>{(pad) => (
-    <FlatList showsVerticalScrollIndicator={false}
+    <FlatList showsVerticalScrollIndicator={false} initialNumToRender={12} maxToRenderPerBatch={10} windowSize={9}
       data={list}
       keyExtractor={(e) => e.id}
       refreshControl={<RefreshControl {...refreshProps(refreshing, reload)} />}

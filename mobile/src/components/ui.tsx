@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, View, type PressableProps, type RefreshControlProps, type TextInputProps, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, type PressableProps, type RefreshControlProps, type TextInputProps, type ViewStyle } from "react-native";
 import { Text, TextInput } from "@/components/Text";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
@@ -7,7 +7,7 @@ import { C, isDark, R, shadow, type Ink } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 import { FLOATING_NAV_SPACE } from "@/lib/layout";
 import { CountUp, NOTICE_IN, PressScale, SkeletonList, StaggerScope, useRiseIn } from "@/lib/motion";
-import Reanimated, { FadeIn, ReduceMotion } from "react-native-reanimated";
+import Reanimated, { FadeIn, interpolateColor, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { GradientFill } from "./Viz";
 import { BlurFrame, useHeaderPad } from "./BlurFrame";
 
@@ -318,10 +318,15 @@ export function Avatar({ name, size = 40, muted }: { name: string; size?: number
 
 /** Our on / off switch (green when on). */
 export function Toggle({ value, onValueChange, disabled, label }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean; label?: string }) {
-  const [x] = useState(() => new Animated.Value(value ? 1 : 0));
+  // Runs on the UI thread (Reanimated), so the switch slides smoothly even while the app is busy.
+  const x = useSharedValue(value ? 1 : 0);
   useEffect(() => {
-    Animated.timing(x, { toValue: value ? 1 : 0, duration: 160, useNativeDriver: false }).start();
+    x.set(withSpring(value ? 1 : 0, { damping: 18, stiffness: 260, mass: 0.6, reduceMotion: ReduceMotion.System }));
   }, [value, x]);
+  const off = isDark ? "#3a3d45" : "#d5d8de";
+  const on = C.green;
+  const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(x.value, [0, 1], [off, on]) }));
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * 20 }, { scale: 1 + Math.sin(x.value * Math.PI) * 0.08 }] }));
   return (
     <Pressable
       onPress={() => {
@@ -335,22 +340,24 @@ export function Toggle({ value, onValueChange, disabled, label }: { value: boole
       hitSlop={8}
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
-      <Animated.View style={{ width: 50, height: 30, borderRadius: 15, padding: 3, backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: [isDark ? "#3a3d45" : "#d5d8de", C.green] }) }}>
-        <Animated.View
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: "#ffffff",
-            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) }],
-            shadowColor: "#000",
-            shadowOpacity: 0.2,
-            shadowRadius: 2,
-            shadowOffset: { width: 0, height: 1 },
-            elevation: 2,
-          }}
+      <Reanimated.View style={[{ width: 50, height: 30, borderRadius: 15, padding: 3 }, track]}>
+        <Reanimated.View
+          style={[
+            {
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: "#ffffff",
+              shadowColor: "#000",
+              shadowOpacity: 0.2,
+              shadowRadius: 2,
+              shadowOffset: { width: 0, height: 1 },
+              elevation: 2,
+            },
+            knob,
+          ]}
         />
-      </Animated.View>
+      </Reanimated.View>
     </Pressable>
   );
 }
