@@ -7,7 +7,8 @@ import { Text } from "@/components/Text";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Camera, Check, CircleCheckFilled, RotateCcw, ScanFace, type IconType } from "@/components/icons";
 import { Button, Muted, Notice, Screen, Toggle } from "@/components/ui";
 import { api } from "@/lib/api";
-import { useCameraSession } from "@/lib/camera";
+import { useCameraFacing, useCameraSession } from "@/lib/camera";
+import { CameraSwitch } from "@/components/CameraSwitch";
 import { haptic } from "@/lib/haptics";
 import { capture } from "@/lib/photo";
 import { C } from "@/lib/theme";
@@ -49,6 +50,7 @@ export default function FaceEnroll() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
+  const lens = useCameraFacing();
   const camera = useCameraSession();
   const [phase, setPhase] = useState<"idle" | "scanning" | "done">("idle");
   const [step, setStep] = useState(0);
@@ -175,7 +177,8 @@ export default function FaceEnroll() {
       {phase !== "done" ? (
         <>
           <View style={{ aspectRatio: 3 / 4, borderRadius: 28, overflow: "hidden", backgroundColor: "#000" }}>
-            {camera.show ? <CameraView key={camera.key} ref={cam} style={{ flex: 1 }} facing="front" mirror onCameraReady={camera.onReady} /> : null}
+            {camera.show ? <CameraView key={`${camera.key}-${lens.facing}`} ref={cam} style={{ flex: 1 }} facing={lens.facing} mirror={lens.mirror} onCameraReady={camera.onReady} /> : null}
+            {phase !== "scanning" ? <View style={{ position: "absolute", top: 12, right: 12 }}><CameraSwitch facing={lens.facing} onPress={lens.toggle} /></View> : null}
             {/* Oval guide: the face must stay inside it. Its colour is the live state. */}
             <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
               <View style={{ width: "62%", aspectRatio: 0.78, borderRadius: 999, borderWidth: 4, borderColor: phase === "scanning" ? ring : "rgba(255,255,255,0.6)", marginTop: -36 }} />

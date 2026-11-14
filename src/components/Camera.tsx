@@ -1,19 +1,45 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { RotateCcw as Refresh } from "./icons";
 
 export interface CameraHandle {
   /** Returns a JPEG data URL of the current frame, or null if the camera is not ready. */
   capture(): string | null;
 }
 
-/** Front camera preview. Works in browsers and inside the Android app (camera permission needed). */
-export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: boolean }>(function Camera(
-  { className = "", mirrored = true },
+const FACING_KEY = "hrms.cameraFacing";
+
+/**
+ * Camera preview with a front / back switch (remembered in this browser, so a scanner tablet
+ * mounted the other way keeps the back camera). The front camera preview is mirrored like a
+ * selfie; captured photos are never mirrored.
+ */
+export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: boolean; switchPosition?: "top-right" | "bottom-right" }>(function Camera(
+  { className = "", mirrored = true, switchPosition = "top-right" },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  // Read the saved choice after mount (localStorage is not available while rendering on the server).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(FACING_KEY) === "back") setFacing("environment");
+    } catch {
+      // Private mode: start with the front camera.
+    }
+  }, []);
+  const toggle = () => {
+    const next = facing === "user" ? "environment" : "user";
+    setFacing(next);
+    setError(null);
+    try {
+      localStorage.setItem(FACING_KEY, next === "environment" ? "back" : "front");
+    } catch {
+      // Not remembered: still switches for now.
+    }
+  };
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -22,7 +48,7 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera not available. Open the site over https.");
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
         if (cancelled) return stream.getTracks().forEach((track) => track.stop());
@@ -42,7 +68,7 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
       cancelled = true;
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [facing]);
 
   useImperativeHandle(ref, () => ({
     capture() {
@@ -57,13 +83,34 @@ export const Camera = forwardRef<CameraHandle, { className?: string; mirrored?: 
     },
   }));
 
-  if (error) return <div className={`flex items-center justify-center bg-gray-900 p-4 text-center text-white ${className}`}>{error}</div>;
+  const switchButton = (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); toggle(); }}
+      aria-label={facing === "user" ? "Switch to back camera" : "Switch to front camera"}
+      className={`absolute z-10 inline-flex h-10 items-center gap-1.5 rounded-full bg-black/50 px-3.5 text-[13px] font-semibold text-white backdrop-blur hover:bg-black/70 ${switchPosition === "top-right" ? "top-3 right-3" : "right-3 bottom-3"}`}
+    >
+      <Refresh size={17} aria-hidden />
+      {facing === "user" ? "Back camera" : "Front camera"}
+    </button>
+  );
+  if (error) {
+    return (
+      <div className={`relative flex items-center justify-center bg-gray-900 p-4 text-center text-white ${className}`}>
+        {error}
+        {switchButton}
+      </div>
+    );
+  }
   return (
-    <video
-      ref={videoRef}
-      playsInline
-      muted
-      className={`bg-black object-cover ${mirrored ? "-scale-x-100" : ""} ${className}`}
-    />
+    <div className={`relative overflow-hidden bg-black ${className}`}>
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        className={`h-full w-full object-cover ${mirrored && facing === "user" ? "-scale-x-100" : ""}`}
+      />
+      {switchButton}
+    </div>
   );
 });

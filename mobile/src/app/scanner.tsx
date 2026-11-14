@@ -11,7 +11,8 @@ import { CircleCheck, CircleX, Download, LogIn, ScanFace } from "@/components/ic
 import { Button } from "@/components/ui";
 import { api, type ScanConfig } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCameraSession } from "@/lib/camera";
+import { useCameraFacing, useCameraSession } from "@/lib/camera";
+import { CameraSwitch } from "@/components/CameraSwitch";
 import { haptic } from "@/lib/haptics";
 import { capture } from "@/lib/photo";
 import { startUpdate, useAppUpdate } from "@/lib/update";
@@ -32,6 +33,7 @@ export default function Scanner() {
   const { scannerMode, leaveScanner } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
+  const lens = useCameraFacing();
   const camera = useCameraSession();
   // Light status bar icons on the black screen; the login page on top gets the normal dark icons back.
   const focused = useIsFocused();
@@ -145,7 +147,7 @@ export default function Scanner() {
     <View style={styles.black}>
       {focused ? <StatusBar style="light" /> : null}
       {camera.show ? (
-        <CameraView key={camera.key} ref={cam} style={StyleSheet.absoluteFill} facing="front" mirror onCameraReady={camera.onReady} />
+        <CameraView key={`${camera.key}-${lens.facing}`} ref={cam} style={StyleSheet.absoluteFill} facing={lens.facing} mirror={lens.mirror} onCameraReady={camera.onReady} />
       ) : null}
       <Pressable style={StyleSheet.absoluteFill} onPress={scan} accessibilityLabel="Scan face">
         <SafeAreaView style={{ flex: 1, justifyContent: "space-between" }}>
@@ -154,9 +156,13 @@ export default function Scanner() {
               <Text style={styles.headerTitle}>{config?.device.business ?? " "}</Text>
               <Text style={styles.headerSub}>{config ? `${config.device.site} · ${config.device.name}` : configError ?? "Connecting…"}</Text>
             </View>
-            <Text style={styles.headerSub}>
-              {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-            </Text>
+            <View style={{ alignItems: "flex-end", gap: 8 }}>
+              <Text style={styles.headerSub}>
+                {now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+              </Text>
+              {/* Switch lens (front / back); remembered on this device. Does not start a scan. */}
+              <CameraSwitch facing={lens.facing} onPress={lens.toggle} label={false} />
+            </View>
           </View>
           <View style={styles.oval} pointerEvents="none" />
           <View style={styles.footer}>

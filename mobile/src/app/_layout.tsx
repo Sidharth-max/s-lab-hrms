@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useKeepAwake } from "expo-keep-awake";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -81,6 +82,9 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  // The screen does not dim or lock while the app is open (the phone's own timeout applies again once the
+  // app is in the background or closed).
+  useKeepAwake();
   const [fontsReady, fontError] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold });
   useEffect(() => {
     // Window colour behind the screens (seen during transitions and behind the keyboard).

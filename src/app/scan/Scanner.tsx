@@ -131,7 +131,15 @@ export function Scanner() {
           />
         </div>
       ) : (
-        <button type="button" onClick={start} className="relative flex-1 overflow-hidden" aria-label="Scan face">
+        // A tappable area (not a <button>): the camera inside has its own front / back switch button.
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={start}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); start(); } }}
+          className="relative flex-1 cursor-pointer overflow-hidden"
+          aria-label="Scan face"
+        >
           <Camera ref={cam} className="absolute inset-0 h-full w-full" />
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="h-[55%] aspect-[3/4] rounded-[50%] border-4 border-white/70" />
@@ -141,7 +149,7 @@ export function Scanner() {
             <div className="text-2xl font-semibold tracking-tight">{busy ? "Checking…" : "Tap the screen and look at the camera"}</div>
             {config?.mode === "mock" && <div className="mt-2 inline-block rounded-md border border-white/30 px-2.5 py-0.5 text-xs font-medium text-white">TEST MODE</div>}
           </div>
-        </button>
+        </div>
       )}
 
       {picking && config && (

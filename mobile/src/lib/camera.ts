@@ -1,6 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 /**
  * Keeps the camera preview alive.
@@ -55,4 +56,36 @@ export function useCameraSession() {
 
   const onReady = useCallback(() => setReady(true), []);
   return { show, key, ready, onReady, restart: () => { tries.current = 0; setReady(false); setKey((k) => k + 1); } };
+}
+
+const FACING_KEY = "hrms.cameraFacing";
+
+function readFacing(): "front" | "back" {
+  try {
+    const v = Platform.OS === "web" ? globalThis.localStorage?.getItem(FACING_KEY) : SecureStore.getItem(FACING_KEY);
+    return v === "back" ? "back" : "front";
+  } catch {
+    return "front";
+  }
+}
+
+/**
+ * Front or back camera for face screens, remembered on this phone (a scanner tablet mounted the other
+ * way round keeps the back camera). Use `facing` on <CameraView> and mirror only the front camera.
+ */
+export function useCameraFacing() {
+  const [facing, setFacing] = useState<"front" | "back">(readFacing);
+  const toggle = useCallback(() => {
+    setFacing((f) => {
+      const next = f === "front" ? "back" : "front";
+      try {
+        if (Platform.OS === "web") globalThis.localStorage?.setItem(FACING_KEY, next);
+        else void SecureStore.setItemAsync(FACING_KEY, next);
+      } catch {
+        // Not remembered: still switches for now.
+      }
+      return next;
+    });
+  }, []);
+  return { facing, toggle, mirror: facing === "front" };
 }
