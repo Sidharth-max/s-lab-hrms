@@ -1,18 +1,19 @@
 import { View } from "react-native";
 import { Text } from "./Text";
-import { useWindowLayout, RAIL_WIDTH } from "@/lib/layout";
+import { LIST_MIN_WIDTH, useWindowLayout, RAIL_WIDTH } from "@/lib/layout";
 import { C } from "@/lib/theme";
 
 /**
  * List-detail canonical layout for an open foldable / tablet (both panes on screen at once).
- * Narrow list, wide detail: 38:62 on an open foldable, 36:64 for 600–959 dp, 32:68 from 960 dp. Only rendered when useWindowLayout().twoPane is true.
+ * List a little narrower than the detail: 42:58 on an open foldable, 40:60 for 600–959 dp, 34:66 from
+ * 960 dp, and never under LIST_MIN_WIDTH (nor over half). Only rendered when useWindowLayout().twoPane is true.
  */
 export function TwoPane({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   const { width, listFraction, rail } = useWindowLayout();
   const content = width - (rail ? RAIL_WIDTH : 0);
   return (
     <View style={{ flex: 1, flexDirection: "row", backgroundColor: C.bg }}>
-      <View style={{ width: Math.round(content * listFraction), borderRightWidth: 1, borderRightColor: C.hairline }}>{left}</View>
+      <View style={{ width: Math.min(Math.max(Math.round(content * listFraction), LIST_MIN_WIDTH), Math.round(content * 0.5)), borderRightWidth: 1, borderRightColor: C.hairline }}>{left}</View>
       <View style={{ flex: 1 }}>{right}</View>
     </View>
   );

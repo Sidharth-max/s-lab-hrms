@@ -10,7 +10,7 @@ export function SplitView({ base, list, children }: { base: string; list: React.
   const path = usePathname();
   const atBase = path === base;
   return (
-    <div className="split grid gap-4 fold:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
+    <div className="split grid gap-4 fold:grid-cols-[minmax(17.5rem,2fr)_minmax(0,3fr)]">
       <aside className={`${atBase ? "block" : "hidden"} min-w-0 fold:block fold:max-h-[calc(100dvh-8rem)] fold:overflow-y-auto`}>{list}</aside>
       <section className={`${atBase ? "hidden" : "block"} cq min-w-0 fold:block`}>{children}</section>
     </div>

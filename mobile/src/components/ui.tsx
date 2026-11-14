@@ -131,7 +131,7 @@ export function HeroPill({ label, tone }: { label: string; tone?: "alert" | "ok"
 
 export function HeroStat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
-    <View style={{ flex: 1, minWidth: 0, backgroundColor: alert ? "rgba(239,68,68,0.32)" : "rgba(255,255,255,0.16)", borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, gap: 2 }}>
+    <View style={{ flex: 1, minWidth: 0, backgroundColor: alert ? "rgba(239,68,68,0.32)" : "rgba(255,255,255,0.16)", borderRadius: 16, paddingVertical: 10, paddingHorizontal: 10, gap: 2 }}>
       <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
       <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "500" }} numberOfLines={1}>{label}</Text>
     </View>

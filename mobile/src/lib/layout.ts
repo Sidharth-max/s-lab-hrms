@@ -53,14 +53,18 @@ export interface WindowLayout {
   listFraction: number;
 }
 
+/** Narrowest the list pane may get in the two-pane layout (dp). */
+export const LIST_MIN_WIDTH = 280;
+
 export function computeLayout(width: number, height: number): WindowLayout {
   const wc = widthClass(width);
   const hc = heightClass(height);
   const twoPane = wc !== "compact" && hc !== "compact";
   const aspect = Math.max(width, height) / Math.min(width, height);
   const foldLike = twoPane && aspect < 1.35;
-  // List pane kept narrow so the detail pane gets the room (Pay / Advance and forms need the width).
-  const listFraction = foldLike ? 0.38 : width < 960 ? 0.36 : 0.32;
+  // List pane a bit narrower than the detail pane, but never so narrow that names are cut short
+  // (TwoPane also keeps it at least LIST_MIN_WIDTH wide).
+  const listFraction = foldLike ? 0.42 : width < 960 ? 0.4 : 0.34;
   return { width, height, widthClass: wc, heightClass: hc, twoPane, rail: twoPane, foldLike, listFraction };
 }
 

@@ -168,13 +168,17 @@ export type LedgerForm = "pay" | "advance" | "extra" | null;
 
 /** Pay / advance / extra buttons. Rendered in a bar at the bottom of the screen (thumb zone). */
 export function LedgerActions({ h, can, active, name, onOpen }: { h: Hisaab; can: HisaabCan; active: boolean; name: string; onOpen: (f: LedgerForm) => void }) {
-  return (
-    <View style={{ flexDirection: "row", gap: 8 }}>
-      {can.pay && h.balance > 0 ? (
-        <View style={{ flex: 1.4, minWidth: 0 }}>
-          <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color="#ffffff" />} onPress={() => onOpen("pay")} />
-        </View>
-      ) : null}
+  // Narrow places (a Fold's detail panel in portrait): Pay gets its own full-width row so its amount
+  // and "Advance" are never cut off.
+  const [width, setWidth] = useState(0);
+  const narrow = width > 0 && width < 400;
+  const pay = can.pay && h.balance > 0 ? (
+    <View style={{ flex: narrow ? undefined : 1.4, minWidth: 0 }}>
+      <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color="#ffffff" />} onPress={() => onOpen("pay")} />
+    </View>
+  ) : null;
+  const rest = (
+    <>
       {can.advance && active ? (
         <View style={{ flex: 1, minWidth: 0 }}>
           <Button title="Advance" variant="secondary" icon={<Coins size={18} color={C.ink.orange} />} onPress={() => onOpen("advance")} />
@@ -185,6 +189,21 @@ export function LedgerActions({ h, can, active, name, onOpen }: { h: Hisaab; can
           <Plus size={20} color={C.ink.pink} />
         </PressScale>
       ) : null}
+    </>
+  );
+  return (
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ gap: 8 }}>
+      {narrow ? (
+        <>
+          {pay}
+          <View style={{ flexDirection: "row", gap: 8 }}>{rest}</View>
+        </>
+      ) : (
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {pay}
+          {rest}
+        </View>
+      )}
     </View>
   );
 }

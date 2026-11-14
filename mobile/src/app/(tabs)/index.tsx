@@ -56,7 +56,7 @@ function HeroStat({ label, value, onPress, alert }: { label: string; value: numb
   return onPress ? <Pressable style={{ flex: 1 }} onPress={onPress} accessibilityRole="button">{body}</Pressable> : <View style={{ flex: 1 }}>{body}</View>;
 }
 
-function PersonRow({ r, date, i }: { r: Dashboard["rows"][number]; date: string; i: number }) {
+function PersonRow({ r, date, i, narrow }: { r: Dashboard["rows"][number]; date: string; i: number; narrow?: boolean }) {
   return (
     <Animated.View entering={enterAt(i)}>
       <Pressable onPress={() => openDay(r, date)} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: i ? 1 : 0, borderTopColor: C.hairline }, pressed && { backgroundColor: C.soft }]}>
@@ -70,14 +70,16 @@ function PersonRow({ r, date, i }: { r: Dashboard["rows"][number]; date: string;
             {r.early ? <Text style={{ color: C.ink.red, fontWeight: "600" }}>{` (${earlyLabel(r.earlyMins ?? 0)})`}</Text> : null}
             {r.manual ? " · manual" : ""}
           </Text>
+          {/* Narrow column (open Fold, portrait): the status sits under the name so the name has room. */}
+          {narrow ? <Badge label={r.statusLabel || "—"} tone={r.status === "ABSENT" ? "neutral" : statusTone(r.status)} dot /> : null}
         </View>
-        <Badge label={r.statusLabel || "—"} tone={r.status === "ABSENT" ? "neutral" : statusTone(r.status)} dot />
+        {narrow ? null : <Badge label={r.statusLabel || "—"} tone={r.status === "ABSENT" ? "neutral" : statusTone(r.status)} dot />}
       </Pressable>
     </Animated.View>
   );
 }
 
-function PeopleCard({ data }: { data: Dashboard }) {
+function PeopleCard({ data, narrow }: { data: Dashboard; narrow?: boolean }) {
   return (
     <Card style={{ padding: 0, gap: 0, overflow: "hidden" }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14, paddingBottom: 6 }}>
@@ -90,7 +92,7 @@ function PeopleCard({ data }: { data: Dashboard }) {
           <Button title="Add employee" icon={<UserPlus size={18} color="#ffffff" />} onPress={() => router.push("/employee/new")} />
         </View>
       ) : null}
-      {data.rows.map((r, i) => <PersonRow key={r.id} r={r} date={data.date} i={i} />)}
+      {data.rows.map((r, i) => <PersonRow key={r.id} r={r} date={data.date} i={i} narrow={narrow} />)}
     </Card>
   );
 }
@@ -218,7 +220,7 @@ export default function Today() {
                 <Text style={{ fontSize: 13, color: C.muted, marginTop: 10 }}>Arrivals through the day</Text>
                 <ArrivalsChart arrivals={data.arrivals} height={130} />
               </Card>
-              <PeopleCard data={data} />
+              <PeopleCard data={data} narrow={layout.width - RAIL_WIDTH < 760} />
             </View>
             {/* Right panel: rate gauge, money, sites, alerts */}
             <View style={{ flex: 1, gap: 16, alignSelf: "stretch" }}>

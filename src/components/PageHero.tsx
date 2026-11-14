@@ -43,7 +43,7 @@ export function PageHero({
           <h1 className="text-2xl font-bold tracking-[-0.03em] sm:text-[28px]">{title}</h1>
           {subtitle ? <p className="mt-0.5 text-sm text-white/85">{subtitle}</p> : null}
         </div>
-        {actions ? <div className="hidden shrink-0 items-center gap-2 sm:flex">{actions}</div> : null}
+        {actions ? <div className="hidden shrink-0 items-center gap-2 @xl:flex">{actions}</div> : null}
       </div>
       {pills?.length ? (
         <div className="mt-3.5 flex flex-wrap gap-1.5">
@@ -71,7 +71,7 @@ export function PageHero({
           ))}
         </div>
       ) : null}
-      {actions ? <div className="mt-3.5 flex flex-wrap gap-2 sm:hidden">{actions}</div> : null}
+      {actions ? <div className="mt-3.5 flex flex-wrap gap-2 @xl:hidden">{actions}</div> : null}
       {children}
     </section>
   );
