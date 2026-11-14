@@ -204,7 +204,7 @@ export function HisaabPanel({
         <details>
           <summary className="cursor-pointer font-semibold">How earnings are worked out</summary>
           <p className="muted mt-2 text-sm">
-            Every day since joining counts at that day&apos;s salary. A month&apos;s salary is split over the days in that month, so a full month always gives the full salary.
+            Every day since joining counts at that day&apos;s salary. Monthly salary uses a 30-day month: one day is the salary ÷ 30 in every month, and a whole month (28, 30 or 31 days) gives the full salary; each unpaid day takes off salary ÷ 30.
             Present and paid leave count fully, half day counts half, absent and unpaid leave count nothing. Weekly offs and holidays are paid to monthly staff.
             Edit attendance on any date and this updates by itself.
           </p>

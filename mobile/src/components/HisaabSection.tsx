@@ -311,7 +311,7 @@ export function HisaabSection({ h, wages, can, onDone }: { employee: { id: strin
         </Pressable>
         {showMonths ? (
           <View style={{ gap: 6, marginTop: 8 }}>
-            <Muted>Every day since joining counts at that day&apos;s salary. A month&apos;s salary is split over that month&apos;s days, so a full month gives the full salary. Present and paid leave count fully, half day half, absent and unpaid leave nothing. Weekly offs and holidays are paid to monthly staff. Edit attendance on any date and this updates by itself.</Muted>
+            <Muted>Every day since joining counts at that day&apos;s salary. Monthly salary uses a 30-day month: one day is the salary ÷ 30 in every month, and a whole month (28, 30 or 31 days) gives the full salary; each unpaid day takes off salary ÷ 30. Present and paid leave count fully, half day half, absent and unpaid leave nothing. Weekly offs and holidays are paid to monthly staff. Edit attendance on any date and this updates by itself.</Muted>
             {wages.length ? <Muted>{wages.map((w) => `From ${dateLabel(w.from)}: ${rs(w.wage)} ${w.wageType === "MONTHLY" ? "/ month" : "/ day"}`).join("\n")}</Muted> : null}
             {h.months.map((m) => <Row key={m.month} label={`${monthLabel(m.month)} · ${m.payableDays} days`} value={rs(m.net)} ink="violet" />)}
             {h.months.length === 0 ? <Muted>Nothing earned yet.</Muted> : null}
