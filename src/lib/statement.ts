@@ -2,7 +2,7 @@ import "server-only";
 import { STATUS_LABEL, type DayResult } from "./attendance";
 import { db } from "./db";
 import { hisaabOf } from "./ledger";
-import { bankShare, dayFactor, dayRate, statutory, wageOn, type WageRate } from "./payroll";
+import { bankShare, dayFactor, dayRate, monthDaysAdjustment, statutory, wageOn, type WageRate } from "./payroll";
 import { monthAttendance, shiftsOf } from "./services";
 import { addMonths, daysInMonth, dbToDateKey, dateKeyToDb, formatIstTime, istDateKey, weekday } from "./time";
 
@@ -80,6 +80,8 @@ export interface Statement {
   };
   money: {
     gross: number;
+    /** Part of gross from the 30-day month rule (a whole month pays the full salary); can be negative. */
+    monthAdjust: number;
     bankGross: number;
     cashGross: number;
     pf: number;
@@ -172,6 +174,35 @@ export async function salaryStatement(businessId: string, employeeId: string, fr
       pay: Math.round(pay),
     };
   });
+  // 30-day month: each whole month inside the range on a monthly salary pays the full salary
+  // (same rule as the ledger, see monthDaysAdjustment). Part months are paid day by day.
+  let monthAdjust = 0;
+  for (const m of months) {
+    const inMonth = derived.filter((d) => d.date.slice(0, 7) === m);
+    if (!inMonth.length) continue;
+    const dim = daysInMonth(m);
+    let full = inMonth.length === dim;
+    let paid = 0;
+    let last: WageRate | null = null;
+    for (const d of inMonth) {
+      const r = wageOn(wage, d.date)!;
+      if (d.status === "NOT_EMPLOYED" || d.status === "FUTURE" || r.wageType !== "MONTHLY") full = false;
+      if (r.wageType === "MONTHLY") {
+        last = r;
+        paid += dayFactor(d.status, r.wageType);
+      }
+    }
+    if (!last) continue;
+    const adj = monthDaysAdjustment(dim, paid, full);
+    if (!adj) continue;
+    const pay = adj * dayRate(last);
+    monthAdjust += pay;
+    gross += pay;
+    bankGross += pay * bankShare(last);
+    bankByMonth.set(m, (bankByMonth.get(m) ?? 0) + pay * bankShare(last));
+    counts.payableDays += adj;
+  }
+  monthAdjust = Math.round(monthAdjust);
   gross = Math.round(gross);
   bankGross = Math.min(gross, Math.round(bankGross));
   let pf = 0;
@@ -220,7 +251,7 @@ export async function salaryStatement(businessId: string, employeeId: string, fr
     },
     days,
     counts,
-    money: { gross, bankGross, cashGross: gross - bankGross, pf, esi, earned, extras, deductions, advances: adv, payments: paid, net: earned + extras - deductions - adv - paid, balanceToday: hisaab.balance },
+    money: { gross, monthAdjust, bankGross, cashGross: gross - bankGross, pf, esi, earned, extras, deductions, advances: adv, payments: paid, net: earned + extras - deductions - adv - paid, balanceToday: hisaab.balance },
     entries,
   };
 }

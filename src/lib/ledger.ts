@@ -3,7 +3,7 @@ import type { Employee, Prisma } from "@prisma/client";
 import { deriveMonth, type PunchInput, type OverrideInput } from "./attendance";
 import { db } from "./db";
 import { effectiveWeeklyOff, parseDayRules } from "./day-rules";
-import { bankShare, dayFactor, dayRate, statutory, wageOn, type WageRate } from "./payroll";
+import { bankShare, dayFactor, dayRate, monthDaysAdjustment, statutory, wageOn, type WageRate } from "./payroll";
 import { leaveDays, shiftsOf } from "./services";
 import { addMonths, dateKeyToDb, daysInMonth, dbToDateKey, istDateKey } from "./time";
 
@@ -151,14 +151,30 @@ export async function hisaabFor(businessId: string, employees: Emp[], tx: Tx = d
         let gross = 0;
         let bankGross = 0;
         let payableDays = 0;
+        // 30-day month: a whole month on a monthly salary pays the full salary (see monthDaysAdjustment).
+        let fullMonth = true;
+        let monthlyPaid = 0;
+        let lastMonthly: WageRate | null = null;
         for (const d of deriveMonth(m, p, o, dayRules, ctx, leaves)) {
           const r = wageOn(wage, d.date)!;
+          if (d.status === "NOT_EMPLOYED" || d.status === "FUTURE" || r.wageType !== "MONTHLY") fullMonth = false;
+          if (r.wageType === "MONTHLY") lastMonthly = r;
           const f = dayFactor(d.status, r.wageType);
           if (f === 0) continue;
           payableDays += f;
+          if (r.wageType === "MONTHLY") monthlyPaid += f;
           const pay = f * dayRate(r, dim);
           gross += pay;
           bankGross += pay * bankShare(r);
+        }
+        if (lastMonthly) {
+          const adj = monthDaysAdjustment(dim, monthlyPaid, fullMonth);
+          if (adj) {
+            const pay = adj * dayRate(lastMonthly);
+            gross += pay;
+            bankGross += pay * bankShare(lastMonthly);
+            payableDays += adj;
+          }
         }
         gross = Math.round(gross);
         bankGross = Math.min(gross, Math.round(bankGross));

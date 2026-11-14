@@ -89,6 +89,7 @@ export async function statementXlsx(s: Statement): Promise<Buffer> {
   ws.addRow([]);
 
   section("Salary breakdown");
+  if (m.monthAdjust) pair("  30-day month adjustment (whole month = full salary)", rupees(m.monthAdjust), { money: true });
   pair("Salary earned (gross)", rupees(m.gross), { money: true, bold: true });
   if (m.cashGross > 0) {
     pair("  Bank part", rupees(m.bankGross), { money: true });
@@ -108,7 +109,7 @@ export async function statementXlsx(s: Statement): Promise<Buffer> {
   }
   pair("Running ledger balance today (all time)", rupees(m.balanceToday), { money: true });
   ws.addRow([]);
-  const note = ws.addRow(["Late and Left early are tags only (no pay cut). Half day: punched in after, or out before, the middle of the shift. See the Attendance sheet for every day."]);
+  const note = ws.addRow(["Monthly salary: one day = salary / 30 in every month; a whole month pays the full salary. Late and Left early are tags only (no pay cut). Half day: punched in after, or out before, the middle of the shift. See the Attendance sheet for every day."]);
   note.font = { italic: true, size: 9, color: { argb: MUTED } };
   ws.mergeCells(note.number, 1, note.number, 5);
 

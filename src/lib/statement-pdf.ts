@@ -203,12 +203,16 @@ export async function statementPdf(s: Statement): Promise<Uint8Array> {
   ensure(14);
   y -= 12;
   text("* marked by hand. Late / Left early are tags only (no pay cut). Half day: in after or out before the middle of the shift.", M, y, { size: 7.5, color: MUTED });
+  ensure(12);
+  y -= 10;
+  text("Monthly salary: one day = salary / 30 in every month; a whole month pays the full salary.", M, y, { size: 7.5, color: MUTED });
 
   // ---------- Salary breakdown ----------
   sectionTitle("Salary breakdown");
   const m = s.money;
   const rows: [string, string, { strong?: boolean; color?: RGB; sub?: boolean }?][] = [
     ["Payable days", days(c.payableDays)],
+    ...(m.monthAdjust ? ([["30-day month adjustment (whole month = full salary)", `${m.monthAdjust > 0 ? "+ " : "- "}${rsText(Math.abs(m.monthAdjust))}`, { sub: true }]] as [string, string, { sub: boolean }][]) : []),
     ["Salary earned (gross)", rsText(m.gross), { strong: true }],
     ...(m.cashGross > 0 ? ([["Bank part", rsText(m.bankGross), { sub: true }], ["Cash part", rsText(m.cashGross), { sub: true }]] as [string, string, { sub: boolean }][]) : []),
     ["PF (employee share, on bank part)", m.pf ? `- ${rsText(m.pf)}` : rsText(0), { color: m.pf ? RED : MUTED }],

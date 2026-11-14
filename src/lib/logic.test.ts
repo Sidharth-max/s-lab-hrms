@@ -207,9 +207,9 @@ describe("ledger", () => {
     expect(wageOn(rates, "2025-12-01")!.monthlyWage).toBe(1500000);
     expect(wageOn([], "2026-01-01")).toBeNull();
   });
-  it("splits a month's salary over that month's days", () => {
-    expect(dayRate(rates[0], 28) * 28).toBeCloseTo(1500000);
-    expect(dayRate(rates[0], 31) * 31).toBeCloseTo(1500000);
+  it("uses a 30-day month for the day rate (salary / 30 in every month)", () => {
+    expect(dayRate(rates[0], 28)).toBeCloseTo(1500000 / 30);
+    expect(dayRate(rates[0], 31)).toBeCloseTo(1500000 / 30);
     expect(dayRate({ ...rates[0], wageType: "DAILY", dailyWage: 60000 }, 31)).toBe(60000);
   });
   it("pays offs and holidays to monthly staff only", () => {
@@ -343,16 +343,27 @@ describe("day rules parsing", () => {
   });
 });
 
-describe("month length", () => {
-  const emp = { wageType: "MONTHLY" as const, monthlyWage: 3000000, dailyWage: 0, basicPercent: 100, pfEnabled: false, esiEnabled: false };
-  it("pays the full salary for a full month of 28, 30 or 31 days", () => {
-    expect(grossPay(emp, 28, 28)).toBe(3000000); // February
-    expect(grossPay(emp, 30, 30)).toBe(3000000);
-    expect(grossPay(emp, 31, 31)).toBe(3000000);
+describe("30-day month", () => {
+  // Rs 12,000 a month -> Rs 400 a day in every month.
+  const emp = { wageType: "MONTHLY" as const, monthlyWage: 1200000, dailyWage: 0, basicPercent: 100, pfEnabled: false, esiEnabled: false };
+  it("pays the full salary for a whole month of 28, 30 or 31 days", () => {
+    expect(grossPay(emp, 28, 28)).toBe(1200000); // February
+    expect(grossPay(emp, 30, 30)).toBe(1200000);
+    expect(grossPay(emp, 31, 31)).toBe(1200000);
   });
-  it("uses that month's own day count for missed days", () => {
-    expect(grossPay(emp, 27, 28)).toBe(Math.round((3000000 * 27) / 28)); // one day missed in February
-    expect(grossPay(emp, 30, 31)).toBe(Math.round((3000000 * 30) / 31));
+  it("cuts salary / 30 for each unpaid day in any month", () => {
+    expect(grossPay(emp, 26, 28)).toBe(1200000 - 2 * 40000); // February, 2 absent -> Rs 11,200
+    expect(grossPay(emp, 29, 30)).toBe(1200000 - 40000);
+    expect(grossPay(emp, 30, 31)).toBe(1200000 - 40000); // 31-day month, 1 absent -> Rs 11,600
+    expect(grossPay(emp, 30.5, 31)).toBe(1200000 - 20000); // half day
+    expect(grossPay(emp, 0, 31)).toBe(0);
+  });
+  it("pays a part month day by day, at most 30 days", async () => {
+    const { monthDaysAdjustment } = await import("./payroll");
+    expect(monthDaysAdjustment(31, 16, false)).toBe(0); // joined mid-month: 16 days x Rs 400
+    expect(monthDaysAdjustment(31, 31, false)).toBe(-1);
+    expect(monthDaysAdjustment(28, 28, true)).toBe(2); // whole February: +2 days
+    expect(monthDaysAdjustment(31, 31, true)).toBe(-1); // whole 31-day month: -1 day
   });
 });
 

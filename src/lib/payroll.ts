@@ -26,7 +26,7 @@ export function payableDays(emp: Pick<EmployeePay, "wageType">, c: DayCounts): n
 }
 
 export function grossPay(emp: EmployeePay, payable: number, daysInMonth: number): number {
-  if (emp.wageType === "MONTHLY") return Math.round((emp.monthlyWage * payable) / daysInMonth);
+  if (emp.wageType === "MONTHLY") return Math.round((emp.monthlyWage * (payable + monthDaysAdjustment(daysInMonth, payable, true))) / SALARY_DAYS);
   return Math.round(emp.dailyWage * payable);
 }
 
@@ -95,7 +95,25 @@ export function wageOn(rates: WageRate[], date: string): WageRate | null {
   return pick;
 }
 
-/** One day's pay at full attendance: a month's salary is split over that month's days (28 to 31). */
-export function dayRate(rate: WageRate, daysInMonth: number): number {
-  return rate.wageType === "MONTHLY" ? rate.monthlyWage / daysInMonth : rate.dailyWage;
+/**
+ * Monthly salaries are paid on a 30-day month: one day = monthly salary / 30 in every month
+ * (₹12,000 -> ₹400 a day), whatever the month's length. A whole month still pays the full salary
+ * (see monthDaysAdjustment). Daily wages are the wage itself.
+ */
+export const SALARY_DAYS = 30;
+export function dayRate(rate: WageRate, _daysInMonth?: number): number {
+  return rate.wageType === "MONTHLY" ? rate.monthlyWage / SALARY_DAYS : rate.dailyWage;
+}
+
+/**
+ * Days to add to (or take from) a month of monthly salary so it pays 30 - unpaid days:
+ * a full month = full salary in 28, 29, 30 or 31-day months, and each unpaid day (absent, unpaid
+ * leave, half of a half day) costs salary / 30. `fullMonth` = employed on every day of the month,
+ * on a monthly salary, and the month is over (no future days). A part month (joined / left / this
+ * month so far) is paid day by day, at most 30 days.
+ */
+export function monthDaysAdjustment(daysInMonth: number, paidDays: number, fullMonth: boolean): number {
+  if (!fullMonth) return Math.min(0, SALARY_DAYS - paidDays);
+  const unpaid = daysInMonth - paidDays;
+  return Math.max(0, SALARY_DAYS - unpaid) - paidDays;
 }
