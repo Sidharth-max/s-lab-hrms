@@ -60,8 +60,9 @@ function Count({ n }: { n?: number }) {
 /** Tabs under the header on tablets, desktops and open foldables. */
 export function NavLinks({ links }: { links: NavItem[] }) {
   const path = usePathname();
+  // Wraps onto a second line when it does not fit, so every page (Settings, History) stays reachable.
   return (
-    <nav className="mx-auto hidden max-w-7xl gap-1 overflow-x-auto px-3 sm:flex">
+    <nav className="mx-auto hidden max-w-7xl flex-wrap gap-x-1 px-3 sm:flex">
       {links.map((l) => {
         const Icon = ICONS[l.icon];
         const active = isActive(path, l.href);
