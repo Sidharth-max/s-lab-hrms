@@ -43,8 +43,16 @@ case "$STATUS" in
     if ./deploy.sh >> "$LOG" 2>&1; then
       log "deployed ${REMOTE:0:7}"
     else
-      echo "$REMOTE" > "$STATE_DIR/failed-sha"
-      log "DEPLOY FAILED for ${REMOTE:0:7} (site kept on previous version). See above."
+      # A failed build is often Docker's build cache, not the code (e.g. "parent snapshot ... does
+      # not exist"). Clear the build cache and try once more before giving up on this version.
+      log "deploy of ${REMOTE:0:7} failed; clearing the Docker build cache and retrying once"
+      docker builder prune -af >> "$LOG" 2>&1 || true
+      if ./deploy.sh >> "$LOG" 2>&1; then
+        log "deployed ${REMOTE:0:7} (on retry)"
+      else
+        echo "$REMOTE" > "$STATE_DIR/failed-sha"
+        log "DEPLOY FAILED for ${REMOTE:0:7} after a retry (site kept on previous version). See above. Fix, or run ./deploy.sh and delete $STATE_DIR/failed-sha."
+      fi
     fi
     ;;
   completed:*)
