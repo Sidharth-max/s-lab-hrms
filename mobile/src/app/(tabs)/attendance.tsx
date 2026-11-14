@@ -53,9 +53,10 @@ export default function Attendance() {
       <Pressable onPress={() => go(addDays(data.date, -1))} hitSlop={8} accessibilityLabel="Previous day" style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: C.track }}>
         <ChevronLeft color={C.text} size={22} />
       </Pressable>
-      <Pressable onPress={() => setPicking(true)} accessibilityLabel="Choose date" style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44 }}>
+      <Pressable onPress={() => setPicking(true)} accessibilityLabel="Choose date" style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, height: 44, paddingHorizontal: 6 }}>
         <CalendarDays size={18} color={C.brandInk} />
-        <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>{data.date === data.today ? `Today · ${dateLabel(data.date)}` : dateLabel(data.date)}</Text>
+        {/* Shrinks (one line, slightly smaller text) on a narrow panel instead of running over the arrows. */}
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: C.text }}>{wide ? (data.date === data.today ? "Today" : dateLabel(data.date).replace(/ \d{4}$/, "")) : data.date === data.today ? `Today · ${dateLabel(data.date)}` : dateLabel(data.date)}</Text>
       </Pressable>
       <Pressable
         onPress={() => data.date < data.today && go(addDays(data.date, 1))}

@@ -74,7 +74,7 @@ export function useWide() {
 }
 
 /** Width of the navigation rail. */
-export const RAIL_WIDTH = 84;
+export const RAIL_WIDTH = 64;
 
 /** Space to leave at the bottom of tab screens on phones, where the navigation bar floats over the content. */
 export const FLOATING_NAV_SPACE = 104;

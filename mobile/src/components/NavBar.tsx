@@ -73,26 +73,25 @@ export function AppTabBar({ state, descriptors, emitter, navigateToTab, rail }: 
   });
 
   if (rail) {
+    // Slim rail on an open Fold / tablet: round icon buttons only (each keeps its name for screen
+    // readers and as a long-press hint), so more width goes to the list and details.
+    const railButton = (active: boolean) => ({ width: 44, height: 44, borderRadius: 22, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: active ? C.brandSoft : "transparent" });
     return (
-      <View style={{ width: RAIL_WIDTH, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16, backgroundColor: C.card, borderRightWidth: 1, borderRightColor: C.hairline, alignItems: "center", gap: 6 }}>
-        <PressScale onPress={openSearch} accessibilityRole="button" accessibilityLabel="Search" style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: C.head, alignItems: "center", justifyContent: "center", marginBottom: 18, ...shadow(2) }}>
-          <Search size={24} color={C.headText} />
+      <View style={{ width: RAIL_WIDTH, paddingTop: insets.top + 14, paddingBottom: insets.bottom + 14, backgroundColor: C.card, borderRightWidth: 1, borderRightColor: C.hairline, alignItems: "center", gap: 10 }}>
+        <PressScale onPress={openSearch} accessibilityRole="button" accessibilityLabel="Search" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.head, alignItems: "center", justifyContent: "center", marginBottom: 12, ...shadow(2) }}>
+          <Search size={20} color={C.headText} />
         </PressScale>
         {items.map(({ route, focused, t, Icon }) => (
-          <Pressable key={route.key} onPress={() => press(route.key, focused)} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={t.label} style={{ alignItems: "center", gap: 4, paddingVertical: 6, width: RAIL_WIDTH }}>
-            <View style={{ width: 56, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: focused ? C.brandSoft : "transparent" }}>
-              <Icon size={22} color={focused ? C.brandInk : C.muted} />
-            </View>
-            <Text style={{ fontSize: 11, fontWeight: focused ? "700" : "500", color: focused ? C.brandInk : C.muted }} numberOfLines={1}>{t.label}</Text>
+          <Pressable key={route.key} onPress={() => press(route.key, focused)} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={t.label} accessibilityHint={t.label} style={railButton(focused)}>
+            <Icon size={22} color={focused ? C.brandInk : C.muted} />
           </Pressable>
         ))}
         <View style={{ flex: 1 }} />
-        <Pressable onPress={() => { openMore(); }} accessibilityRole="button" accessibilityLabel="More" style={{ alignItems: "center", gap: 4, paddingVertical: 6, width: RAIL_WIDTH }}>
-          <View style={{ width: 56, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: overlay === "more" ? C.brandSoft : "transparent" }}>
+        <Pressable onPress={() => { openMore(); }} accessibilityRole="button" accessibilityLabel={me?.pendingApprovals ? `More, ${me.pendingApprovals} waiting for approval` : "More"} style={railButton(overlay === "more")}>
+          <View>
             <Grid size={22} color={overlay === "more" ? C.brandInk : C.muted} />
             <Dot n={me?.pendingApprovals} />
           </View>
-          <Text style={{ fontSize: 11, fontWeight: "500", color: C.muted }}>More</Text>
         </Pressable>
       </View>
     );
