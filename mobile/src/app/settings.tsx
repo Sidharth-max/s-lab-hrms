@@ -1,4 +1,6 @@
 import { router, Stack } from "expo-router";
+import Animated from "react-native-reanimated";
+import { SWAP_IN } from "@/lib/motion";
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { Text } from "@/components/Text";
@@ -192,7 +194,7 @@ function Section({ id, open, setOpen, icon: Icon, ink, title, summary, children 
         </View>
         {isOpen ? <ChevronUp size={20} color={C.muted} /> : <ChevronDown size={20} color={C.muted} />}
       </Pressable>
-      {isOpen ? <View style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>{children}</View> : null}
+      {isOpen ? <Animated.View entering={SWAP_IN} style={{ paddingHorizontal: 16, paddingBottom: 16, gap: 10 }}>{children}</Animated.View> : null}
     </Card>
   );
 }

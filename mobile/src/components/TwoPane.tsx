@@ -5,8 +5,7 @@ import { C } from "@/lib/theme";
 
 /**
  * List-detail canonical layout for an open foldable / tablet (both panes on screen at once).
- * Pane split follows Samsung's ratios: 50:50 on a foldable (the crease falls between the panes),
- * 42:58 for 600–959 dp, 38:62 from 960 dp. Only rendered when useWindowLayout().twoPane is true.
+ * Narrow list, wide detail: 38:62 on an open foldable, 36:64 for 600–959 dp, 32:68 from 960 dp. Only rendered when useWindowLayout().twoPane is true.
  */
 export function TwoPane({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
   const { width, listFraction, rail } = useWindowLayout();

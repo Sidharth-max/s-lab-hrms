@@ -59,7 +59,8 @@ export function computeLayout(width: number, height: number): WindowLayout {
   const twoPane = wc !== "compact" && hc !== "compact";
   const aspect = Math.max(width, height) / Math.min(width, height);
   const foldLike = twoPane && aspect < 1.35;
-  const listFraction = foldLike ? 0.5 : width < 960 ? 0.42 : 0.38;
+  // List pane kept narrow so the detail pane gets the room (Pay / Advance and forms need the width).
+  const listFraction = foldLike ? 0.38 : width < 960 ? 0.36 : 0.32;
   return { width, height, widthClass: wc, heightClass: hc, twoPane, rail: twoPane, foldLike, listFraction };
 }
 

@@ -90,9 +90,16 @@ export default function Employees() {
               {e.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{e.code}</Text>
             </Text>
             <Text style={{ fontSize: 13, color: C.muted }} numberOfLines={1}>{e.site} · <Text style={{ color: C.ink.violet, fontWeight: "600" }}>{rs(e.wage)}</Text> {e.wageType === "MONTHLY" ? "/ month" : "/ day"}</Text>
+            {/* In the narrow side panel the badges go under the name, so the name always has room. */}
+            {wide && e.active && (e.inHouse || !e.face) ? (
+              <View style={{ flexDirection: "row", gap: 6, marginTop: 2 }}>
+                {e.inHouse ? <Badge label="In-house" /> : null}
+                {!e.face ? <Badge label="No face" tone="red" dot /> : null}
+              </View>
+            ) : null}
           </View>
-          {e.inHouse && e.active ? <Badge label="In-house" /> : null}
-          {!e.face && e.active ? <Badge label="No face" tone="red" dot /> : null}
+          {!wide && e.inHouse && e.active ? <Badge label="In-house" /> : null}
+          {!wide && !e.face && e.active ? <Badge label="No face" tone="red" dot /> : null}
           <ChevronRight size={18} color={C.muted} />
         </Pressable>
         </Animated.View>

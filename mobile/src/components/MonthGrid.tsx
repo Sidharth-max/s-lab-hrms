@@ -2,6 +2,8 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/Text";
+import Animated from "react-native-reanimated";
+import { popAt } from "@/lib/motion";
 import { dateLabel } from "@/lib/format";
 import { C } from "@/lib/theme";
 
@@ -48,14 +50,15 @@ export function MonthGrid({ employeeId, month, days, compact }: { employeeId: st
             const tappable = d.status !== "FUTURE" && d.status !== "NOT_EMPLOYED";
             const isToday = d.date === today;
             return (
+              // Cells pop in one after another when the month is shown (keyed by month, so again on change).
+              <Animated.View key={`${month}-${j}`} entering={popAt(w * 7 + j)}>
               <Pressable
-                key={j}
                 disabled={!tappable}
                 onPress={() => router.push({ pathname: "/attendance/[employeeId]/[date]", params: { employeeId, date: d.date } })}
                 accessibilityLabel={`${dateLabel(d.date)}: ${d.short || d.status}${d.late ? ", late" : ""}`}
                 style={({ pressed }) => [
                   { width: cell, height: cellH, borderRadius: Math.min(12, Math.round(cell * 0.28)), borderWidth: isToday ? 2 : 1, borderColor: isToday ? C.brand : col.border, backgroundColor: col.bg, alignItems: "center", justifyContent: "center", gap: 1 },
-                  pressed && { opacity: 0.7 },
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.92 }] },
                 ]}
               >
                 {/* Late arrival: small red dot in the corner (still a full day). */}
@@ -63,6 +66,7 @@ export function MonthGrid({ employeeId, month, days, compact }: { employeeId: st
                 <Text style={{ ...tight, fontSize: numSize, lineHeight: numSize + 2, color: isToday ? C.brandInk : C.muted, fontWeight: isToday ? "700" : "400" }}>{Number(d.date.slice(8))}</Text>
                 {d.short ? <Text numberOfLines={1} style={{ ...tight, fontSize: letterSize, lineHeight: letterSize + 2, fontWeight: "700", color: col.fg }}>{d.short}{d.manual ? "*" : ""}{d.missingOut ? "!" : ""}</Text> : null}
               </Pressable>
+              </Animated.View>
             );
           })}
         </View>

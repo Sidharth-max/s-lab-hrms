@@ -95,9 +95,9 @@ export default function Attendance() {
         </Sheet>
       ) : null}
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.hairline }}><Text style={{ fontSize: 22, fontWeight: "700", color: C.ink.green }}>{counts.green}</Text><Text style={{ fontSize: 12, color: C.muted }}>Present</Text></View>
-        <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.hairline }}><Text style={{ fontSize: 22, fontWeight: "700", color: C.ink.amber }}>{counts.amber}</Text><Text style={{ fontSize: 12, color: C.muted }}>Half day</Text></View>
-        <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.hairline }}><Text style={{ fontSize: 22, fontWeight: "700", color: C.ink.red }}>{counts.red}</Text><Text style={{ fontSize: 12, color: C.muted }}>Absent</Text></View>
+        <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, padding: wide ? 10 : 12, borderWidth: 1, borderColor: C.hairline }}><Text style={{ fontSize: 22, fontWeight: "700", color: C.ink.green }}>{counts.green}</Text><Text style={{ fontSize: 12, color: C.muted }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Present</Text></View>
+        <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, padding: wide ? 10 : 12, borderWidth: 1, borderColor: C.hairline }}><Text style={{ fontSize: 22, fontWeight: "700", color: C.ink.amber }}>{counts.amber}</Text><Text style={{ fontSize: 12, color: C.muted }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Half day</Text></View>
+        <View style={{ flex: 1, backgroundColor: C.card, borderRadius: 16, padding: wide ? 10 : 12, borderWidth: 1, borderColor: C.hairline }}><Text style={{ fontSize: 22, fontWeight: "700", color: C.ink.red }}>{counts.red}</Text><Text style={{ fontSize: 12, color: C.muted }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Absent</Text></View>
       </View>
       {wide ? dateBar : null}
       <Tabs options={[{ value: "active", label: "Active" }, { value: "all", label: "All" }, { value: "archived", label: "Archived" }]} value={show} onChange={setShow} />
@@ -110,14 +110,16 @@ export default function Attendance() {
             style={({ pressed }) => [{ padding: 14, gap: 4, borderTopWidth: i ? 1 : 0, borderTopColor: C.line }, (pressed || (wide && selected?.employeeId === r.employeeId && selected.date === data.date)) && { backgroundColor: C.soft }]}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, flexShrink: 1 }} numberOfLines={wide ? 1 : undefined}>
                 {r.name} <Text style={{ color: C.muted, fontWeight: "400" }}>{r.code}{r.archived ? " · archived" : ""}</Text>
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} />
+                {/* Narrow side panel: the status goes on its own line below, so the name has room. */}
+                {wide ? null : <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} />}
                 <Pencil size={16} color={C.muted} />
               </View>
             </View>
+            {wide ? <Badge label={r.statusLabel || "—"} tone={statusTone(r.status)} /> : null}
             <Muted>
               In <Text style={{ color: r.late ? C.ink.red : r.inAt ? C.ink.teal : C.muted, fontWeight: r.inAt ? "600" : "400" }}>{r.inAt ?? "—"}</Text>
               {r.late ? <Text style={{ color: C.ink.red, fontWeight: "600" }}>{` (${lateLabel(r.lateMins ?? 0)})`}</Text> : null} · Out <Text style={{ color: r.early ? C.ink.red : r.outAt ? C.ink.blue : C.muted, fontWeight: r.outAt ? "600" : "400" }}>{r.outAt ?? "—"}</Text>

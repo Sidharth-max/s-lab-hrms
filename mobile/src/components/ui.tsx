@@ -6,7 +6,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { C, isDark, R, shadow, type Ink } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
 import { FLOATING_NAV_SPACE } from "@/lib/layout";
-import { PressScale, SkeletonList } from "@/lib/motion";
+import { CountUp, NOTICE_IN, NOTICE_OUT, PressScale, SkeletonList, SMOOTH_LAYOUT, StaggerScope, useRiseIn } from "@/lib/motion";
 import Reanimated, { FadeIn, ReduceMotion } from "react-native-reanimated";
 import { GradientFill } from "./Viz";
 import { BlurFrame, useHeaderPad } from "./BlurFrame";
@@ -37,6 +37,7 @@ export function Screen({
     // With a footer the bar itself covers the bottom inset (the page scrolls under it, blurred).
     <SafeAreaView style={styles.screen} edges={footer ? ["left", "right"] : ["left", "right", "bottom"]}>
       {/* The page starts below the transparent, blurred header and scrolls underneath it. */}
+      <StaggerScope>
       <BlurFrame footer={footer}>
         {(pad, bottomPad) => {
           // The page content fades in once it is ready (instead of popping in after the loading placeholder).
@@ -50,6 +51,7 @@ export function Screen({
           );
         }}
       </BlurFrame>
+      </StaggerScope>
     </SafeAreaView>
   );
 }
@@ -68,8 +70,10 @@ export function refreshProps(refreshing: boolean, onRefresh: () => void) {
   };
 }
 
+/** Card: rises in when the page opens (one after another), and slides smoothly when things above it change. */
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  const enter = useRiseIn();
+  return <Reanimated.View entering={enter} layout={SMOOTH_LAYOUT} style={[styles.card, style]}>{children}</Reanimated.View>;
 }
 
 export function H1({ children }: { children: React.ReactNode }) {
@@ -145,9 +149,10 @@ export function Hero({
   pills?: { label: string; tone?: "alert" | "ok" }[]; value?: string; valueLabel?: string;
   stats?: { label: string; value: string; alert?: boolean }[]; right?: React.ReactNode; children?: React.ReactNode;
 }) {
+  const enter = useRiseIn();
   const initials = avatar ? avatar.trim().split(/\s+/).filter(Boolean).map((p, i, a) => (i === 0 || i === a.length - 1 ? p[0] : "")).join("").toUpperCase().slice(0, 2) : "";
   return (
-    <View style={{ borderRadius: 28, padding: 18, gap: 14, overflow: "hidden", ...shadow(2), shadowColor: C.gradient[1] }}>
+    <Reanimated.View entering={enter} style={{ borderRadius: 28, padding: 18, gap: 14, overflow: "hidden", ...shadow(2), shadowColor: C.gradient[1] }}>
       <GradientFill />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         {avatar ? (
@@ -168,12 +173,17 @@ export function Hero({
       {value ? (
         <View style={{ gap: 2 }}>
           {valueLabel ? <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "500" }}>{valueLabel}</Text> : null}
-          <Text style={{ color: "#fff", fontSize: 34, fontWeight: "700", letterSpacing: -1, fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+          {/^-?₹[\d,]+$/.test(value) ? (
+            // A rupee amount counts up to its value.
+            <CountUp value={Number(value.replace(/[^\d-]/g, ""))} format={(n) => `${n < 0 ? "-" : ""}₹${Math.abs(Math.round(n)).toLocaleString("en-IN")}`} style={{ color: "#fff", fontSize: 34, fontWeight: "700", letterSpacing: -1 }} />
+          ) : (
+            <Text style={{ color: "#fff", fontSize: 34, fontWeight: "700", letterSpacing: -1, fontVariant: ["tabular-nums"] }} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+          )}
         </View>
       ) : null}
       {stats?.length ? <View style={{ flexDirection: "row", gap: 8 }}>{stats.map((s) => <HeroStat key={s.label} {...s} />)}</View> : null}
       {children}
-    </View>
+    </Reanimated.View>
   );
 }
 
@@ -211,7 +221,8 @@ export function Button({
       {gradient ? <GradientFill /> : null}
       {/* Wrapped so the icon always sits above the gradient layer. */}
       {loading ? <ActivityIndicator color={fg} /> : icon ? <View>{icon}</View> : null}
-      <Text style={[styles.buttonText, { color: fg }]} numberOfLines={1}>{title}</Text>
+      {/* Shrinks to fit instead of being cut off in narrow places (e.g. Pay / Advance in a Fold's side panel). */}
+      <Text style={[styles.buttonText, { color: fg }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{title}</Text>
     </PressScale>
   );
 }
@@ -385,9 +396,9 @@ export function Notice({ text, tone = "neutral" }: { text: string; tone?: "neutr
     green: { bg: C.greenSoft, fg: C.greenInk, border: C.greenLine },
   }[tone];
   return (
-    <View style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]} accessibilityLiveRegion="polite">
+    <Reanimated.View entering={NOTICE_IN} exiting={NOTICE_OUT} layout={SMOOTH_LAYOUT} style={[styles.notice, { backgroundColor: map.bg, borderColor: map.border }]} accessibilityLiveRegion="polite">
       <Text style={{ color: map.fg, fontSize: 14, lineHeight: 20 }}>{text}</Text>
-    </View>
+    </Reanimated.View>
   );
 }
 
@@ -429,7 +440,7 @@ export const styles = StyleSheet.create({
   h1: { fontSize: 24, fontWeight: "700", color: C.text, letterSpacing: -0.5 },
   h2: { fontSize: 16, fontWeight: "600", color: C.text, letterSpacing: -0.2 },
   muted: { fontSize: 14, color: C.muted, lineHeight: 20 },
-  button: { minHeight: 50, borderRadius: 999, borderWidth: 1, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  button: { minHeight: 50, borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   buttonText: { fontSize: 15, fontWeight: "600", flexShrink: 1 },
   label: { fontSize: 13, fontWeight: "500", color: C.muted },
   hint: { fontSize: 12, color: C.muted },

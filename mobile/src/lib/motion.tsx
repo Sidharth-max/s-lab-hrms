@@ -1,8 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   Easing,
+  FadeIn,
   FadeInDown,
+  FadeInUp,
+  FadeOut,
+  LinearTransition,
+  SlideInDown,
+  ZoomIn,
+  withDelay,
+  type EntryAnimationsValues,
+  type LayoutAnimation,
   ReduceMotion,
   useAnimatedStyle,
   useReducedMotion,
@@ -164,3 +173,55 @@ export function SuccessPop({ children }: { children: React.ReactNode }) {
 }
 
 export { Animated, FadeInDown, ReduceMotion };
+
+// ---------- Page entrance: cards rise in one after another ----------
+
+const StaggerCtx = createContext<{ next: () => number } | null>(null);
+
+/**
+ * Wraps a page (Screen does this). Cards and heroes inside rise in one after another when the page
+ * opens; anything mounted later (a new tab, a section opened) rises in on its own without delay.
+ */
+export function StaggerScope({ children }: { children: React.ReactNode }) {
+  const [value] = useState(() => {
+    const start = Date.now();
+    let n = 0;
+    return { next: () => (Date.now() - start < 700 ? n++ : 0) };
+  });
+  return <StaggerCtx.Provider value={value}>{children}</StaggerCtx.Provider>;
+}
+
+const EASE_OUT = Easing.bezier(0.2, 0.8, 0.2, 1);
+
+/** Entering animation for a block: fades in while rising 14 px (and growing from 98%), staggered on page open. */
+export function useRiseIn(): ((v: EntryAnimationsValues) => LayoutAnimation) | undefined {
+  const ctx = useContext(StaggerCtx);
+  const reduce = useReducedMotion();
+  const [delay] = useState(() => (ctx ? Math.min(ctx.next(), 7) * 55 : 0));
+  if (reduce) return undefined;
+  return () => {
+    "worklet";
+    return {
+      initialValues: { opacity: 0, transform: [{ translateY: 14 }, { scale: 0.98 }] },
+      animations: {
+        opacity: withDelay(delay, withTiming(1, { duration: 260 })),
+        transform: [{ translateY: withDelay(delay, withTiming(0, { duration: 380, easing: EASE_OUT })) }, { scale: withDelay(delay, withTiming(1, { duration: 380, easing: EASE_OUT })) }],
+      },
+    };
+  };
+}
+
+/** Calendar cells pop in from the top-left corner (used when a month is shown). */
+export function popAt(i: number) {
+  return ZoomIn.duration(240).delay(Math.min(i, 41) * 9).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+}
+
+/** Notices and messages slide down into place. */
+export const NOTICE_IN = FadeInUp.duration(260).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+export const NOTICE_OUT = FadeOut.duration(160).reduceMotion(ReduceMotion.System);
+/** Content swapped in place (a tab, an opened section) fades in. */
+export const SWAP_IN = FadeIn.duration(220).reduceMotion(ReduceMotion.System);
+/** Sticky bottom bar slides up into place. */
+export const BAR_IN = SlideInDown.duration(320).easing(EASE_OUT).reduceMotion(ReduceMotion.System);
+/** Sizes animate smoothly when content above or inside changes (sections opening, notices appearing). */
+export const SMOOTH_LAYOUT = LinearTransition.duration(220).reduceMotion(ReduceMotion.System);

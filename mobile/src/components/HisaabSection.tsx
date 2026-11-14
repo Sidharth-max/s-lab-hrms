@@ -171,12 +171,12 @@ export function LedgerActions({ h, can, active, name, onOpen }: { h: Hisaab; can
   return (
     <View style={{ flexDirection: "row", gap: 8 }}>
       {can.pay && h.balance > 0 ? (
-        <View style={{ flex: 1.4 }}>
+        <View style={{ flex: 1.4, minWidth: 0 }}>
           <Button title={`Pay ${rs(h.balance)}`} accessibilityLabel={`Pay ${rs(h.balance)} to ${name}`} icon={<Cash size={18} color="#ffffff" />} onPress={() => onOpen("pay")} />
         </View>
       ) : null}
       {can.advance && active ? (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Button title="Advance" variant="secondary" icon={<Coins size={18} color={C.ink.orange} />} onPress={() => onOpen("advance")} />
         </View>
       ) : null}

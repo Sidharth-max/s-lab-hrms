@@ -2,6 +2,8 @@ import { createContext, useContext, useRef, useState, type ComponentRef } from "
 import { View, type ViewStyle } from "react-native";
 import { BlurTargetView, BlurView } from "expo-blur";
 import { HeaderHeightContext } from "expo-router/react-navigation";
+import Animated from "react-native-reanimated";
+import { BAR_IN } from "@/lib/motion";
 import { C, isDark } from "@/lib/theme";
 
 /**
@@ -57,7 +59,7 @@ export function BlurFrame({ children, style, footer }: { children: (pad: number,
       </BlurTargetView>
       <BlurStrip height={pad} target={target} />
       {footer ? (
-        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} onLayout={(e) => setFooterH(Math.round(e.nativeEvent.layout.height))}>
+        <Animated.View entering={BAR_IN} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} onLayout={(e) => setFooterH(Math.round(e.nativeEvent.layout.height))}>
           <BlurView
             blurTarget={target}
             blurMethod="dimezisBlurViewSdk31Plus"
@@ -67,7 +69,7 @@ export function BlurFrame({ children, style, footer }: { children: (pad: number,
             pointerEvents="none"
           />
           {footer}
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );
